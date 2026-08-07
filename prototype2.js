@@ -123,6 +123,28 @@ function saveChartMode(mode) {
   try { sessionStorage.setItem(STORAGE_CHART_MODE, mode); } catch (_) {}
 }
 
+function setPersistentState(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return;
+  } catch (_) {}
+  try {
+    sessionStorage.setItem(key, value);
+  } catch (_) {}
+}
+
+function getPersistentState(key) {
+  try {
+    const v = localStorage.getItem(key);
+    if (v != null) return v;
+  } catch (_) {}
+  try {
+    const v = sessionStorage.getItem(key);
+    if (v != null) return v;
+  } catch (_) {}
+  return null;
+}
+
 function saveFormState() {
   try {
     const state = {};
@@ -142,13 +164,13 @@ function saveFormState() {
     state['children'] = children ? children.value : '';
     state.pkPayoutUserEdited = !!document.getElementById('pk-payout')?.dataset.userEdited;
 
-    localStorage.setItem(STORAGE_FORM_STATE, JSON.stringify(state));
+    setPersistentState(STORAGE_FORM_STATE, JSON.stringify(state));
   } catch (_) {}
 }
 
 function loadFormState() {
   try {
-    const raw = localStorage.getItem(STORAGE_FORM_STATE);
+    const raw = getPersistentState(STORAGE_FORM_STATE);
     if (!raw) return;
     const state = JSON.parse(raw);
     if (!state || typeof state !== 'object') return;
@@ -875,7 +897,7 @@ function fillExample() {
   set('mortgage', 930000);     set('other-assets', 0);
   set('ahv', 32760);           set('child-allowance', 5520);
   set('child-pension', 11376); set('other-income', 0);
-  set('return-rate', 6);       set('inflation', 1.2);
+  set('return-rate', 6.9);     set('inflation', 1.4);
   set('projection-years', 27); set('conversion-rate', 5.2);
 
   const pkCapEl = document.getElementById('pk-capital');
@@ -998,9 +1020,24 @@ function attachEvents() {
     if (chartModal && !chartModal.classList.contains('hidden')) updateChart();
   });
 
+  // Mobile browsers can skip late input events before refresh/navigation.
+  // Persist once more when the page is being hidden.
+  window.addEventListener('pagehide', () => {
+    saveFormState();
+  });
+
   // Live recalc on every input/select change
   document.querySelectorAll('input, select').forEach((el) => {
     el.addEventListener('input', () => {
+      if (el.id === 'pk-payout') el.dataset.userEdited = '1';
+      if (['pk-share', 'pk-capital', 'pk-payout', 'conversion-rate'].includes(el.id)) {
+        syncPkDisplays();
+      }
+      updateResults();
+      if (activeDrawer) updateDrawerChips();
+      saveFormState();
+    });
+    el.addEventListener('change', () => {
       if (el.id === 'pk-payout') el.dataset.userEdited = '1';
       if (['pk-share', 'pk-capital', 'pk-payout', 'conversion-rate'].includes(el.id)) {
         syncPkDisplays();
