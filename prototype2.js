@@ -40,6 +40,7 @@ let latestInsightText = '';
 const STORAGE_STEP    = 'p2-wizard-step';
 const STORAGE_STARTED = 'p2-wizard-started';
 const STORAGE_CHART_MODE = 'p2-chart-mode';
+const STORAGE_FORM_STATE = 'p2-form-state-v1';
 let chartMode = 'nominal';
 
 // ============================================================
@@ -120,6 +121,63 @@ function loadChartMode() {
 
 function saveChartMode(mode) {
   try { sessionStorage.setItem(STORAGE_CHART_MODE, mode); } catch (_) {}
+}
+
+function saveFormState() {
+  try {
+    const state = {};
+    document.querySelectorAll('input, select').forEach((el) => {
+      if (!el.id) return;
+      if (el.type === 'radio') return;
+      if (el.type === 'checkbox') {
+        state[el.id] = !!el.checked;
+      } else {
+        state[el.id] = el.value;
+      }
+    });
+
+    const marital = document.querySelector('input[name="marital-status"]:checked');
+    const children = document.querySelector('input[name="children"]:checked');
+    state['marital-status'] = marital ? marital.value : '';
+    state['children'] = children ? children.value : '';
+    state.pkPayoutUserEdited = !!document.getElementById('pk-payout')?.dataset.userEdited;
+
+    localStorage.setItem(STORAGE_FORM_STATE, JSON.stringify(state));
+  } catch (_) {}
+}
+
+function loadFormState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_FORM_STATE);
+    if (!raw) return;
+    const state = JSON.parse(raw);
+    if (!state || typeof state !== 'object') return;
+
+    document.querySelectorAll('input, select').forEach((el) => {
+      if (!el.id || !(el.id in state)) return;
+      if (el.type === 'radio') return;
+      if (el.type === 'checkbox') {
+        el.checked = !!state[el.id];
+      } else {
+        el.value = state[el.id];
+      }
+    });
+
+    if (state['marital-status']) {
+      const ms = document.querySelector(`input[name="marital-status"][value="${state['marital-status']}"]`);
+      if (ms) ms.checked = true;
+    }
+    if (state['children']) {
+      const ch = document.querySelector(`input[name="children"][value="${state['children']}"]`);
+      if (ch) ch.checked = true;
+    }
+
+    const pkPayoutEl = document.getElementById('pk-payout');
+    if (pkPayoutEl) {
+      if (state.pkPayoutUserEdited) pkPayoutEl.dataset.userEdited = '1';
+      else delete pkPayoutEl.dataset.userEdited;
+    }
+  } catch (_) {}
 }
 
 function syncChartModeButtons() {
@@ -837,6 +895,7 @@ function fillExample() {
 
   syncPkDisplays();
   updateResults();
+  saveFormState();
 }
 
 // ============================================================
@@ -948,6 +1007,7 @@ function attachEvents() {
       }
       updateResults();
       if (activeDrawer) updateDrawerChips();
+      saveFormState();
     });
   });
 
@@ -956,6 +1016,7 @@ function attachEvents() {
     radio.addEventListener('change', () => {
       updateResults();
       if (activeDrawer) updateDrawerChips();
+      saveFormState();
     });
   });
 }
@@ -965,6 +1026,7 @@ function attachEvents() {
 // ============================================================
 
 initFormattedFields();
+loadFormState();
 chartMode = loadChartMode();
 syncChartModeButtons();
 syncPkDisplays();
@@ -973,3 +1035,4 @@ initDrawerSwipe('drawer-income');
 showStep(loadStep());
 attachEvents();
 updateResults();
+saveFormState();
