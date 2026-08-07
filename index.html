@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pensionierungsplanung Webapp</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.sheetjs.com/xlsx-0.19.0/package/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Pensionierungsplanung</h1>
+      <p>Diese Webapp liest deine Excel-Datei <strong>Rentenberechnung.xlsx</strong> und zeigt Übersichtsdaten, Vorsorgelücken und wichtige Fragen zur Pensionierung.</p>
+    </header>
+
+    <section class="card file-card">
+      <label for="file-input" class="button">Excel-Datei auswählen</label>
+      <input id="file-input" type="file" accept=".xlsx,.xls" />
+      <p class="hint">Datei auswählen oder die vorhandene Excel-Datei hier hochladen.</p>
+    </section>
+
+    <section id="results" class="hidden">
+      <section class="card" id="summary-card">
+        <h2>Übersicht</h2>
+        <div id="summary" class="summary-grid"></div>
+      </section>
+
+      <section class="card" id="overview-card">
+        <h2>Vorsorgelücke je Jahr</h2>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Jahr</th>
+                <th>Netto-Einkommen</th>
+                <th>Jahreslücke</th>
+                <th>Monatslücke</th>
+              </tr>
+            </thead>
+            <tbody id="overview-table-body"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="card" id="details-card">
+        <h2>Detailwerte der Rentenjahre</h2>
+        <div id="details"></div>
+      </section>
+
+      <section class="card" id="questions-card">
+        <h2>Wichtige Fragen zur Pensionierung</h2>
+        <ul id="questions"></ul>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

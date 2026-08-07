@@ -1,0 +1,37 @@
+:root {
+  color-scheme: dark;
+  background: #f4f7fb;
+  color: #1d2633;
+  font-family: Inter, system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-height: 100vh; }
+main { max-width: 1080px; margin: 0 auto; padding: 24px; }
+header h1 { margin: 0 0 12px; font-size: clamp(2rem, 3vw, 3rem); }
+header p { margin: 0 0 24px; line-height: 1.65; }
+.card { background: #ffffff; border-radius: 18px; box-shadow: 0 18px 40px rgba(16, 42, 74, 0.08); margin-bottom: 24px; padding: 24px; }
+.file-card { display: flex; flex-direction: column; gap: 14px; align-items: flex-start; }
+.button { display: inline-flex; align-items: center; justify-content: center; padding: 12px 18px; border-radius: 999px; color: #ffffff; background: #1f5fff; cursor: pointer; text-decoration: none; font-weight: 600; }
+#file-input { display: none; }
+.hint { margin: 0; color: #5f6f84; }
+.summary-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(180px,1fr)); gap: 16px; }
+.summary-card-item { padding: 18px; border-radius: 16px; background: linear-gradient(135deg,#eff6ff,#ffffff); }
+.summary-card-item h3 { margin: 0 0 6px; font-size: 0.95rem; color: #334155; }
+.summary-card-item p { margin: 0; font-size: 1.4rem; font-weight: 700; }
+.table-wrapper { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+thead th { text-align: left; padding: 12px 14px; border-bottom: 1px solid #e2e8f0; color: #334155; }
+tbody td { padding: 12px 14px; border-bottom: 1px solid #f1f5f9; }
+tbody tr:last-child td { border-bottom: none; }
+.hidden { display: none; }
+#details > .year-block { margin-top: 18px; }
+#details h3 { margin: 0 0 12px; font-size: 1.1rem; }
+.details-table { width: 100%; border-collapse: collapse; }
+.details-table th, .details-table td { padding: 10px 12px; border: 1px solid #e2e8f0; }
+.details-table th { background: #f8fafc; }
+#questions ul { margin: 0; padding-left: 20px; }
+#questions li { margin-bottom: 12px; line-height: 1.55; }
+@media (max-width: 720px) {
+  main { padding: 16px; }
+  .card { padding: 18px; }
+}

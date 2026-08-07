@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Finanzplaner Wizard</title>
+  <link rel="stylesheet" href="wizard.css" />
+</head>
+<body>
+  <main class="page">
+    <div class="wizard-card">
+      <header class="wizard-header">
+        <div>
+          <p class="eyebrow">Mobile-first Dialog</p>
+          <h1>Finanzplanung im Dialog</h1>
+          <p>Beantworte die Kernfragen. Der Basismodus führt dich schnell durch die wichtigsten Werte.</p>
+        </div>
+        <div class="progress" id="wizard-progress">Schritt 1 von 6</div>
+        <div class="wizard-page-nav">
+          <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+          <button type="button" class="button button-primary" data-action="next">Weiter</button>
+        </div>
+      </header>
+      <form id="wizard-form" class="wizard-form">
+        <section class="wizard-step active" data-step="1">
+          <div class="step-content">
+            <h2>Willkommen</h2>
+            <p>Wähle den Basismodus für 6 Schritte oder den Expertenmodus für 10 Schritte. Alternativ kannst du mit den Testdaten direkt starten.</p>
+            <div class="step-summary">
+              <div class="step-summary-item"><strong>Basismodus:</strong> 6 Schritte, schnell zur Kernplanung</div>
+              <div class="step-summary-item"><strong>Expertenmodus:</strong> 10 Schritte, inklusive Details und Annahmen</div>
+            </div>
+            <div class="fastpath-actions">
+              <button type="button" class="button button-primary" data-action="fastpath">Basismodus (6 Schritte)</button>
+              <button type="button" class="button button-secondary" data-action="expert">Expertenmodus (10 Schritte)</button>
+              <button type="button" class="button button-tertiary" data-action="sample">Testdaten laden</button>
+            </div>
+            <p class="hint">Basismodus zeigt die wichtigsten Felder. Im Expertenmodus werden zusätzliche Detailseiten freigeschaltet.</p>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="2">
+          <div class="step-content">
+            <h2>Basisinfos</h2>
+            <p>Bitte beantworte zuerst die wichtigsten Grunddaten, damit die Planung passt.</p>
+            <label class="field">
+              <span>Basisfall</span>
+              <select id="profile-type" required>
+                <option value="single">Einzelperson</option>
+                <option value="couple">Paar</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>Alter Hauptperson</span>
+              <input id="age-main" type="number" min="18" step="1" required placeholder="z.B. 45" />
+            </label>
+            <label class="field" id="partner-age-field">
+              <span>Alter Partner/in</span>
+              <input id="age-partner" type="number" min="18" step="1" placeholder="z.B. 43" />
+            </label>
+            <label class="field">
+              <span>Planungszeitraum (Jahre)</span>
+              <input id="planning-horizon" type="number" min="1" step="1" value="20" required />
+            </label>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-primary" data-action="next">Weiter</button>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="3">
+          <div class="step-content">
+            <h2>Was möchtest du erreichen?</h2>
+            <p>Wähle ein Ziel, damit die nächsten Fragen besser zu dir passen.</p>
+            <label class="field">
+              <input type="radio" name="goal" value="understand" checked />
+              <span>Vermögen verstehen</span>
+            </label>
+            <label class="field">
+              <input type="radio" name="goal" value="stability" />
+              <span>Lebensstandard sichern</span>
+            </label>
+            <label class="field">
+              <input type="radio" name="goal" value="compare" />
+              <span>Szenarien vergleichen</span>
+            </label>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-primary" data-action="next">Weiter</button>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="4">
+          <div class="step-content">
+            <h2>Basiswerte</h2>
+            <p>Beginne mit den drei wichtigsten Werten. Details kannst du später ergänzen.</p>
+            <label class="field">
+              <span>Gesamtvermögen</span>
+              <input id="asset-total" type="number" min="0" step="0.01" placeholder="z.B. 650000" />
+            </label>
+            <label class="field">
+              <span>Gesamteinnahmen pro Jahr</span>
+              <input id="income-total" type="number" min="0" step="0.01" placeholder="z.B. 110000" />
+            </label>
+            <label class="field">
+              <span>Gesamtausgaben pro Jahr</span>
+              <input id="expense-total" type="number" min="0" step="0.01" placeholder="z.B. 70000" />
+            </label>
+            <p class="hint">Falls du später mehr Details hast, kannst du sie in den nächsten Schritten eintragen.</p>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-primary" data-action="next">Weiter</button>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="5" data-advanced="true">
+          <div class="step-content">
+            <h2>Vermögenswerte</h2>
+            <label class="field">
+              <span>Geldvermögen / Sparkapital</span>
+              <input id="asset-cash" type="number" min="0" step="0.01" placeholder="z.B. 50000" />
+            </label>
+            <label class="field">
+              <span>Immobilienwert</span>
+              <input id="asset-property" type="number" min="0" step="0.01" placeholder="z.B. 400000" />
+            </label>
+            <label class="field">
+              <span>Wertpapiere / Fonds</span>
+              <input id="asset-investments" type="number" min="0" step="0.01" placeholder="z.B. 150000" />
+            </label>
+            <label class="field">
+              <span>Pensionskasse / Vorsorge</span>
+              <input id="asset-pension" type="number" min="0" step="0.01" placeholder="z.B. 80000" />
+            </label>
+            <label class="field">
+              <span>Sonstiges Vermögen</span>
+              <input id="asset-other" type="number" min="0" step="0.01" placeholder="z.B. 20000" />
+            </label>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-primary" data-action="next">Weiter</button>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="6" data-advanced="true">
+          <div class="step-content">
+            <h2>Ausgaben</h2>
+            <p>Trage hier deine jährlichen Ausgaben ein. Später kannst du einzelne Posten noch verfeinern.</p>
+            <label class="field">
+              <span>Fixkosten</span>
+              <input id="expense-fixed" type="number" min="0" step="0.01" placeholder="z.B. 30000" />
+            </label>
+            <label class="field">
+              <span>Lebenshaltungskosten</span>
+              <input id="expense-living" type="number" min="0" step="0.01" placeholder="z.B. 25000" />
+            </label>
+            <label class="field">
+              <span>Puffer / Reserve</span>
+              <input id="expense-buffer" type="number" min="0" step="0.01" placeholder="z.B. 5000" />
+            </label>
+            <label class="field">
+              <span>Sonstige Ausgaben</span>
+              <input id="expense-other" type="number" min="0" step="0.01" placeholder="z.B. 4000" />
+            </label>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-primary" data-action="next">Weiter</button>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="7" data-advanced="true">
+          <div class="step-content">
+            <h2>Lebensereignisse</h2>
+            <label class="field">
+              <span>Kapitalbezug / Auszahlung</span>
+              <input id="event-capital-amount" type="number" min="0" step="0.01" placeholder="z.B. 60000" />
+            </label>
+            <label class="field">
+              <span>In wie vielen Jahren?</span>
+              <input id="event-capital-year" type="number" min="0" step="1" placeholder="z.B. 3" />
+            </label>
+            <label class="field">
+              <span>Erbschaft</span>
+              <input id="event-inheritance-amount" type="number" min="0" step="0.01" placeholder="z.B. 100000" />
+            </label>
+            <label class="field">
+              <span>In wie vielen Jahren?</span>
+              <input id="event-inheritance-year" type="number" min="0" step="1" placeholder="z.B. 8" />
+            </label>
+            <label class="field">
+              <span>Geplante Anschaffung</span>
+              <input id="event-purchase-amount" type="number" min="0" step="0.01" placeholder="z.B. 25000" />
+            </label>
+            <label class="field">
+              <span>In wie vielen Jahren?</span>
+              <input id="event-purchase-year" type="number" min="0" step="1" placeholder="z.B. 5" />
+            </label>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-primary" data-action="next">Weiter</button>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="8" data-advanced="true">
+          <div class="step-content">
+            <h2>Annahmen</h2>
+            <label class="field">
+              <span>Zinssatz (p.a.)</span>
+              <input id="assumption-rate" type="number" min="0" max="20" step="0.01" value="2.0" required />
+            </label>
+            <label class="field">
+              <span>Inflation (p.a.)</span>
+              <input id="assumption-inflation" type="number" min="0" max="20" step="0.01" value="1.5" required />
+            </label>
+            <label class="field">
+              <span>Rendite für Kapital / Dividenden</span>
+              <input id="assumption-return" type="number" min="0" max="20" step="0.01" value="4.0" required />
+            </label>
+            <label class="field">
+              <span>Wachstum Mieteinnahmen</span>
+              <input id="assumption-rent-growth" type="number" min="0" max="20" step="0.01" value="1.0" required />
+            </label>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-primary" data-action="next">Weiter</button>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="9">
+          <div class="step-content">
+            <h2>Szenarien</h2>
+            <p class="hint">Szenarien beschreiben hier unterschiedliche Finanzentscheidungen. Das Basisszenario bleibt immer erhalten.</p>
+            <div class="scenario-group">
+              <label class="field">
+                <span>Szenario 1</span>
+                <input id="scenario-1-name" type="text" value="Basis" required readonly />
+              </label>
+              <label class="field">
+                <span>Entscheidung</span>
+                <select id="scenario-1-decision" disabled>
+                  <option value="status-quo">Status quo</option>
+                </select>
+              </label>
+            </div>
+            <div class="scenario-group">
+              <label class="field">
+                <span>Szenario 2</span>
+                <input id="scenario-2-name" type="text" value="Alternative" required />
+              </label>
+              <label class="field">
+                <span>Entscheidung</span>
+                <select id="scenario-2-decision">
+                  <option value="amortization">Mehr Amortisation</option>
+                  <option value="capital-withdrawal">Kapitalbezug statt Rente</option>
+                  <option value="more-savings">Mehr sparen</option>
+                  <option value="lower-expenses">Niedrigere Ausgaben</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-primary" data-action="next">Projektion anzeigen</button>
+          </div>
+        </section>
+
+        <section class="wizard-step" data-step="10">
+          <div class="step-content">
+            <h2>Ergebnis</h2>
+            <div id="results-summary" class="result-cards"></div>
+            <div class="chart-card">
+              <canvas id="scenario-chart" width="760" height="320"></canvas>
+            </div>
+            <div class="table-wrapper">
+              <table class="result-table">
+                <thead>
+                  <tr>
+                    <th>Jahr</th>
+                    <th>Szenario</th>
+                    <th>Progn. Vermögen</th>
+                    <th>Netto-Jahresüberschuss</th>
+                  </tr>
+                </thead>
+                <tbody id="results-table"></tbody>
+              </table>
+            </div>
+            <div id="results-note" class="result-note"></div>
+          </div>
+          <div class="wizard-controls">
+            <button type="button" class="button button-secondary" data-action="prev">Zurück</button>
+            <button type="button" class="button button-secondary" id="restart-button">Neu starten</button>
+          </div>
+        </section>
+      </form>
+    </div>
+  </main>
+  <script src="wizard.js"></script>
+</body>
+</html>
