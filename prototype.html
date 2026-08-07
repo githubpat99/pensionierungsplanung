@@ -22,24 +22,21 @@
 
     <div class="wizard-card" id="wizard-card">
       <div class="wizard-header">
-        <div>
-          <p class="eyebrow">Schritt für Schritt</p>
+        <div class="wizard-header-bar">
+          <span class="progress" id="wizard-progress">Schritt 1 von 4</span>
           <h2 id="wizard-title">Persönliche Angaben</h2>
-          <p id="wizard-description">Beginne mit deinen Grunddaten. Die Simulation wird direkt aktualisiert.</p>
-        </div>
-        <div class="wizard-header-right">
-          <div class="progress" id="wizard-progress">Schritt 1 von 4</div>
+          <button type="button" class="info-toggle-btn" id="wizard-info-btn" aria-expanded="false" aria-label="Info einblenden">i</button>
           <div class="wizard-header-controls">
             <button type="button" class="button button-secondary" data-action="prev" id="header-prev">Zurück</button>
             <button type="button" class="button button-primary" data-action="next" id="header-next">Weiter</button>
           </div>
         </div>
+        <p class="wizard-desc-panel hidden" id="wizard-description">Beginne mit deinen Grunddaten. Die Simulation wird direkt aktualisiert.</p>
       </div>
 
       <form id="prototype-form" class="wizard-form">
         <section class="wizard-step active" data-step="1">
           <div class="step-content">
-            <h3>1. Persönliche Angaben</h3>
             <div class="grid-2">
               <label class="field"><span>Alter</span><input id="age" type="number" min="18" value="50" /></label>
               <label class="field"><span>Pensionierungsalter</span><input id="retire-age" type="number" min="55" value="65" /></label>
@@ -57,53 +54,35 @@
 
         <section class="wizard-step" data-step="2">
           <div class="step-content">
-            <h3>2. Vermögen</h3>
-            <div class="step-inline-summary">
-              <div class="summary-chip">
-                <span>Gesamtvermögen</span>
-                <strong id="step2-total-assets">CHF 0</strong>
-              </div>
-              <div class="summary-chip">
-                <span>Rendite p.a. monetär</span>
-                <strong id="step2-total-return">CHF 0</strong>
-              </div>
+            <div class="step-chips-bar">
+              <span class="mini-chip">Vermögen: <strong id="step2-total-assets">CHF 0</strong></span>
+              <span class="mini-chip">Rendite: <strong id="step2-total-return">CHF 0</strong></span>
             </div>
             <div class="grid-2">
-              <label class="field"><span>Säule 3a</span><input id="pillar3a" type="number" min="0" value="80000" /></label>
-              <label class="field"><span>Erwartete Rendite Säule 3a (%)</span><input id="pillar3a-return" type="number" min="0" max="10" step="0.1" value="2.5" /></label>
+              <label class="field"><span>Säule 3a (CHF)</span><input id="pillar3a" type="number" min="0" value="80000" /></label>
+              <label class="field"><span>Rendite 3a (%)</span><input id="pillar3a-return" type="number" min="0" max="10" step="0.1" value="2.5" /></label>
             </div>
             <div class="grid-2">
-              <label class="field"><span>Wertschriften</span><input id="investments" type="number" min="0" value="120000" /></label>
-              <label class="field"><span>Erwartete Rendite Wertschriften (%)</span><input id="investments-return" type="number" min="0" max="10" step="0.1" value="4.5" /></label>
+              <label class="field"><span>Wertschriften (CHF)</span><input id="investments" type="number" min="0" value="120000" /></label>
+              <label class="field"><span>Rendite WS (%)</span><input id="investments-return" type="number" min="0" max="10" step="0.1" value="4.5" /></label>
             </div>
             <div class="grid-2">
-              <label class="field"><span>Immobilienwert</span><input id="real-estate" type="number" min="0" value="0" /></label>
-              <label class="field"><span>Einnahmen aus Immobilien</span><input id="real-estate-income" type="number" min="0" value="0" /></label>
+              <label class="field"><span>Immobilienwert (CHF)</span><input id="real-estate" type="number" min="0" value="0" /></label>
+              <label class="field"><span>Mieteinnahmen (CHF)</span><input id="real-estate-income" type="number" min="0" value="0" /></label>
             </div>
             <div class="grid-2">
-              <label class="field"><span>Hypothek / Fremdkapital</span><input id="mortgage" type="number" min="0" value="0" /></label>
-              <div></div>
+              <label class="field"><span>Hypothek (CHF)</span><input id="mortgage" type="number" min="0" value="0" /></label>
+              <label class="field"><span>Übriges Vermögen (CHF)</span><input id="other-assets" type="number" min="0" value="20000" /></label>
             </div>
-            <label class="field"><span>Übriges Vermögen</span><input id="other-assets" type="number" min="0" value="20000" /></label>
           </div>
         </section>
 
         <section class="wizard-step" data-step="3">
           <div class="step-content">
-            <h3>3. Einkommen</h3>
-            <div class="step-inline-summary">
-              <div class="summary-chip">
-                <span>AHV</span>
-                <strong id="step3-ahv-total">CHF 0</strong>
-              </div>
-              <div class="summary-chip">
-                <span>Zusätzliche Einkommen total</span>
-                <strong id="step3-additional-total">CHF 0</strong>
-              </div>
-              <div class="summary-chip">
-                <span>Gesamteinkommen total</span>
-                <strong id="step3-income-total">CHF 0</strong>
-              </div>
+            <div class="step-chips-bar">
+              <span class="mini-chip">AHV: <strong id="step3-ahv-total">CHF 0</strong></span>
+              <span class="mini-chip">Weitere: <strong id="step3-additional-total">CHF 0</strong></span>
+              <span class="mini-chip">Total: <strong id="step3-income-total">CHF 0</strong></span>
             </div>
             <div class="grid-2">
               <label class="field"><span>AHV</span><input id="ahv" type="number" min="0" value="20000" /></label>
@@ -116,34 +95,31 @@
           </div>
         </section>
 
-        <section class="wizard-step" data-step="4">
+        <section class="wizard-step step4-compact" data-step="4">
           <div class="step-content">
-            <h3>4. PK-Varianten & Grafik</h3>
-            <div class="grid-2">
-              <label class="field"><span>Altersguthaben</span>
-                <input id="pk-capital" type="number" min="0" value="1000000" />
-                <div id="pk-capital-display" style="color:#475569;font-size:0.95rem;margin-top:6px"></div>
+            <div class="grid-2 grid-2-keep">
+              <label class="field"><span>Altersguthaben (CHF)</span>
+                <input id="pk-capital" type="text" inputmode="numeric" min="0" value="1'000'000" />
               </label>
-              <label class="field"><span>Umwandlungssatz (UWS, %)</span><input id="conversion-rate" class="input-compact" type="number" min="0" max="10" step="0.1" value="5" /></label>
+              <label class="field"><span>UWS (%)</span><input id="conversion-rate" type="number" min="0" max="10" step="0.1" value="5" /></label>
             </div>
-            <div class="grid-2">
-              <label class="field"><span>Kapitalauszahlung</span>
-                <input id="pk-payout" type="number" min="0" value="60000" />
-                <div id="pk-payout-display" style="color:#475569;font-size:0.95rem;margin-top:6px"></div>
+            <div class="grid-2 grid-2-keep">
+              <label class="field"><span>Kap.-Auszahlung (CHF)</span>
+                <input id="pk-payout" type="text" inputmode="numeric" min="0" value="60'000" />
               </label>
-              <label class="field"><span>Erwartete Jahresrente</span>
-                <input id="pk-pension" type="number" min="0" value="24000" readonly />
-                <div id="pk-pension-display" style="color:#475569;font-size:0.95rem;margin-top:6px"></div>
+              <label class="field"><span>Jahresrente (berechnet)</span>
+                <input id="pk-pension" type="text" inputmode="numeric" value="24'000" readonly />
               </label>
             </div>
-            <label class="field"><span>Kapitalauszahlung</span><input id="pk-share" type="range" min="0" max="100" value="50" /><span class="range-value" id="pk-share-value">50%</span></label>
-            <div class="simulation-grid">
-              <div class="sliders">
-                <label class="field"><span>Jahresbedarf</span><input id="capital-draw" type="number" min="0" value="20000" /></label>
-                <label class="field"><span>Kapitalrendite (%)</span><input id="return-rate" class="input-compact" type="number" min="0" max="12" step="0.1" value="3.5" /></label>
-                <label class="field"><span>Inflation (%)</span><input id="inflation" class="input-compact" type="number" min="0" max="8" step="0.1" value="1.5" /></label>
-              </div>
+            <label class="field field-range"><span>Kap.-Auszahlungsanteil <span class="range-value" id="pk-share-value">50%</span></span><input id="pk-share" type="range" min="0" max="100" value="50" /></label>
+            <label class="field"><span>Jahresbedarf (CHF)</span><input id="capital-draw" type="text" inputmode="numeric" value="20'000" /></label>
+            <div class="grid-2 grid-2-keep">
+              <label class="field"><span>Kapitalrendite (%)</span><input id="return-rate" type="number" min="0" max="12" step="0.1" value="3.5" /></label>
+              <label class="field"><span>Inflation (%)</span><input id="inflation" type="number" min="0" max="8" step="0.1" value="1.5" /></label>
             </div>
+            <div id="pk-capital-display" class="hidden"></div>
+            <div id="pk-payout-display" class="hidden"></div>
+            <div id="pk-pension-display" class="hidden"></div>
             <div class="results-grid results-grid-two-rows">
               <div class="result-card">
                 <h4>Investiertes Kapital</h4>
@@ -175,9 +151,18 @@
                 <p id="result-total">-</p>
                 <div class="result-sub"><div>(Gesichert + Kapitalrendite)</div></div>
               </div>
-              <div class="result-card result-card-wide"><h4>Kapital reicht bis</h4><p id="result-age">-</p></div>
+              <div class="result-card">
+                <h4>Kapital reicht bis</h4>
+                <p id="result-age">-</p>
+                <p id="result-age-emoji" style="font-size:1.6rem;margin:4px 0 0;"></p>
+                <div class="result-sub">
+                  <div id="result-age-detail">-</div>
+                </div>
+              </div>
             </div>
-            <button type="button" class="button button-secondary chart-launch" id="open-chart-modal">Grafik anzeigen</button>
+            <div class="step4-actions">
+              <button type="button" class="button button-secondary chart-launch" id="open-chart-modal">Grafik anzeigen</button>
+            </div>
             <div class="insight-box" id="result-insight"></div>
           </div>
         </section>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pensionsplaner – Variante 2</title>
+  <link rel="stylesheet" href="prototype2.css" />
+</head>
+<body>
+  <main class="p2-app" id="p2-app">
+
+    <!-- Compact sticky header -->
+    <div class="p2-header">
+      <div class="p2-header-bar">
+        <h2 class="p2-title" id="p2-title">Persönliche Angaben</h2>
+        <div class="p2-nav">
+          <button id="p2-prev" class="button button-secondary" title="Testdaten laden">T</button>
+          <button id="p2-next" class="button button-primary">Weiter</button>
+        </div>
+        <button class="p2-info-btn p2-info-smiley" id="p2-info-btn" aria-expanded="false" aria-label="Info einblenden">🙂</button>
+      </div>
+      <p class="p2-desc hidden" id="p2-desc">Deine Grunddaten – werden live in der Simulation verwendet.</p>
+    </div>
+
+    <!-- Step 1: Personal data -->
+    <div class="p2-step active" data-step="1">
+      <div class="p2-fields">
+        <div class="p2-step1-layout">
+          <div class="p2-step1-left">
+            <label class="field field-compact"><span>Alter</span><input id="age" type="number" min="18" value="50" /></label>
+            <label class="field field-compact"><span>Pensionierungsalter</span><input id="retire-age" type="number" min="55" value="65" /></label>
+            <label class="field field-compact"><span>Projektion bis</span><input id="life-expectancy" type="number" min="75" value="90" /></label>
+          </div>
+          <div class="p2-step1-right">
+            <label class="field field-compact"><span>Kanton</span>
+              <select id="canton">
+                <option value="">Bitte wählen</option>
+                <option>AG</option><option>AI</option><option>AR</option><option>BE</option><option>BL</option><option>BS</option>
+                <option>FR</option><option>GE</option><option>GL</option><option>GR</option><option>JU</option><option>LU</option>
+                <option>NE</option><option>NW</option><option>OW</option><option>SG</option><option>SH</option><option>SO</option>
+                <option>SZ</option><option>TG</option><option>TI</option><option>UR</option><option>VD</option><option>VS</option>
+                <option>ZG</option><option>ZH</option>
+              </select>
+            </label>
+            <label class="field"><span>Zivilstand</span>
+              <div class="radio-group radio-group-inline">
+                <label><input type="radio" name="marital-status" value="ledig" checked /> ledig</label>
+                <label><input type="radio" name="marital-status" value="verheiratet" /> verheiratet</label>
+                <label><input type="radio" name="marital-status" value="verwitwet" /> verwitwet</label>
+                <label><input type="radio" name="marital-status" value="geschieden" /> geschieden</label>
+              </div>
+            </label>
+            <label class="field field-compact field-kids"><span>Kinder</span>
+              <div class="radio-group radio-group-inline">
+                <label><input type="radio" name="children" value="nein" checked /> nein</label>
+                <label><input type="radio" name="children" value="ja" /> ja</label>
+              </div>
+            </label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2: PK + Result Hub -->
+    <div class="p2-step" data-step="2">
+
+      <!-- PK input section -->
+      <div class="p2-pk">
+        <div class="grid-2k">
+          <label class="field"><span>Altersguthaben (CHF)</span>
+            <input id="pk-capital" type="text" inputmode="numeric" value="1'000'000" />
+          </label>
+          <label class="field"><span>UWS (%)</span>
+            <input id="conversion-rate" type="number" min="0" max="10" step="0.1" value="5" />
+          </label>
+        </div>
+        <div class="grid-2k">
+          <label class="field"><span>Kapitalauszahlung (CHF)</span>
+            <input id="pk-payout" type="text" inputmode="numeric" value="60'000" />
+          </label>
+          <label class="field"><span>Jahresrente (berechnet)</span>
+            <input id="pk-pension" type="text" inputmode="numeric" value="0" readonly />
+          </label>
+        </div>
+        <label class="field field-range">
+          <span>Kapitalanteil <span id="pk-share-value" class="range-badge">50%</span></span>
+          <input id="pk-share" type="range" min="0" max="100" value="50" />
+        </label>
+        <label class="field"><span>Jahresbedarf (CHF)</span>
+          <input id="capital-draw" type="text" inputmode="numeric" value="20'000" />
+        </label>
+        <div class="grid-2k">
+          <label class="field"><span>Kapitalrendite (%)</span>
+            <input id="return-rate" type="number" min="0" max="12" step="0.1" value="3.5" />
+          </label>
+          <label class="field"><span>Inflation (%)</span>
+            <input id="inflation" type="number" min="0" max="8" step="0.1" value="1.5" />
+          </label>
+        </div>
+        <div class="grid-2k">
+          <label class="field"><span>Projektionsdauer (Jahre)</span>
+            <input id="projection-years" type="number" min="1" max="60" value="27" />
+          </label>
+          <div class="field" style="align-self:end;">
+            <button type="button" class="button button-secondary p2-chart-btn" id="open-chart-modal" aria-label="Grafik anzeigen">📊</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Result cards hub -->
+      <div class="p2-section-label">Ergebnis <span class="p2-section-hint">(Kacheln tippen für Details)</span></div>
+      <div class="p2-cards">
+        <div class="p2-card p2-card-tap p2-card-full" id="card-invested" role="button" tabindex="0" aria-label="Gesamtkapital – Details einblenden">
+          <span class="p2-card-badge">i</span>
+          <h4>Gesamtkapital</h4>
+          <p id="result-invested">–</p>
+          <div class="p2-card-detail">
+            <div class="p2-card-line"><span>davon investiert</span><strong id="result-invested-amount">–</strong></div>
+            <div class="p2-card-line"><span>Kapitalertrag</span><strong id="result-invest-return">–</strong></div>
+          </div>
+        </div>
+        <div class="p2-card p2-card-tap p2-card-full" id="card-secured" role="button" tabindex="0" aria-label="Einkommen Gesamt – Details einblenden">
+          <span class="p2-card-badge">i</span>
+          <h4>Gesamteinkommen</h4>
+          <p id="result-total">–</p>
+          <div class="p2-card-detail">
+            <div class="p2-card-line"><span>Rentenleistungen</span><strong id="result-rent-income">–</strong></div>
+            <div class="p2-card-line"><span>Kapitalertrag</span><strong id="result-invest-income">–</strong></div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Smiley popup -->
+  <div class="p2-smiley-modal hidden" id="smiley-modal" role="dialog" aria-modal="true" aria-labelledby="smiley-modal-title">
+    <div class="p2-smiley-modal-content">
+      <div class="p2-smiley-modal-header">
+        <h4 id="smiley-modal-title">Einschätzung</h4>
+        <button type="button" class="button button-secondary" id="close-smiley-modal">Schliessen</button>
+      </div>
+      <p class="p2-smiley-modal-text" id="smiley-modal-text"></p>
+    </div>
+  </div>
+
+  <!-- Drawer backdrop -->
+  <div class="p2-backdrop" id="p2-backdrop"></div>
+
+  <!-- Drawer: Investiertes Kapital -->
+  <div class="p2-drawer" id="drawer-invested" aria-label="Investiertes Kapital – Details">
+    <div class="p2-drawer-handle"></div>
+    <div class="p2-drawer-header">
+      <div class="p2-drawer-title-row">
+        <h3>Gesamtkapital</h3>
+        <button class="p2-drawer-close" data-drawer="drawer-invested" aria-label="Schliessen">✕</button>
+      </div>
+      <div class="p2-drawer-chips">
+        <span class="mini-chip">Gesamtkapital: <strong id="d-inv-total">–</strong></span>
+        <span class="mini-chip">davon investiert: <strong id="d-inv-invested">–</strong></span>
+        <span class="mini-chip">Kapitalertrag: <strong id="d-inv-return">–</strong></span>
+      </div>
+    </div>
+    <div class="p2-drawer-content">
+      <div class="p2-drawer-summary">
+        <div class="p2-drawer-summary-line"><span>Säule 3a (i)</span><strong id="d-p3a">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>Wertschriften (i)</span><strong id="d-ws">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>Kapital aus PK (i)</span><strong id="d-pk-capital">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>Immobilien</span><strong id="d-real-estate">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>Hypotheken</span><strong id="d-mortgage">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>übriges Vermögen</span><strong id="d-other-assets">–</strong></div>
+        <div class="p2-drawer-summary-note">Kapitalerträge aus (i) und Mieteinnahmen.</div>
+      </div>
+      <div class="grid-2k">
+        <label class="field"><span>Säule 3a (CHF)</span><input id="pillar3a" type="number" min="0" value="80000" /></label>
+        <label class="field"><span>Rendite 3a (%)</span><input id="pillar3a-return" type="number" min="0" max="10" step="0.1" value="2.5" /></label>
+      </div>
+      <div class="grid-2k">
+        <label class="field"><span>Wertschriften (CHF)</span><input id="investments" type="number" min="0" value="120000" /></label>
+        <label class="field"><span>Rendite WS (%)</span><input id="investments-return" type="number" min="0" max="10" step="0.1" value="4.5" /></label>
+      </div>
+      <div class="grid-2k">
+        <label class="field"><span>Immobilienwert (CHF)</span><input id="real-estate" type="number" min="0" value="0" /></label>
+        <label class="field"><span>Mieteinnahmen (CHF)</span><input id="real-estate-income" type="number" min="0" value="0" /></label>
+      </div>
+      <div class="grid-2k">
+        <label class="field"><span>Hypothek (CHF)</span><input id="mortgage" type="number" min="0" value="0" /></label>
+        <label class="field"><span>Übriges Vermögen (CHF)</span><input id="other-assets" type="number" min="0" value="20000" /></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Drawer: Gesichertes Einkommen -->
+  <div class="p2-drawer" id="drawer-income" aria-label="Gesichertes Einkommen – Details">
+    <div class="p2-drawer-handle"></div>
+    <div class="p2-drawer-header">
+      <div class="p2-drawer-title-row">
+        <h3>Gesichertes Einkommen</h3>
+        <button class="p2-drawer-close" data-drawer="drawer-income" aria-label="Schliessen">✕</button>
+      </div>
+      <div class="p2-drawer-chips">
+        <span class="mini-chip">AHV: <strong id="d-ahv">–</strong></span>
+        <span class="mini-chip">Zusatz: <strong id="d-zusatz">–</strong></span>
+        <span class="mini-chip">PK-Rente: <strong id="d-pk-rente">–</strong></span>
+      </div>
+    </div>
+    <div class="p2-drawer-content">
+      <div class="grid-2k">
+        <label class="field"><span>AHV (CHF)</span><input id="ahv" type="number" min="0" value="20000" /></label>
+        <label class="field"><span>Kinderzulagen (CHF)</span><input id="child-allowance" type="number" min="0" value="0" /></label>
+      </div>
+      <div class="grid-2k">
+        <label class="field"><span>Kinderrenten (CHF)</span><input id="child-pension" type="number" min="0" value="0" /></label>
+        <label class="field"><span>Übrige Renten (CHF)</span><input id="other-income" type="number" min="0" value="0" /></label>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart modal -->
+  <div class="p2-chart-modal hidden" id="chart-modal" role="dialog" aria-modal="true" aria-labelledby="chart-modal-title">
+    <div class="p2-chart-modal-content">
+      <div class="p2-chart-modal-header">
+        <h4 id="chart-modal-title">Projektion</h4>
+        <div class="p2-chart-mode" aria-label="Darstellungsmodus">
+          <button type="button" class="p2-mode-btn active" data-chart-mode="nominal">Nominal</button>
+          <button type="button" class="p2-mode-btn" data-chart-mode="real">Real</button>
+        </div>
+        <button type="button" class="button button-secondary" id="close-chart-modal">Schliessen</button>
+      </div>
+      <div class="p2-chart-card" id="chart-card">
+        <canvas id="simulation-chart" width="800" height="320"></canvas>
+      </div>
+      <div class="p2-chart-note" id="chart-method-note"></div>
+    </div>
+  </div>
+
+  <script src="prototype2.js"></script>
+</body>
+</html>

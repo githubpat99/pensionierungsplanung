@@ -9,7 +9,65 @@ const chartCard = document.getElementById('chart-card');
 const chartModal = document.getElementById('chart-modal');
 const openChartModalButton = document.getElementById('open-chart-modal');
 const closeChartModalButton = document.getElementById('close-chart-modal');
+const step4Section = document.querySelector('.wizard-step[data-step="4"]');
+const step4Cards = Array.from(document.querySelectorAll('.wizard-step[data-step="4"] .result-card'));
+const page = document.querySelector('.page');
+const wizardCard = document.getElementById('wizard-card');
+const wizardInfoBtn = document.getElementById('wizard-info-btn');
+const wizardDescPanel = document.getElementById('wizard-description');
 const shareValue = (id) => document.getElementById(id)?.value;
+
+// Parse Swiss-formatted numbers (1'234'567 or plain)
+function parseFormatted(val) {
+  if (typeof val !== 'string') val = String(val ?? '');
+  const n = Number(val.replace(/[' ]/g, ''));
+  return Number.isFinite(n) ? n : 0;
+}
+
+function formatThousands(n) {
+  if (!Number.isFinite(n)) return '';
+  return Math.round(n).toLocaleString('de-CH').replace(/\u202f/g, "'").replace(/,/g, "'");
+}
+
+// Read a number field that may be text-formatted
+function readField(id) {
+  const el = document.getElementById(id);
+  if (!el) return 0;
+  return parseFormatted(el.value);
+}
+
+const FORMATTED_FIELDS = ['pk-capital', 'pk-payout', 'pk-pension', 'capital-draw'];
+
+function applyThousandsFormat(id) {
+  const el = document.getElementById(id);
+  if (!el || el === document.activeElement) return;
+  const n = parseFormatted(el.value);
+  if (n > 0) el.value = formatThousands(n);
+}
+
+function initFormattedFields() {
+  FORMATTED_FIELDS.forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    // Format initial value
+    const n = parseFormatted(el.value);
+    if (n > 0) el.value = formatThousands(n);
+    // On blur: reformat
+    el.addEventListener('blur', () => {
+      const n2 = parseFormatted(el.value);
+      el.value = n2 > 0 ? formatThousands(n2) : '';
+    });
+    // On focus: show raw number for easy editing
+    el.addEventListener('focus', () => {
+      const n2 = parseFormatted(el.value);
+      if (n2 > 0) el.value = String(n2);
+    });
+  });
+}
+const storageKeys = {
+  started: 'prototype-wizard-started',
+  step: 'prototype-wizard-step',
+};
 
 const stepData = [
   { title: 'Persönliche Angaben', desc: 'Beginne mit deinen Grunddaten. Die Simulation wird direkt aktualisiert.' },
@@ -23,19 +81,95 @@ let currentStep = 0;
 const prevButton = document.getElementById('header-prev');
 const nextButton = document.getElementById('header-next');
 
+function activateWizardMode() {
+  if (page) {
+    page.classList.add('wizard-started');
+  }
+  try {
+    window.sessionStorage.setItem(storageKeys.started, '1');
+  } catch (_) {
+    // ignore storage failures
+  }
+}
+
+function restoreWizardMode() {
+  try {
+    return window.sessionStorage.getItem(storageKeys.started) === '1';
+  } catch (_) {
+    return false;
+  }
+}
+
+function saveCurrentStep(index) {
+  try {
+    window.sessionStorage.setItem(storageKeys.step, String(index));
+  } catch (_) {
+    // ignore storage failures
+  }
+}
+
+function readStoredStep() {
+  try {
+    const raw = window.sessionStorage.getItem(storageKeys.step);
+    const value = Number.parseInt(raw, 10);
+    if (!Number.isFinite(value)) return 0;
+    return Math.min(Math.max(value, 0), steps.length - 1);
+  } catch (_) {
+    return 0;
+  }
+}
+
+function setStep4CardExpanded(card, isExpanded) {
+  if (!card) return;
+  card.classList.toggle('expanded', isExpanded);
+  card.setAttribute('aria-expanded', isExpanded ? 'true' : 'false');
+}
+
+function initializeStep4Cards() {
+  if (!step4Cards.length) return;
+
+  step4Cards.forEach((card) => {
+    card.setAttribute('role', 'button');
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('aria-expanded', 'false');
+
+    card.addEventListener('click', () => {
+      const shouldOpen = !card.classList.contains('expanded');
+      step4Cards.forEach((otherCard) => setStep4CardExpanded(otherCard, false));
+      setStep4CardExpanded(card, shouldOpen);
+    });
+
+    card.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter' || event.key === ' ') {
+        event.preventDefault();
+        card.click();
+      }
+    });
+  });
+}
+
 function showStep(index) {
   currentStep = index;
+  saveCurrentStep(index);
   steps.forEach((step, i) => step.classList.toggle('active', i === index));
   title.textContent = stepData[index].title;
-  description.textContent = stepData[index].desc;
+  if (description) {
+    description.textContent = stepData[index].desc;
+    description.classList.add('hidden');
+  }
+  if (wizardInfoBtn) wizardInfoBtn.setAttribute('aria-expanded', 'false');
   progress.textContent = `Schritt ${index + 1} von ${steps.length}`;
-  prevButton.disabled = index === 0;
+  prevButton.disabled = false;
+  prevButton.textContent = index === 0 ? 'Testdaten laden' : 'Zurueck';
   nextButton.disabled = index === steps.length - 1;
-  nextButton.textContent = index === steps.length - 1 ? 'Erneut prüfen' : 'Weiter';
+  nextButton.textContent = 'Weiter';
+  nextButton.style.visibility = index === steps.length - 1 ? 'hidden' : 'visible';
   if (index === steps.length - 1) {
     updateResults();
   }
-  window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (window.innerWidth > 640) {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 }
 
 function simulateProjection(initialCapital, securedIncome, variableReturnRate, draw, inflation, years) {
@@ -261,7 +395,7 @@ function formatCHF(value) {
 }
 
 function readNumber(id) {
-  return Number(shareValue(id)) || 0;
+  return readField(id);
 }
 
 function updateStepSummaries() {
@@ -300,69 +434,63 @@ function updateStepSummaries() {
 }
 
 function syncPkDisplays() {
-  const pkCapital = Number(shareValue('pk-capital')) || 0;
+  const pkCapital = readField('pk-capital');
   const pkShare = Number(shareValue('pk-share')) || 0;
   const pkPayoutEl = document.getElementById('pk-payout');
-  const pkPayoutDisplay = document.getElementById('pk-payout-display');
-  const pkCapitalDisplay = document.getElementById('pk-capital-display');
-  if (pkCapitalDisplay) pkCapitalDisplay.textContent = `Gesamt: CHF ${formatCHF(pkCapital)}`;
-  // if user hasn't manually entered pk-payout, mirror slider
-  if (pkPayoutEl && (!pkPayoutEl.dataset.userEdited || pkPayoutEl.value === '' || Number(pkPayoutEl.value) === 0)) {
+  // if user hasn't manually edited pk-payout, mirror slider
+  if (pkPayoutEl && (!pkPayoutEl.dataset.userEdited || parseFormatted(pkPayoutEl.value) === 0)) {
     const implied = Math.round(pkCapital * (pkShare / 100));
-    pkPayoutEl.value = implied;
+    pkPayoutEl.value = document.activeElement === pkPayoutEl ? String(implied) : formatThousands(implied);
   }
-  if (pkPayoutDisplay) pkPayoutDisplay.textContent = `Auszahlung: CHF ${formatCHF(Number(document.getElementById('pk-payout').value || 0))}`;
-
-  // compute and display PK pension (read-only field + formatted display)
+  // compute and update PK pension (read-only)
   const pkPensionEl = document.getElementById('pk-pension');
-  const pkPensionDisplay = document.getElementById('pk-pension-display');
-  const pkPayoutVal = Number(document.getElementById('pk-payout').value || 0);
+  const pkPayoutVal = readField('pk-payout');
   const remainingPk = Math.max(0, pkCapital - pkPayoutVal);
   const conversion = Number(shareValue('conversion-rate')) / 100;
   const computedPension = Math.round(remainingPk * conversion);
-  if (pkPensionEl) pkPensionEl.value = computedPension;
-  if (pkPensionDisplay) pkPensionDisplay.textContent = `Berechnet: CHF ${formatCHF(computedPension)}`;
+  if (pkPensionEl) {
+    pkPensionEl.value = document.activeElement === pkPensionEl ? String(computedPension) : formatThousands(computedPension);
+  }
 }
 
 function updateResults() {
   const projectionYears = Math.max(1, Number(shareValue('projection-years')) || 1);
   const life = Number(shareValue('retire-age')) + projectionYears;
-  const draw = Number(shareValue('capital-draw'));
-  const netRealEstate = Math.max(0, Number(shareValue('real-estate')) - Number(shareValue('mortgage')));
-  const capital = Number(shareValue('pk-capital')) + Number(shareValue('pillar3a')) + Number(shareValue('investments')) + Number(shareValue('other-assets')) + netRealEstate;
+  const draw = readField('capital-draw');
+  const netRealEstate = Math.max(0, readField('real-estate') - readField('mortgage'));
+  const capital = readField('pk-capital') + readField('pillar3a') + readField('investments') + readField('other-assets') + netRealEstate;
   const years = projectionYears;
 
-  // include age, retire age and children in the insight text for clarity
   const age = Number(shareValue('age'));
   const retireAge = Number(shareValue('retire-age'));
   const children = shareValue('children');
 
-  const pkCapital = Number(shareValue('pk-capital'));
-  const pkPayout = Math.min(Number(shareValue('pk-payout')) || 0, pkCapital);
+  const pkCapital = readField('pk-capital');
+  const pkPayout = Math.min(readField('pk-payout'), pkCapital);
   const remainingPk = Math.max(0, pkCapital - pkPayout);
   const conversion = Number(shareValue('conversion-rate')) / 100;
   const pkPensionComputed = Math.round(remainingPk * conversion);
   const investedCapital = Math.round(
-    Number(shareValue('pillar3a')) +
-    Number(shareValue('investments')) +
-    Number(shareValue('other-assets')) +
+    readField('pillar3a') +
+    readField('investments') +
+    readField('other-assets') +
     pkPayout
   );
-  const pillar3aReturn = Number(shareValue('pillar3a-return')) / 100;
-  const investmentsReturn = Number(shareValue('investments-return')) / 100;
+  const pillar3aReturn = readField('pillar3a-return') / 100;
+  const investmentsReturn = readField('investments-return') / 100;
   const otherAssetsReturn = Number(shareValue('return-rate')) / 100;
   const weightedReturnRate = (
-    (Number(shareValue('pillar3a')) * pillar3aReturn) +
-    (Number(shareValue('investments')) * investmentsReturn) +
-    ((Number(shareValue('other-assets')) + pkPayout) * otherAssetsReturn)
+    (readField('pillar3a') * pillar3aReturn) +
+    (readField('investments') * investmentsReturn) +
+    ((readField('other-assets') + pkPayout) * otherAssetsReturn)
   ) / Math.max(investedCapital, 1);
   const securedIncome = Math.round(
     pkPensionComputed +
-    Number(shareValue('ahv')) +
-    Number(shareValue('child-allowance')) +
-    Number(shareValue('child-pension')) +
-    Number(shareValue('other-income')) +
-    Number(shareValue('real-estate-income'))
+    readField('ahv') +
+    readField('child-allowance') +
+    readField('child-pension') +
+    readField('other-income') +
+    readField('real-estate-income')
   );
   const projection = simulateProjection(capital, securedIncome, weightedReturnRate, draw, Number(shareValue('inflation')) / 100 || 0, years);
   const firstYearReturn = Math.round(projection.returnAmounts[0] || 0);
@@ -371,11 +499,39 @@ function updateResults() {
   const gapToNeed = annualInflatedNeed - firstYearPotentialIncome;
   const firstDepletionYear = projection.rawPath.findIndex((value, index) => index > 0 && value <= 0);
   const resultAge = firstDepletionYear > 0 ? Number(shareValue('retire-age')) + firstDepletionYear : null;
+  const ageIsUnlimited = draw <= 0 || resultAge === null || resultAge > 120;
+  const ageValue = ageIsUnlimited ? null : resultAge;
   const resultAgeText = draw > 0
-    ? (resultAge === null ? '120+' : (resultAge > 120 ? '120+' : `${resultAge} Jahre`))
+    ? (ageIsUnlimited ? '120+' : `${resultAge} Jahre`)
     : 'Unbegrenzt';
+  const resultAgeDetailEl = document.getElementById('result-age-detail');
+  const resultAgeEmojiEl = document.getElementById('result-age-emoji');
 
   document.getElementById('result-age').textContent = resultAgeText;
+
+  // Emoji based on how long the capital lasts
+  if (resultAgeEmojiEl) {
+    if (ageIsUnlimited) {
+      resultAgeEmojiEl.textContent = '🤩';
+      resultAgeEmojiEl.title = 'Kapital reicht ueber den gesamten Horizont!';
+    } else if (ageValue >= 90) {
+      resultAgeEmojiEl.textContent = '😊';
+      resultAgeEmojiEl.title = 'Sehr gut – Kapital reicht bis mindestens 90';
+    } else {
+      resultAgeEmojiEl.textContent = '🤔';
+      resultAgeEmojiEl.title = 'Kapital reicht nicht bis 90 – Optimierungsbedarf';
+    }
+  }
+
+  if (resultAgeDetailEl) {
+    if (draw <= 0) {
+      resultAgeDetailEl.textContent = `Kein Kapitalverzehr bei Bedarf CHF 0/Jahr. Projektion bis Alter ${life}.`;
+    } else if (ageIsUnlimited) {
+      resultAgeDetailEl.textContent = `Bei Bedarf CHF ${formatCHF(draw)}/Jahr reicht das Kapital ueber den Projekthorizont bis Alter ${life}.`;
+    } else {
+      resultAgeDetailEl.textContent = `Bei Bedarf CHF ${formatCHF(draw)}/Jahr wird Alter ${resultAge} erreicht.`;
+    }
+  }
 
   document.getElementById('result-invested').textContent = `CHF ${formatCHF(investedCapital)}`;
   document.getElementById('result-secured').textContent = `CHF ${formatCHF(securedIncome)}`;
@@ -425,10 +581,10 @@ function fillExample() {
   document.getElementById('marital-status').value = 'verheiratet';
   document.getElementById('children').value = 'ja';
   document.getElementById('life-expectancy').value = 92;
-  document.getElementById('pk-capital').value = 1100000;
+  document.getElementById('pk-capital').value = '1\'100\'000';
   document.getElementById('conversion-rate').value = 5.2;
-  document.getElementById('pk-pension').value = 45000;
-  document.getElementById('pk-payout').value = 300000;
+  document.getElementById('pk-pension').value = '45\'000';
+  document.getElementById('pk-payout').value = '300\'000';
   document.getElementById('pk-share').value = 50;
   document.getElementById('pk-share-value').textContent = '50%';
   document.getElementById('pillar3a').value = 85000;
@@ -448,7 +604,7 @@ function fillExample() {
   document.getElementById('return-rate').value = 5;
   document.getElementById('inflation').value = 1.1;
   document.getElementById('projection-years').value = 27;
-  document.getElementById('capital-draw').value = 120000;
+  document.getElementById('capital-draw').value = '120\'000';
   // mark that pk-payout was not manually edited so slider sync can set it
   const pkPayoutEl = document.getElementById('pk-payout');
   if (pkPayoutEl) delete pkPayoutEl.dataset.userEdited;
@@ -459,8 +615,18 @@ function fillExample() {
 }
 
 function attachEvents() {
-  startButton.addEventListener('click', () => showStep(0));
-  exampleButton.addEventListener('click', () => fillExample());
+  startButton.addEventListener('click', () => {
+    activateWizardMode();
+    showStep(0);
+    wizardCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  exampleButton.addEventListener('click', () => {
+    activateWizardMode();
+    fillExample();
+    showStep(0);
+    wizardCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
 
   document.querySelectorAll('input, select').forEach((control) => {
     control.addEventListener('input', () => {
@@ -470,6 +636,9 @@ function attachEvents() {
       }
       // if pk-payout input edited by user mark it
       if (control.id === 'pk-payout') control.dataset.userEdited = '1';
+      if (FORMATTED_FIELDS.includes(control.id)) {
+        // allow typing freely – only format on blur (handled in initFormattedFields)
+      }
       if (control.id === 'pk-share' || control.id === 'pk-capital' || control.id === 'pk-payout') syncPkDisplays();
       updateStepSummaries();
       if (chartModal && !chartModal.classList.contains('hidden')) updateChart();
@@ -498,6 +667,21 @@ function attachEvents() {
     });
   }
 
+  if (step4InfoButton && step4Section) {
+    step4InfoButton.addEventListener('click', () => {
+      const isOpen = step4Section.classList.contains('details-open');
+      setStep4DetailsVisibility(!isOpen);
+    });
+  }
+
+  if (wizardInfoBtn && wizardDescPanel) {
+    wizardInfoBtn.addEventListener('click', () => {
+      const isOpen = !wizardDescPanel.classList.contains('hidden');
+      wizardDescPanel.classList.toggle('hidden', isOpen);
+      wizardInfoBtn.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+    });
+  }
+
   window.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && chartModal && !chartModal.classList.contains('hidden')) {
       chartModal.classList.add('hidden');
@@ -511,14 +695,31 @@ function attachEvents() {
   });
 
   document.querySelectorAll('[data-action="next"]').forEach((button) => {
-    button.addEventListener('click', () => showStep(Math.min(steps.length - 1, currentStep + 1)));
+    button.addEventListener('click', () => {
+      activateWizardMode();
+      showStep(Math.min(steps.length - 1, currentStep + 1));
+    });
   });
   document.querySelectorAll('[data-action="prev"]').forEach((button) => {
-    button.addEventListener('click', () => showStep(Math.max(0, currentStep - 1)));
+    button.addEventListener('click', () => {
+      if (currentStep === 0) {
+        activateWizardMode();
+        fillExample();
+        showStep(0);
+        return;
+      }
+      showStep(Math.max(0, currentStep - 1));
+    });
   });
 }
 
-showStep(0);
+if (restoreWizardMode()) {
+  activateWizardMode();
+}
+
+initFormattedFields();
+initializeStep4Cards();
+showStep(readStoredStep());
 attachEvents();
 updateStepSummaries();
 updateResults();
