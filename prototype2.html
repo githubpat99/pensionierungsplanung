@@ -14,8 +14,8 @@
       <div class="p2-header-bar">
         <h2 class="p2-title" id="p2-title">Persönliche Angaben</h2>
         <div class="p2-nav">
-          <button id="p2-prev" class="button button-secondary" title="Testdaten laden">T</button>
-          <button id="p2-next" class="button button-primary">Weiter</button>
+          <button id="p2-prev" class="button button-secondary" title="Zurück" aria-label="Zurück">←</button>
+          <button id="p2-next" class="button button-primary">Simulation</button>
         </div>
         <button class="p2-info-btn p2-info-smiley" id="p2-info-btn" aria-expanded="false" aria-label="Info einblenden">🙂</button>
       </div>
@@ -27,9 +27,9 @@
       <div class="p2-fields">
         <div class="p2-step1-layout">
           <div class="p2-step1-left">
-            <label class="field field-compact"><span>Alter</span><input id="age" type="number" min="18" value="50" /></label>
+            <label class="field field-compact"><span>Alter</span><input id="age" type="number" min="18" value="56" /></label>
             <label class="field field-compact"><span>Pensionierungsalter</span><input id="retire-age" type="number" min="55" value="65" /></label>
-            <label class="field field-compact"><span>Projektion bis</span><input id="life-expectancy" type="number" min="75" value="90" /></label>
+            <label class="field field-compact field-projection"><span>Projektion bis</span><input id="life-expectancy" type="number" min="75" value="92" /></label>
           </div>
           <div class="p2-step1-right">
             <label class="field field-compact"><span>Kanton</span>
@@ -37,23 +37,23 @@
                 <option value="">Bitte wählen</option>
                 <option>AG</option><option>AI</option><option>AR</option><option>BE</option><option>BL</option><option>BS</option>
                 <option>FR</option><option>GE</option><option>GL</option><option>GR</option><option>JU</option><option>LU</option>
-                <option>NE</option><option>NW</option><option>OW</option><option>SG</option><option>SH</option><option>SO</option>
+                <option>NE</option><option>NW</option><option>OW</option><option selected>SG</option><option>SH</option><option>SO</option>
                 <option>SZ</option><option>TG</option><option>TI</option><option>UR</option><option>VD</option><option>VS</option>
                 <option>ZG</option><option>ZH</option>
               </select>
             </label>
             <label class="field"><span>Zivilstand</span>
               <div class="radio-group radio-group-inline">
-                <label><input type="radio" name="marital-status" value="ledig" checked /> ledig</label>
-                <label><input type="radio" name="marital-status" value="verheiratet" /> verheiratet</label>
+                <label><input type="radio" name="marital-status" value="ledig" /> ledig</label>
+                <label><input type="radio" name="marital-status" value="verheiratet" checked /> verheiratet</label>
                 <label><input type="radio" name="marital-status" value="verwitwet" /> verwitwet</label>
                 <label><input type="radio" name="marital-status" value="geschieden" /> geschieden</label>
               </div>
             </label>
             <label class="field field-compact field-kids"><span>Kinder</span>
               <div class="radio-group radio-group-inline">
-                <label><input type="radio" name="children" value="nein" checked /> nein</label>
-                <label><input type="radio" name="children" value="ja" /> ja</label>
+                <label><input type="radio" name="children" value="nein" /> nein</label>
+                <label><input type="radio" name="children" value="ja" checked /> ja</label>
               </div>
             </label>
           </div>
@@ -68,26 +68,25 @@
       <div class="p2-pk">
         <div class="grid-2k">
           <label class="field"><span>Altersguthaben (CHF)</span>
-            <input id="pk-capital" type="text" inputmode="numeric" value="1'000'000" />
+            <input id="pk-capital" type="text" inputmode="numeric" value="950'000" />
           </label>
           <label class="field"><span>UWS (%)</span>
-            <input id="conversion-rate" type="number" min="0" max="10" step="0.1" value="5" />
+            <input id="conversion-rate" type="number" min="0" max="10" step="0.1" value="3.6" />
           </label>
         </div>
-        <div class="grid-2k">
-          <label class="field"><span>Kapitalauszahlung (CHF)</span>
-            <input id="pk-payout" type="text" inputmode="numeric" value="60'000" />
-          </label>
-          <label class="field"><span>Jahresrente (berechnet)</span>
-            <input id="pk-pension" type="text" inputmode="numeric" value="0" readonly />
-          </label>
-        </div>
+        <input id="pk-payout" type="hidden" value="60'000" />
+        <input id="pk-pension" type="hidden" value="0" />
         <label class="field field-range">
-          <span>Kapitalanteil <span id="pk-share-value" class="range-badge">50%</span></span>
-          <input id="pk-share" type="range" min="0" max="100" value="50" />
+          <span class="p2-mix-head"><span>Kapitalanteil</span><strong id="pk-share-value" class="range-badge">50%</strong></span>
+          <div class="p2-mix-track" aria-hidden="true"><span></span></div>
+          <input id="pk-share" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
+          <div class="p2-mix-labels">
+            <span>Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value">Kapitalrendite –</small></span>
+            <span>Rente <strong id="pk-rent-share-value">–</strong></span>
+          </div>
         </label>
         <label class="field"><span>Jahresbedarf (CHF)</span>
-          <input id="capital-draw" type="text" inputmode="numeric" value="20'000" />
+          <input id="capital-draw" type="text" inputmode="numeric" value="120'000" />
         </label>
         <div class="grid-2k">
           <label class="field"><span>Kapitalrendite (%)</span>
@@ -103,8 +102,8 @@
           </label>
           <div class="field" style="align-self:end;">
             <div class="p2-chart-actions">
-              <button type="button" class="button button-secondary p2-chart-btn" id="open-chart-modal" aria-label="Kapitalentwicklung anzeigen">Kapital</button>
-              <button type="button" class="button button-secondary p2-chart-btn" id="open-gap-modal" aria-label="Rentenluecke anzeigen">Luecke</button>
+              <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-chart-modal" title="Kapitalentwicklung anzeigen" aria-label="Kapitalentwicklung anzeigen"><span class="p2-button-icon p2-button-icon-capital" aria-hidden="true"></span></button>
+              <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-gap-modal" title="Rentenlücke anzeigen" aria-label="Rentenlücke anzeigen"><span class="p2-button-icon p2-button-icon-gap" aria-hidden="true"></span></button>
             </div>
           </div>
         </div>
@@ -116,29 +115,13 @@
         <div class="p2-card p2-card-tap p2-card-full" id="card-invested" role="button" tabindex="0" aria-label="Gesamtkapital – Details einblenden">
           <span class="p2-card-badge">i</span>
           <h4>Gesamtkapital</h4>
-          <p id="result-invested">–</p>
-          <div class="p2-card-detail">
-            <div class="p2-card-line"><span>davon investiert</span><strong id="result-invested-amount">–</strong></div>
-            <div class="p2-card-line"><span>Kapitalertrag</span><strong id="result-invest-return">–</strong></div>
-          </div>
+          <p class="p2-card-summary"><strong id="result-invested">–</strong><span>investiert <b id="result-invested-amount">–</b></span><span>Ertrag <b id="result-invest-return">–</b></span></p>
         </div>
-        <div class="p2-card p2-card-tap p2-card-full" id="card-secured" role="button" tabindex="0" aria-label="Einkommen Gesamt – Details einblenden">
+        <div class="p2-card p2-card-tap p2-card-full" id="card-secured" role="button" tabindex="0" aria-label="Gesamteinkommen / Jahr – Details einblenden">
           <span class="p2-card-badge">i</span>
-          <h4>Gesamteinkommen</h4>
-          <p id="result-total">–</p>
-          <div class="p2-card-detail">
-            <div class="p2-card-line"><span>Rentenleistungen</span><strong id="result-rent-income">–</strong></div>
-            <div class="p2-card-line"><span>Kapitalertrag</span><strong id="result-invest-income">–</strong></div>
-          </div>
+          <h4>Gesamteinkommen / Jahr</h4>
+          <p class="p2-card-summary"><strong id="result-total">–</strong><span>Renten <b id="result-rent-income">–</b></span><span>Kapitalertrag <b id="result-invest-income">–</b></span></p>
         </div>
-      </div>
-
-      <div class="p2-gap-story">
-        <div class="p2-gap-story-head">
-          <h4>Rentenlücke auf Jahresbasis</h4>
-          <p>Einkommen vs. Bedarf pro Jahr ab Pensionierung.</p>
-        </div>
-        <div class="p2-gap-gallery" id="annual-gap-gallery" aria-live="polite"></div>
       </div>
 
     </div>
@@ -167,62 +150,73 @@
         <h3>Gesamtkapital</h3>
         <button class="p2-drawer-close" data-drawer="drawer-invested" aria-label="Schliessen">✕</button>
       </div>
-      <div class="p2-drawer-chips">
-        <span class="mini-chip">Gesamtkapital: <strong id="d-inv-total">–</strong></span>
-        <span class="mini-chip">davon investiert: <strong id="d-inv-invested">–</strong></span>
-        <span class="mini-chip">Kapitalertrag: <strong id="d-inv-return">–</strong></span>
+      <div class="p2-drawer-capital-summary">
+        <strong id="d-inv-total">–</strong>
+        <span>investiert <b id="d-inv-invested">–</b></span>
+        <span>Ertrag <b id="d-inv-return">–</b></span>
       </div>
     </div>
     <div class="p2-drawer-content">
       <div class="p2-drawer-summary">
-        <div class="p2-drawer-summary-line"><span>Säule 3a (i)</span><strong id="d-p3a">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>Wertschriften (i)</span><strong id="d-ws">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>Kapital aus PK (i)</span><strong id="d-pk-capital">–</strong></div>
+        <div class="p2-drawer-section-title"><span>investiert</span><strong id="d-inv-invested-section">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>Säule 3a</span><strong id="d-p3a">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>Wertschriften</span><strong id="d-ws">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>Kapital aus PK</span><strong id="d-pk-capital">–</strong></div>
+        <div class="p2-drawer-section-title"><span>weiteres Vermögen</span><strong id="d-other-total">–</strong></div>
         <div class="p2-drawer-summary-line"><span>Immobilien</span><strong id="d-real-estate">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>Hypotheken</span><strong id="d-mortgage">–</strong></div>
+        <div class="p2-drawer-summary-line"><span>Schulden / Hypotheken</span><strong id="d-mortgage">–</strong></div>
         <div class="p2-drawer-summary-line"><span>übriges Vermögen</span><strong id="d-other-assets">–</strong></div>
-        <div class="p2-drawer-summary-note">Kapitalerträge aus (i) und Mieteinnahmen.</div>
+      </div>
+      <div class="p2-drawer-section-title p2-drawer-earnings-title"><span>Ertrag</span><strong id="d-inv-return-section">–</strong></div>
+      <div class="p2-drawer-input-row">
+        <label class="field"><span>Säule 3a (CHF)</span><input id="pillar3a" type="number" min="0" value="85000" /></label>
+        <label class="field"><span>Zins (%)</span><input id="pillar3a-return" type="number" min="0" max="10" step="0.1" value="4.5" /></label>
+        <div class="p2-drawer-return"><strong id="d-p3a-return">–</strong></div>
+      </div>
+      <div class="p2-drawer-input-row">
+        <label class="field"><span>Wertschriften (CHF)</span><input id="investments" type="number" min="0" value="15000" /></label>
+        <label class="field"><span>Zins (%)</span><input id="investments-return" type="number" min="0" max="10" step="0.1" value="5" /></label>
+        <div class="p2-drawer-return"><strong id="d-ws-return">–</strong></div>
+      </div>
+      <div class="p2-drawer-input-row p2-drawer-earnings-row">
+        <span>Ertrag aus PK</span>
+        <span>Kapitalrendite <b id="d-pk-rate">–</b></span>
+        <strong id="d-pk-return">–</strong>
+      </div>
+      <div class="p2-drawer-earnings-row p2-drawer-other-row"><span>Weitere Erträge</span><strong id="d-other-return">–</strong></div>
+      <div class="p2-drawer-separator" aria-hidden="true"></div>
+      <div class="grid-2k">
+        <label class="field"><span>Immobilien (CHF)</span><input id="real-estate" type="number" min="0" value="1600000" /></label>
+        <label class="field"><span>Schulden / Hypotheken (CHF)</span><input id="mortgage" type="number" min="0" value="930000" /></label>
       </div>
       <div class="grid-2k">
-        <label class="field"><span>Säule 3a (CHF)</span><input id="pillar3a" type="number" min="0" value="80000" /></label>
-        <label class="field"><span>Rendite 3a (%)</span><input id="pillar3a-return" type="number" min="0" max="10" step="0.1" value="2.5" /></label>
-      </div>
-      <div class="grid-2k">
-        <label class="field"><span>Wertschriften (CHF)</span><input id="investments" type="number" min="0" value="120000" /></label>
-        <label class="field"><span>Rendite WS (%)</span><input id="investments-return" type="number" min="0" max="10" step="0.1" value="4.5" /></label>
-      </div>
-      <div class="grid-2k">
-        <label class="field"><span>Immobilienwert (CHF)</span><input id="real-estate" type="number" min="0" value="0" /></label>
-        <label class="field"><span>Mieteinnahmen (CHF)</span><input id="real-estate-income" type="number" min="0" value="0" /></label>
-      </div>
-      <div class="grid-2k">
-        <label class="field"><span>Hypothek (CHF)</span><input id="mortgage" type="number" min="0" value="0" /></label>
-        <label class="field"><span>Übriges Vermögen (CHF)</span><input id="other-assets" type="number" min="0" value="20000" /></label>
+        <label class="field"><span>Übriges Vermögen (CHF)</span><input id="other-assets" type="number" min="0" value="0" /></label>
+        <label class="field"><span>Weitere Erträge (CHF)</span><input id="real-estate-income" type="number" min="0" value="10000" /></label>
       </div>
     </div>
   </div>
 
   <!-- Drawer: Gesichertes Einkommen -->
-  <div class="p2-drawer" id="drawer-income" aria-label="Gesichertes Einkommen – Details">
+  <div class="p2-drawer" id="drawer-income" aria-label="Renten – Details">
     <div class="p2-drawer-handle"></div>
     <div class="p2-drawer-header">
       <div class="p2-drawer-title-row">
-        <h3>Gesichertes Einkommen</h3>
+        <h3>Renten</h3>
         <button class="p2-drawer-close" data-drawer="drawer-income" aria-label="Schliessen">✕</button>
       </div>
-      <div class="p2-drawer-chips">
-        <span class="mini-chip">AHV: <strong id="d-ahv">–</strong></span>
-        <span class="mini-chip">Zusatz: <strong id="d-zusatz">–</strong></span>
-        <span class="mini-chip">PK-Rente: <strong id="d-pk-rente">–</strong></span>
+      <div class="p2-drawer-income-summary">
+        <strong id="d-rent-total">–</strong>
+        <div><span>AHV</span><b id="d-ahv">–</b><span>Zusätze</span><b id="d-zusatz">–</b></div>
+        <div><span>PK</span><b id="d-pk-rente">–</b></div>
       </div>
     </div>
     <div class="p2-drawer-content">
       <div class="grid-2k">
-        <label class="field"><span>AHV (CHF)</span><input id="ahv" type="number" min="0" value="20000" /></label>
-        <label class="field"><span>Kinderzulagen (CHF)</span><input id="child-allowance" type="number" min="0" value="0" /></label>
+        <label class="field"><span>AHV (CHF)</span><input id="ahv" type="number" min="0" value="32760" /></label>
+        <label class="field"><span>Kinderzulagen (CHF)</span><input id="child-allowance" type="number" min="0" value="5520" /></label>
       </div>
       <div class="grid-2k">
-        <label class="field"><span>Kinderrenten (CHF)</span><input id="child-pension" type="number" min="0" value="0" /></label>
+        <label class="field"><span>Kinderrenten (CHF)</span><input id="child-pension" type="number" min="0" value="11376" /></label>
         <label class="field"><span>Übrige Renten (CHF)</span><input id="other-income" type="number" min="0" value="0" /></label>
       </div>
     </div>
@@ -232,12 +226,8 @@
   <div class="p2-chart-modal hidden" id="chart-modal" role="dialog" aria-modal="true" aria-labelledby="chart-modal-title">
     <div class="p2-chart-modal-content">
       <div class="p2-chart-modal-header">
-        <h4 id="chart-modal-title">Projektion</h4>
-        <div class="p2-chart-mode" aria-label="Darstellungsmodus">
-          <button type="button" class="p2-mode-btn active" data-chart-mode="nominal">Nominal</button>
-          <button type="button" class="p2-mode-btn" data-chart-mode="real">Real</button>
-        </div>
-        <button type="button" class="button button-secondary" id="close-chart-modal">Schliessen</button>
+        <h4 id="chart-modal-title">Kapitalentwicklung (nominal)</h4>
+        <button type="button" class="p2-modal-close" id="close-chart-modal" aria-label="Kapitalentwicklung schliessen"></button>
       </div>
       <div class="p2-chart-card" id="chart-card">
         <canvas id="simulation-chart" width="800" height="320"></canvas>
@@ -249,17 +239,16 @@
         </div>
         <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
         <input id="chart-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug" />
-        <div class="p2-chart-share-labels"><span>Rente <strong id="chart-rent-value">–</strong></span><span>Kapital <strong id="chart-capital-value">–</strong></span></div>
+        <div class="p2-chart-share-labels"><span>Kapital <strong id="chart-capital-value">–</strong><small id="chart-capital-return-value">Kapitalrendite –</small></span><span>Rente <strong id="chart-rent-value">–</strong></span></div>
       </div>
-      <div class="p2-chart-slider-wrap">
+      <div class="p2-chart-slider-wrap p2-chart-click-hint">
         <div class="p2-chart-slider-head">
-          <span>Jahresregler</span>
+          <span>Jahresauswahl</span>
           <strong id="chart-focus-label">Jahr 1</strong>
         </div>
-        <input id="chart-year-slider" type="range" min="1" max="27" value="1" />
         <div class="p2-chart-focus" id="chart-year-details"></div>
       </div>
-      <div class="p2-chart-note" id="chart-method-note"></div>
+      <div class="p2-chart-note p2-chart-mode-label" id="chart-method-note"></div>
     </div>
   </div>
 
@@ -267,34 +256,24 @@
   <div class="p2-chart-modal hidden" id="gap-modal" role="dialog" aria-modal="true" aria-labelledby="gap-modal-title">
     <div class="p2-chart-modal-content">
       <div class="p2-chart-modal-header">
-        <h4 id="gap-modal-title">Rentenluecke / Einkommensueberschuss</h4>
-        <div class="p2-chart-mode" aria-label="Darstellungsmodus">
-          <button type="button" class="p2-mode-btn active" data-chart-mode="nominal">Nominal</button>
-          <button type="button" class="p2-mode-btn" data-chart-mode="real">Real</button>
-        </div>
-        <button type="button" class="button button-secondary" id="close-gap-modal">Schliessen</button>
+        <h4 id="gap-modal-title">Rentenlücke (nominal)</h4>
+        <button type="button" class="p2-modal-close" id="close-gap-modal" aria-label="Rentenlücke schliessen"></button>
       </div>
-      <div class="p2-chart-card" id="gap-chart-card">
-        <canvas id="gap-simulation-chart" width="800" height="320"></canvas>
-      </div>
+      <div class="p2-chart-card"><canvas id="gap-simulation-chart" width="800" height="320"></canvas></div>
       <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
         <div class="p2-chart-share-head">
           <span>Dein Mix</span>
           <strong id="gap-share-value">50% Kapital / 50% Rente</strong>
         </div>
         <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
-        <input id="gap-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug" />
-        <div class="p2-chart-share-labels"><span>Rente <strong id="gap-rent-value">–</strong></span><span>Kapital <strong id="gap-capital-value">–</strong></span></div>
+        <input id="gap-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug in der Lückengrafik" />
+        <div class="p2-chart-share-labels"><span>Kapital <strong id="gap-capital-value">–</strong><small id="gap-capital-return-value">Kapitalrendite –</small></span><span>Rente <strong id="gap-rent-value">–</strong></span></div>
       </div>
-      <div class="p2-chart-slider-wrap">
-        <div class="p2-chart-slider-head">
-          <span>Jahresregler</span>
-          <strong id="gap-focus-label">Jahr 1</strong>
-        </div>
-        <input id="gap-year-slider" type="range" min="1" max="27" value="1" />
+      <div class="p2-chart-slider-wrap p2-chart-click-hint">
+        <div class="p2-chart-slider-head"><span>Jahresauswahl</span><strong id="gap-focus-label">Jahr 1</strong></div>
         <div class="p2-chart-focus" id="gap-year-details"></div>
       </div>
-      <div class="p2-chart-note" id="gap-chart-note"></div>
+      <div class="p2-chart-note p2-chart-mode-label" id="gap-chart-note"></div>
     </div>
   </div>
 

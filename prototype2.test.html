@@ -1,0 +1,163 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Prototype2 Tests</title>
+  <style>
+    body { font: 16px system-ui, sans-serif; margin: 20px; color: #172033; }
+    h1 { font-size: 1.2rem; }
+    #status { padding: 10px; background: #eef2ff; border-radius: 8px; }
+    li { margin: 6px 0; }
+    .pass { color: #087f5b; }
+    .fail { color: #b42318; }
+    iframe { width: 1px; height: 1px; border: 0; position: absolute; opacity: 0; }
+  </style>
+</head>
+<body>
+  <h1>Prototype2 Testcases</h1>
+  <div id="status">Tests laufen ...</div>
+  <ol id="results"></ol>
+  <iframe id="app" src="prototype2.html?tests=1" title="App under test"></iframe>
+  <script>
+    const results = document.getElementById('results');
+    const status = document.getElementById('status');
+    const frame = document.getElementById('app');
+
+    function assert(condition, message) {
+      if (!condition) throw new Error(message);
+    }
+
+    function setField(doc, id, value) {
+      const field = doc.getElementById(id);
+      assert(field, `Feld fehlt: ${id}`);
+      field.value = String(value);
+    }
+
+    function formatCHF(value) {
+      return Math.round(value).toLocaleString('de-CH', { maximumFractionDigits: 0 });
+    }
+
+    function prepareControlledScenario(doc, api) {
+      const values = {
+        'pk-capital': 950000,
+        'pk-share': 50,
+        'conversion-rate': 3.6,
+        'pillar3a': 85000,
+        'pillar3a-return': 4.5,
+        'investments': 15000,
+        'investments-return': 5,
+        'other-assets': 0,
+        'return-rate': 6.9,
+        'real-estate': 1600000,
+        'mortgage': 930000,
+        'real-estate-income': 10000,
+        'ahv': 32760,
+        'child-allowance': 5520,
+        'child-pension': 11376,
+        'other-income': 0,
+        'capital-draw': 120000,
+        'inflation': 1.4,
+        'projection-years': 27,
+      };
+      Object.entries(values).forEach(([id, value]) => setField(doc, id, value));
+      api.syncPkDisplays();
+      api.updateResults();
+      return api.buildScenarioData();
+    }
+
+    async function run() {
+      await new Promise((resolve, reject) => {
+        const started = Date.now();
+        const check = () => {
+          if (frame.contentWindow && frame.contentWindow.p2TestApi) return resolve();
+          if (Date.now() - started > 3000) return reject(new Error('App konnte nicht geladen werden'));
+          setTimeout(check, 25);
+        };
+        check();
+      });
+      const win = frame.contentWindow;
+      const doc = win.document;
+      const api = win.p2TestApi;
+      assert(api, 'Test-API fehlt');
+
+      const tests = [
+        ['Standardbasis verwendet UWS 3.6%', () => {
+          assert(doc.getElementById('conversion-rate').value === '3.6', 'UWS ist nicht 3.6%');
+          const capital = Number(doc.getElementById('pk-capital').value.replace(/'/g, ''));
+          assert(capital === 950000, `PK-Basis ist ${capital} statt 950000`);
+        }],
+        ['50% Mix berechnet Kapital und Rente korrekt', () => {
+          const scenario = prepareControlledScenario(doc, api);
+          assert(scenario.pkPayout === 475000, `Kapitalauszahlung: ${scenario.pkPayout}`);
+          assert(scenario.pkPension === 17100, `PK-Rente: ${scenario.pkPension}`);
+        }],
+        ['Kapitalrendite setzt sich aus den Renditequellen zusammen', () => {
+          const scenario = prepareControlledScenario(doc, api);
+          const expected = 85000 * 0.045 + 15000 * 0.05 + 475000 * 0.069 + 10000;
+          assert(scenario.totalInvestIncome === Math.round(expected), `Ertrag ${scenario.totalInvestIncome}, erwartet ${expected}`);
+          assert(scenario.totalInvestIncome < scenario.totalCapital, 'Jahresertrag ist groesser als das Gesamtvermoegen');
+        }],
+        ['Ergebnis-Kachel zeigt denselben Kapitalertrag wie das Modell', () => {
+          const scenario = prepareControlledScenario(doc, api);
+          const visible = doc.getElementById('result-invest-return').textContent;
+          assert(visible === `CHF ${formatCHF(scenario.totalInvestIncome)}`, `Anzeige ${visible}, Modell CHF ${formatCHF(scenario.totalInvestIncome)}`);
+        }],
+        ['Mix-Regler setzt den Kapitalanteil synchron', () => {
+          setField(doc, 'pk-share', 80);
+          api.syncPkDisplays();
+          api.updateResults();
+          const scenario = api.buildScenarioData();
+          assert(scenario.pkPayout === 760000, `80% Kapital ergibt ${scenario.pkPayout}`);
+          assert(scenario.pkPension === 6840, `20% Rente ergibt ${scenario.pkPension}`);
+        }],
+        ['Beide Grafik-Buttons oeffnen ihre Grafik', () => {
+          const chartButton = doc.getElementById('open-chart-modal');
+          const gapButton = doc.getElementById('open-gap-modal');
+          assert(chartButton && gapButton, 'Grafik-Icon fehlt');
+          chartButton.click();
+          assert(!doc.getElementById('chart-modal').classList.contains('hidden'), 'Kapitalgrafik oeffnet nicht');
+          doc.getElementById('close-chart-modal').click();
+          gapButton.click();
+          assert(!doc.getElementById('gap-modal').classList.contains('hidden'), 'Lueckengrafik oeffnet nicht');
+          doc.getElementById('close-gap-modal').click();
+        }],
+        ['Lueckengrafik steuert den PK-Mix ohne Jahresregler', () => {
+          const gapShare = doc.getElementById('gap-share-slider');
+          assert(gapShare, 'Luecken-Mix-Regler fehlt');
+          assert(!doc.getElementById('gap-year-slider'), 'Alter Jahresregler ist noch vorhanden');
+          gapShare.value = '80';
+          gapShare.dispatchEvent(new Event('input', { bubbles: true }));
+          assert(doc.getElementById('pk-share').value === '80', 'Luecken-Mix synchronisiert den PK-Anteil nicht');
+          assert(doc.getElementById('gap-share-value').textContent.includes('80% Kapital'), 'Luecken-Mix-Anzeige ist falsch');
+        }],
+        ['Grafiken sind nominal-only', () => {
+          assert(doc.querySelectorAll('[data-chart-mode="real"]').length === 0, 'Real-Modus ist noch vorhanden');
+          assert(doc.querySelectorAll('.p2-chart-mode-label').length === 2, 'Nominal-Hinweis fehlt in einer Grafik');
+        }],
+      ];
+
+      for (const [name, test] of tests) {
+        const item = document.createElement('li');
+        try {
+          test();
+          item.className = 'pass';
+          item.textContent = `PASS: ${name}`;
+        } catch (error) {
+          item.className = 'fail';
+          item.textContent = `FAIL: ${name} - ${error.message}`;
+        }
+        results.appendChild(item);
+      }
+      const failures = results.querySelectorAll('.fail').length;
+      status.textContent = failures ? `${failures} Test(s) fehlgeschlagen` : 'Alle Tests bestanden';
+      status.className = failures ? 'fail' : 'pass';
+    }
+
+    run().catch((error) => {
+      status.textContent = `Testlauf abgebrochen: ${error.message}`;
+      status.className = 'fail';
+    });
+  </script>
+</body>
+</html>
