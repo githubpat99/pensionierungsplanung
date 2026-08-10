@@ -102,7 +102,10 @@
             <input id="projection-years" type="number" min="1" max="60" value="27" />
           </label>
           <div class="field" style="align-self:end;">
-            <button type="button" class="button button-secondary p2-chart-btn" id="open-chart-modal" aria-label="Grafik anzeigen">📊</button>
+            <div class="p2-chart-actions">
+              <button type="button" class="button button-secondary p2-chart-btn" id="open-chart-modal" aria-label="Kapitalentwicklung anzeigen">Kapital</button>
+              <button type="button" class="button button-secondary p2-chart-btn" id="open-gap-modal" aria-label="Rentenluecke anzeigen">Luecke</button>
+            </div>
           </div>
         </div>
       </div>
@@ -128,6 +131,14 @@
             <div class="p2-card-line"><span>Kapitalertrag</span><strong id="result-invest-income">–</strong></div>
           </div>
         </div>
+      </div>
+
+      <div class="p2-gap-story">
+        <div class="p2-gap-story-head">
+          <h4>Rentenlücke auf Jahresbasis</h4>
+          <p>Einkommen vs. Bedarf pro Jahr ab Pensionierung.</p>
+        </div>
+        <div class="p2-gap-gallery" id="annual-gap-gallery" aria-live="polite"></div>
       </div>
 
     </div>
@@ -231,7 +242,59 @@
       <div class="p2-chart-card" id="chart-card">
         <canvas id="simulation-chart" width="800" height="320"></canvas>
       </div>
+      <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
+        <div class="p2-chart-share-head">
+          <span>Dein Mix</span>
+          <strong id="chart-share-value">50% Kapital / 50% Rente</strong>
+        </div>
+        <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
+        <input id="chart-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug" />
+        <div class="p2-chart-share-labels"><span>Rente <strong id="chart-rent-value">–</strong></span><span>Kapital <strong id="chart-capital-value">–</strong></span></div>
+      </div>
+      <div class="p2-chart-slider-wrap">
+        <div class="p2-chart-slider-head">
+          <span>Jahresregler</span>
+          <strong id="chart-focus-label">Jahr 1</strong>
+        </div>
+        <input id="chart-year-slider" type="range" min="1" max="27" value="1" />
+        <div class="p2-chart-focus" id="chart-year-details"></div>
+      </div>
       <div class="p2-chart-note" id="chart-method-note"></div>
+    </div>
+  </div>
+
+  <!-- Gap modal -->
+  <div class="p2-chart-modal hidden" id="gap-modal" role="dialog" aria-modal="true" aria-labelledby="gap-modal-title">
+    <div class="p2-chart-modal-content">
+      <div class="p2-chart-modal-header">
+        <h4 id="gap-modal-title">Rentenluecke / Einkommensueberschuss</h4>
+        <div class="p2-chart-mode" aria-label="Darstellungsmodus">
+          <button type="button" class="p2-mode-btn active" data-chart-mode="nominal">Nominal</button>
+          <button type="button" class="p2-mode-btn" data-chart-mode="real">Real</button>
+        </div>
+        <button type="button" class="button button-secondary" id="close-gap-modal">Schliessen</button>
+      </div>
+      <div class="p2-chart-card" id="gap-chart-card">
+        <canvas id="gap-simulation-chart" width="800" height="320"></canvas>
+      </div>
+      <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
+        <div class="p2-chart-share-head">
+          <span>Dein Mix</span>
+          <strong id="gap-share-value">50% Kapital / 50% Rente</strong>
+        </div>
+        <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
+        <input id="gap-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug" />
+        <div class="p2-chart-share-labels"><span>Rente <strong id="gap-rent-value">–</strong></span><span>Kapital <strong id="gap-capital-value">–</strong></span></div>
+      </div>
+      <div class="p2-chart-slider-wrap">
+        <div class="p2-chart-slider-head">
+          <span>Jahresregler</span>
+          <strong id="gap-focus-label">Jahr 1</strong>
+        </div>
+        <input id="gap-year-slider" type="range" min="1" max="27" value="1" />
+        <div class="p2-chart-focus" id="gap-year-details"></div>
+      </div>
+      <div class="p2-chart-note" id="gap-chart-note"></div>
     </div>
   </div>
 
