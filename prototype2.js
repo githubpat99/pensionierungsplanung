@@ -17,9 +17,11 @@ const insightBody  = document.getElementById('result-insight');
 const chartModal   = document.getElementById('chart-modal');
 const openChartBtn = document.getElementById('open-chart-modal');
 const closeChartBtn = document.getElementById('close-chart-modal');
+const chartInfoBtn = document.getElementById('chart-info-btn');
 const gapModal = document.getElementById('gap-modal');
 const openGapBtn = document.getElementById('open-gap-modal');
 const closeGapBtn = document.getElementById('close-gap-modal');
+const gapInfoBtn = document.getElementById('gap-info-btn');
 const smileyModal = document.getElementById('smiley-modal');
 const closeSmileyModalBtn = document.getElementById('close-smiley-modal');
 const smileyModalText = document.getElementById('smiley-modal-text');
@@ -247,6 +249,8 @@ function syncYearControls(scenario) {
 function showStep(n) {
   currentStep = n;
   saveStep(n);
+  document.activeElement?.blur();
+  document.body.classList.toggle('p2-show-simulation', n === steps.length - 1);
   steps.forEach((s, i) => s.classList.toggle('active', i === n));
   if (p2Progress) p2Progress.textContent = `${n + 1} / ${steps.length}`;
   p2Title.textContent    = STEP_META[n].title;
@@ -262,6 +266,8 @@ function showStep(n) {
   p2Next.style.display         = n === steps.length - 1 ? 'none' : 'inline-flex';
   p2Next.textContent            = 'Simulation';
   p2InfoBtn?.setAttribute('aria-expanded', 'false');
+
+  requestAnimationFrame(() => window.scrollTo(0, 0));
 
   if (n === steps.length - 1) updateResults();
 }
@@ -353,6 +359,37 @@ function setText(id, text) {
   if (el) el.textContent = text;
 }
 
+function syncLinkedRanges() {
+  document.querySelectorAll('[data-sync-range]').forEach((input) => {
+    const range = document.getElementById(input.dataset.syncRange);
+    if (range) range.value = input.id === 'capital-draw' ? parseFormatted(input.value) : input.value;
+  });
+  updateCapitalDrawDisplay();
+}
+
+function updateCapitalDrawDisplay() {
+  const input = document.getElementById('capital-draw');
+  const range = document.getElementById('capital-draw-range');
+  const display = document.getElementById('capital-draw-display');
+  const fill = document.getElementById('capital-draw-track-fill');
+  if (!input || !range) return;
+  const value = parseFormatted(input.value);
+  if (display) display.textContent = `CHF ${formatThousands(value)}`;
+  if (fill) {
+    const min = Number(range.min) || 0;
+    const max = Number(range.max) || 1;
+    fill.style.width = `${Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))}%`;
+  }
+}
+
+function syncInputValue(source, target) {
+  if (!target) return;
+  target.value = target.id === 'capital-draw'
+    ? formatThousands(Number(source.value) || 0)
+    : source.value;
+  if (target.id === 'capital-draw') updateCapitalDrawDisplay();
+}
+
 // ============================================================
 // Swipe-to-close drawer (touch)
 // ============================================================
@@ -431,25 +468,31 @@ function syncPkDisplays() {
       : formatThousands(computed);
   }
   setText('pk-rent-share-value', `CHF ${formatCHF(computed)}/J.`);
-  setText('pk-return-share-value', `Rendite CHF ${formatCHF(Math.round(pkPayoutVal * readField('return-rate') / 100))}/J.`);
+  setText('pk-return-share-value', 'Kap.-Ertrag ges. –');
 }
 
 function syncChartShareControls(scenario) {
   const share = Math.max(0, Math.min(100, readField('pk-share')));
   const controls = [
-    { slider: chartShareSlider, value: 'chart-share-value', rent: 'chart-rent-value', capital: 'chart-capital-value' },
-    { slider: document.getElementById('gap-share-slider'), value: 'gap-share-value', rent: 'gap-rent-value', capital: 'gap-capital-value' },
+    { slider: chartShareSlider, value: 'chart-share-value', rent: 'chart-rent-value', capital: 'chart-capital-value', capitalShare: 'chart-capital-share', rentShare: 'chart-rent-share' },
+    { slider: document.getElementById('gap-share-slider'), value: 'gap-share-value', rent: 'gap-rent-value', capital: 'gap-capital-value', capitalShare: 'gap-capital-share', rentShare: 'gap-rent-share' },
   ];
-  controls.forEach(({ slider, value, rent, capital }) => {
+  controls.forEach(({ slider, value, rent, capital, capitalShare, rentShare }) => {
     if (slider) slider.value = String(share);
     setText(value, `${share}% Kapital / ${100 - share}% Rente`);
+    setText(capitalShare, `${share}%`);
+    setText(rentShare, `${100 - share}%`);
     setText(rent, `CHF ${formatCHF(scenario?.pkPension || 0)}/J.`);
     setText(capital, `CHF ${formatCHF(scenario?.pkPayout || 0)}`);
     const track = slider?.previousElementSibling?.querySelector('span');
     if (track) track.style.width = `${share}%`;
   });
-  setText('chart-capital-return-value', `Kapitalrendite CHF ${formatCHF(scenario?.pkCapitalIncome || 0)}/J.`);
-  setText('gap-capital-return-value', `Kapitalrendite CHF ${formatCHF(scenario?.pkCapitalIncome || 0)}/J.`);
+  setText('pk-return-share-value', `Kap.-Ertrag ges. CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
+  setText('pk-total-rent-share-value', `Gesamtrente CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
+  setText('chart-capital-return-value', `Kap.-Ertrag ges. CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
+  setText('gap-capital-return-value', `Kap.-Ertrag ges. CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
+  setText('chart-total-rent', `Gesamtrente CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
+  setText('gap-total-rent', `Gesamtrente CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
 }
 
 function buildScenarioData() {
@@ -792,7 +835,7 @@ function updateChart() {
   if (!canvas) return;
   const dpr      = window.devicePixelRatio || 1;
   const cssW     = Math.max(canvas.clientWidth || canvas.width, 280);
-  const cssH     = Math.max(Math.round(cssW * 0.5), 240);
+  const cssH     = Math.max(Math.round(cssW * 0.58), 260);
   canvas.style.height = `${cssH}px`;
   canvas.width   = Math.round(cssW * dpr);
   canvas.height  = Math.round(cssH * dpr);
@@ -809,7 +852,7 @@ function updateChart() {
   const mob    = cssW < 520;
   const tM = mob ? 34 : 46;
   const bM = mob ? 22 : 26;
-  const lM = 12;
+  const lM = mob ? 30 : 42;
   const gap = 14;
   const avail  = Math.max(120, cssH - tM - bM - gap);
   const capH   = Math.round(avail * 0.68);
@@ -824,13 +867,13 @@ function updateChart() {
   const mapYK = v => casBot - ((v - cashMin) / cashRng) * cashH;
 
   function formatKCHF(value) {
-    return `KCHF ${Math.round(value / 1000)}`;
+    return `KCHF ${Math.round(value / 100000) * 100}`;
   }
 
   function drawTag(text, x, y, color) {
-    ctx.font = `${mob ? 9 : 10}px Inter,sans-serif`;
+    ctx.font = `${mob ? 16.2 : 18}px Inter,sans-serif`;
     const tagWidth = ctx.measureText(text).width + 10;
-    const tagHeight = mob ? 14 : 16;
+    const tagHeight = mob ? 23 : 26;
     const drawX = Math.max(3, Math.min(x, cssW - tagWidth - 3));
     const drawY = Math.max(tagHeight + 1, Math.min(y, cssH - 2));
     ctx.fillStyle = 'rgba(255,255,255,0.92)';
@@ -910,9 +953,23 @@ function updateChart() {
     ctx.fill();
   }
 
+  // Soft green area keeps the total-income series visually anchored.
+  const incomeBaseY = mapYK(Math.max(0, cashMin));
+  ctx.beginPath();
+  incomeSeries.forEach((value, index) => {
+    const x = mapX(index);
+    const y = mapYK(value);
+    index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.lineTo(mapX(incomeSeries.length - 1), incomeBaseY);
+  ctx.lineTo(mapX(0), incomeBaseY);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(16,185,129,0.08)';
+  ctx.fill();
+
   // Income line
-  ctx.strokeStyle = '#10b981';
-  ctx.lineWidth = mob ? 1.5 : 1.8;
+  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
+  ctx.lineWidth = mob ? 4 : 4.5;
   ctx.setLineDash([]);
   ctx.beginPath();
   for (let y = 0; y < incomeSeries.length; y++) {
@@ -922,17 +979,15 @@ function updateChart() {
   }
   ctx.stroke();
 
-  // Rent income remains visible beneath the combined green income line.
-  ctx.strokeStyle = '#eab308';
-  ctx.lineWidth = mob ? 1.3 : 1.5;
-  ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = '#10b981';
+  ctx.lineWidth = mob ? 2.4 : 2.8;
   ctx.beginPath();
-  rentSeries.forEach((value, index) => {
-    const x = mapX(index), y = mapYK(value);
-    index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
+  for (let y = 0; y < incomeSeries.length; y++) {
+    const x = mapX(y);
+    if (y === 0) ctx.moveTo(x, mapYK(incomeSeries[y]));
+    else ctx.lineTo(x, mapYK(incomeSeries[y]));
+  }
   ctx.stroke();
-  ctx.setLineDash([]);
 
   // Need line
   ctx.strokeStyle = '#64748b';
@@ -955,7 +1010,15 @@ function updateChart() {
   const finalGap = gapSeries[gapSeries.length - 1] || 0;
   const finalIncomeY = mapYK(incomeSeries[incomeSeries.length - 1] || 0);
   const finalNeedY = mapYK(needSeries[needSeries.length - 1] || 0);
-  drawTag(finalGap >= 0 ? 'Überschuss' : 'Bedarf', cssW - 118, Math.min(finalIncomeY, finalNeedY) - 6, finalGap >= 0 ? '#10b981' : '#64748b');
+  const rightTags = [
+    { text: 'Bedarf', y: finalNeedY + 12, color: '#64748b' },
+    { text: 'Gesamteinkommen', y: finalIncomeY - 8, color: '#10b981' },
+  ];
+  const tagGap = mob ? 27 : 31;
+  rightTags[1].y = Math.max(rightTags[1].y, rightTags[0].y + tagGap);
+  const tagOverflow = rightTags[rightTags.length - 1].y - (casBot - 2);
+  if (tagOverflow > 0) rightTags.forEach(tag => { tag.y -= tagOverflow; });
+  rightTags.forEach(tag => drawTag(tag.text, cssW - (tag.text === 'Gesamteinkommen' ? 154 : 62), tag.y, tag.color));
 
   if (focusIndex > 0) {
     const capY = mapYC(capitalSeries[focusIndex] || 0);
@@ -970,24 +1033,15 @@ function updateChart() {
     ctx.beginPath();
     ctx.arc(focusX, incomeY, 2.5, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#eab308';
-    ctx.beginPath();
-    ctx.arc(focusX, mapYK(rentSeries[focusIndex] || 0), 2.5, 0, Math.PI * 2);
-    ctx.fill();
     ctx.fillStyle = '#64748b';
     ctx.beginPath();
     ctx.arc(focusX, needY, 2.5, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  ctx.fillStyle = '#0f172a';
-  ctx.font = `${mob ? 10 : 12}px Inter,sans-serif`;
-  ctx.textAlign = 'right';
-  ctx.fillText(`bis Alter ${life}`, cssW - 8, mob ? 14 : 18);
-
   // Grid and axis labels
   ctx.strokeStyle = 'rgba(148,163,184,0.25)'; ctx.fillStyle = '#94a3b8';
-  ctx.font = `${mob ? 8 : 10}px Inter,sans-serif`;
+  ctx.font = `${mob ? 14.4 : 16.8}px Inter,sans-serif`;
   const xT = mob ? 4 : 5;
   for (let i = 0; i < xT; i++) {
     const r = xT === 1 ? 0 : i / (xT - 1);
@@ -997,7 +1051,7 @@ function updateChart() {
     ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(x, capTop); ctx.lineTo(x, casBot); ctx.stroke();
     ctx.textAlign = i === xT - 1 ? 'right' : 'left';
-    ctx.fillText(`Alter ${ageAtTick}`, x + (i === xT-1 ? -2 : 2), casBot + 12);
+    ctx.fillText(i === 0 ? 'Jahr 0' : `${ageAtTick}`, x + (i === xT-1 ? -2 : 2), casBot + 14);
   }
 
   const yTC = mob ? 3 : 4;
@@ -1007,16 +1061,14 @@ function updateChart() {
     ctx.setLineDash([]);
     ctx.beginPath(); ctx.moveTo(lM, y); ctx.lineTo(cssW, y); ctx.stroke();
     ctx.textAlign = 'left';
-    ctx.fillText(formatKCHF(capMax * r), lM + 2, y - 3);
+    ctx.fillText(formatKCHF(capMax * r), lM - 4, y - 3);
   }
 
   // Lower panel axis labels
   ctx.fillStyle = '#94a3b8';
   ctx.textAlign = 'left';
-  ctx.fillText(chartMode === 'real' ? 'Gesamteinkommen / Bedarf (heutige Kaufkraft)' : 'Gesamteinkommen / Bedarf', lM, casTop + 10);
-  ctx.fillText(formatKCHF(cashMax), lM + 2, casTop + 18);
-  ctx.textAlign = 'right';
-  ctx.fillText(formatKCHF(cashMin), cssW - 3, casBot - 3);
+  ctx.fillText(formatKCHF(cashMax), lM - 4, casTop + 12);
+  ctx.fillText('KCHF 0', lM - 4, casBot - 3);
 
   // Method note
   const noteEl = document.getElementById('chart-method-note');
@@ -1025,7 +1077,7 @@ function updateChart() {
       ? 'Real = Werte in heutiger Kaufkraft, inflationsbereinigt.'
       : 'Nominal = laufende Franken ohne Inflationsabzug.';
     noteEl.textContent =
-      `${modeLabel} Oben: Kapitalentwicklung und Kapitalrendite (blau). Unten: Renteneinkommen (gelb) und Gesamteinkommen (grün) gegen Bedarf (grau). ` +
+      `${modeLabel} Oben: Kapitalentwicklung und Kapitalrendite (blau). Unten: Gesamteinkommen (grün) gegen Bedarf (grau). ` +
       `Startkapital CHF ${formatCHF(totalCapital)}, ges. Einkommen CHF ${formatCHF(securedIncome)}, ` +
       `Rendite ${(Math.round(wRet * 10000) / 100).toFixed(2)}%, Inflation ${readField('inflation').toFixed(1)}%.`;
   }
@@ -1036,9 +1088,11 @@ function updateChart() {
     const incomeAtFocus = Math.round(incomeSeries[focusIndex] || 0);
     const needAtFocus = Math.round(needSeries[focusIndex] || 0);
     const gapAtFocus = incomeAtFocus - needAtFocus;
-    chartYearDetails.textContent =
-      `Alter ${ageAtFocus}: Kapital CHF ${formatCHF(capAtFocus)}, Einkommen CHF ${formatCHF(incomeAtFocus)}, Bedarf CHF ${formatCHF(needAtFocus)}, ` +
-      `${gapAtFocus >= 0 ? 'Ueberschuss' : 'Luecke'} ${gapAtFocus >= 0 ? '+' : '-'}CHF ${formatCHF(Math.abs(gapAtFocus))}.`;
+    chartYearDetails.innerHTML =
+      `<span class="p2-chart-focus-line p2-chart-focus-capital">Kapital CHF ${formatCHF(capAtFocus)}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-income">Gesamteinkommen CHF ${formatCHF(incomeAtFocus)}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-need">Bedarf CHF ${formatCHF(needAtFocus)}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-gap">${gapAtFocus >= 0 ? 'Überschuss' : 'Lücke'} CHF ${formatCHF(Math.abs(gapAtFocus))}</span>`;
   }
 }
 
@@ -1051,11 +1105,14 @@ function updateGapChart() {
   const years = Math.min(projYears, Math.max(proj.potentials.length, proj.needs.length));
   const focusIndex = Math.min(years, clampFocusYear(years));
   const incomeSeries = [];
+  const rentSeries = [];
   const needSeries = [];
   for (let i = 1; i <= years; i++) {
     const income = (proj.potentials[i - 1] ?? securedIncome) / inflationFactor(i);
+    const rent = (securedIncome * Math.pow(1 + inflation, i)) / inflationFactor(i);
     const need = (proj.needs[i - 1] ?? 0) / inflationFactor(i);
     incomeSeries.push(income);
+    rentSeries.push(rent);
     needSeries.push(need);
   }
   const gapSeries = incomeSeries.map((value, i) => value - (needSeries[i] || 0));
@@ -1077,7 +1134,7 @@ function updateGapChart() {
   const top = mob ? 22 : 28;
   const bottom = cssH - (mob ? 28 : 32);
   const left = mob ? 16 : 24;
-  const right = 10;
+  const right = mob ? 28 : 18;
   const h = Math.max(120, bottom - top);
   const maxY = Math.max(1, ...incomeSeries, ...needSeries);
   const xStep = (cssW - left - right) / Math.max(1, years - 1);
@@ -1086,7 +1143,7 @@ function updateGapChart() {
 
   ctx.strokeStyle = 'rgba(148,163,184,0.28)';
   ctx.fillStyle = '#94a3b8';
-  ctx.font = `${mob ? 8 : 10}px Inter,sans-serif`;
+  ctx.font = `${mob ? 12 : 14}px Inter,sans-serif`;
   for (let i = 0; i < 4; i++) {
     const r = i / 3;
     const y = bottom - r * h;
@@ -1094,52 +1151,70 @@ function updateGapChart() {
     ctx.moveTo(left, y);
     ctx.lineTo(cssW - right, y);
     ctx.stroke();
-    ctx.fillText(`KCHF ${Math.round((maxY * r) / 1000)}`, left + 2, y - 3);
   }
 
-  // Clear lines and a soft fill make the gap readable on small screens.
+  // A small set of stacked bars keeps the rent gap readable on mobile.
+  const barCount = Math.min(5, years);
+  const barWidth = Math.min(42, Math.max(20, (cssW - left - right) / (barCount * 1.8)));
+  for (let bar = 0; bar < barCount; bar++) {
+    const index = barCount === 1 ? 0 : Math.round((bar / (barCount - 1)) * (years - 1));
+    const x = mapX(index) - barWidth / 2;
+    const need = Math.max(0, needSeries[index] || 0);
+    const income = Math.max(0, incomeSeries[index] || 0);
+    const rent = Math.min(income, Math.max(0, rentSeries[index] || 0));
+    const incomeHeight = bottom - mapY(income);
+    const rentHeight = bottom - mapY(rent);
+    const capitalHeight = Math.max(0, incomeHeight - rentHeight);
+    const capitalTop = bottom - capitalHeight;
+    const rentTop = capitalTop - rentHeight;
+    const gapHeight = Math.max(0, rentTop - mapY(need));
+
+    // Keep the stack order fixed: capital at the bottom, rent above it, gap on top.
+    ctx.fillStyle = '#2563eb';
+    ctx.fillRect(x, capitalTop, barWidth, capitalHeight);
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(x, rentTop, barWidth, rentHeight);
+    if (need > income) {
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(x, mapY(need), barWidth, gapHeight);
+    }
+    if (index === focusIndex - 1) {
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(x - 2, mapY(Math.max(need, income)) - 2, barWidth + 4, bottom - mapY(Math.max(need, income)) + 4);
+    }
+  }
+
+  // Bedarf remains visible as a dashed reference line across the stacked bars.
+  ctx.strokeStyle = '#64748b';
+  ctx.lineWidth = mob ? 1.8 : 2;
+  ctx.setLineDash([5, 4]);
   ctx.beginPath();
-  incomeSeries.forEach((value, index) => index ? ctx.lineTo(mapX(index), mapY(value)) : ctx.moveTo(mapX(index), mapY(value)));
-  [...needSeries].reverse().forEach((value, reverseIndex) => {
-    const index = needSeries.length - reverseIndex - 1;
-    ctx.lineTo(mapX(index), mapY(value));
+  needSeries.forEach((value, index) => {
+    const x = mapX(index);
+    const y = mapY(value);
+    index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(16, 185, 129, 0.14)';
-  ctx.fill();
-
-  function drawLine(series, color, dashed = false) {
-    ctx.beginPath();
-    series.forEach((value, index) => index ? ctx.lineTo(mapX(index), mapY(value)) : ctx.moveTo(mapX(index), mapY(value)));
-    ctx.strokeStyle = color;
-    ctx.lineWidth = mob ? 2 : 2.3;
-    ctx.setLineDash(dashed ? [5, 4] : []);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-  drawLine(needSeries, '#94a3b8', true);
-  drawLine(incomeSeries, '#10b981');
-
-  const focusX = mapX(focusIndex - 1);
-  ctx.strokeStyle = '#172033';
-  ctx.lineWidth = 1;
-  ctx.setLineDash([3, 4]);
-  ctx.beginPath();
-  ctx.moveTo(focusX, top);
-  ctx.lineTo(focusX, bottom);
   ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = '#94a3b8';
-  ctx.beginPath(); ctx.arc(focusX, mapY(needSeries[focusIndex - 1] || 0), 3, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = '#10b981';
-  ctx.beginPath(); ctx.arc(focusX, mapY(incomeSeries[focusIndex - 1] || 0), 3, 0, Math.PI * 2); ctx.fill();
 
-  const tickCount = mob ? 4 : 6;
+  // Keep the y-axis labels above the stacked bars.
   ctx.fillStyle = '#64748b';
+  ctx.font = `${mob ? 12 : 14}px Inter,sans-serif`;
+  ctx.textAlign = 'left';
+  for (let i = 0; i < 4; i++) {
+    const r = i / 3;
+    const y = bottom - r * h;
+    ctx.fillText(`KCHF ${Math.round((maxY * r) / 10000) * 10}`, left + 2, y - 3);
+  }
+
+  const tickCount = barCount;
+  ctx.fillStyle = '#64748b';
+  ctx.font = `${mob ? 12 : 14}px Inter,sans-serif`;
   ctx.textAlign = 'left';
   for (let t = 0; t < tickCount; t++) {
     const r = tickCount === 1 ? 0 : t / (tickCount - 1);
-    const index = Math.min(years - 1, Math.max(0, Math.round(r * (years - 1))));
+    const index = barCount === 1 ? 0 : Math.round(r * (years - 1));
     const x = mapX(index);
     ctx.fillText(String(retireAge + index + 1), x - 8, bottom + 14);
   }
@@ -1147,16 +1222,17 @@ function updateGapChart() {
   const note = document.getElementById('gap-chart-note');
   if (note) {
     note.textContent =
-      'Nominal: Grau = Bedarf, Gruen = Einkommen. Jahresauswahl durch Antippen der Jahreslinie.';
+      'Nominal: Blau = Kapital, Gelb = Rente, Rot = Rentenlücke, gestrichelt Grau = Bedarf. Jahresauswahl durch Antippen der Jahreslinie.';
   }
 
   if (gapYearDetails) {
     const need = Math.round(needSeries[focusIndex - 1] || 0);
     const income = Math.round(incomeSeries[focusIndex - 1] || 0);
     const gap = income - need;
-    gapYearDetails.textContent =
-      `Alter ${retireAge + focusIndex}: Bedarf CHF ${formatCHF(need)}, Einkommen CHF ${formatCHF(income)}, ` +
-      `${gap >= 0 ? 'Ueberschuss' : 'Luecke'} ${gap >= 0 ? '+' : '-'}CHF ${formatCHF(Math.abs(gap))}.`;
+    gapYearDetails.innerHTML =
+      `<span class="p2-chart-focus-line p2-chart-focus-gap">${gap >= 0 ? 'Überschuss' : 'Lücke'} CHF ${formatCHF(Math.abs(gap))}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-need">Bedarf CHF ${formatCHF(need)}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-income">Gesamteinkommen CHF ${formatCHF(income)}</span>`;
   }
 }
 
@@ -1267,6 +1343,11 @@ function attachEvents() {
     updateChart();
   });
   closeChartBtn?.addEventListener('click', () => chartModal?.classList.add('hidden'));
+  chartInfoBtn?.addEventListener('click', () => {
+    const help = chartInfoBtn.parentElement;
+    const isOpen = help?.classList.toggle('is-open') || false;
+    chartInfoBtn.setAttribute('aria-expanded', String(isOpen));
+  });
   chartModal?.addEventListener('click', (e) => {
     if (e.target === chartModal) chartModal.classList.add('hidden');
   });
@@ -1278,6 +1359,11 @@ function attachEvents() {
     updateGapChart();
   });
   closeGapBtn?.addEventListener('click', () => gapModal?.classList.add('hidden'));
+  gapInfoBtn?.addEventListener('click', () => {
+    const help = gapInfoBtn.parentElement;
+    const isOpen = help?.classList.toggle('is-open') || false;
+    gapInfoBtn.setAttribute('aria-expanded', String(isOpen));
+  });
   gapModal?.addEventListener('click', (e) => {
     if (e.target === gapModal) gapModal.classList.add('hidden');
   });
@@ -1357,6 +1443,15 @@ function attachEvents() {
   // Live recalc on every input/select change
   document.querySelectorAll('input, select').forEach((el) => {
     el.addEventListener('input', () => {
+      if (el.dataset.syncTarget) {
+        const target = document.getElementById(el.dataset.syncTarget);
+        syncInputValue(el, target);
+      }
+      if (el.dataset.syncRange) {
+        const range = document.getElementById(el.dataset.syncRange);
+        if (range) range.value = el.id === 'capital-draw' ? parseFormatted(el.value) : el.value;
+        if (el.id === 'capital-draw') updateCapitalDrawDisplay();
+      }
       if (el.id === 'pk-payout') el.dataset.userEdited = '1';
       if (['pk-share', 'pk-capital', 'pk-payout', 'conversion-rate'].includes(el.id)) {
         syncPkDisplays();
@@ -1366,6 +1461,15 @@ function attachEvents() {
       saveFormState();
     });
     el.addEventListener('change', () => {
+      if (el.dataset.syncTarget) {
+        const target = document.getElementById(el.dataset.syncTarget);
+        syncInputValue(el, target);
+      }
+      if (el.dataset.syncRange) {
+        const range = document.getElementById(el.dataset.syncRange);
+        if (range) range.value = el.id === 'capital-draw' ? parseFormatted(el.value) : el.value;
+        if (el.id === 'capital-draw') updateCapitalDrawDisplay();
+      }
       if (el.id === 'pk-payout') el.dataset.userEdited = '1';
       if (['pk-share', 'pk-capital', 'pk-payout', 'conversion-rate'].includes(el.id)) {
         syncPkDisplays();
@@ -1399,6 +1503,7 @@ window.p2TestApi = {
 
 initFormattedFields();
 loadFormState();
+syncLinkedRanges();
 chartMode = 'nominal';
 syncChartModeButtons();
 syncPkDisplays();

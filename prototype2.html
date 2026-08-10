@@ -27,9 +27,9 @@
       <div class="p2-fields">
         <div class="p2-step1-layout">
           <div class="p2-step1-left">
-            <label class="field field-compact"><span>Alter</span><input id="age" type="number" min="18" value="56" /></label>
-            <label class="field field-compact"><span>Pensionierungsalter</span><input id="retire-age" type="number" min="55" value="65" /></label>
-            <label class="field field-compact field-projection"><span>Projektion bis</span><input id="life-expectancy" type="number" min="75" value="92" /></label>
+            <label class="field field-compact"><span>Alter</span><div class="p2-inline-control"><input id="age" type="number" min="18" max="100" value="56" data-sync-range="age-range" /><input id="age-range" class="p2-tune-range" type="range" min="18" max="100" value="56" data-sync-target="age" aria-label="Alter" /></div></label>
+            <label class="field field-compact"><span>Pensionierungsalter</span><div class="p2-inline-control"><input id="retire-age" type="number" min="55" max="80" value="65" data-sync-range="retire-age-range" /><input id="retire-age-range" class="p2-tune-range" type="range" min="55" max="80" value="65" data-sync-target="retire-age" aria-label="Pensionierungsalter" /></div></label>
+            <label class="field field-compact field-projection"><span>Projektion bis</span><div class="p2-inline-control"><input id="life-expectancy" type="number" min="75" max="120" value="92" data-sync-range="life-expectancy-range" /><input id="life-expectancy-range" class="p2-tune-range" type="range" min="75" max="120" value="92" data-sync-target="life-expectancy" aria-label="Projektion bis" /></div></label>
           </div>
           <div class="p2-step1-right">
             <label class="field field-compact"><span>Kanton</span>
@@ -70,8 +70,9 @@
           <label class="field"><span>Altersguthaben (CHF)</span>
             <input id="pk-capital" type="text" inputmode="numeric" value="950'000" />
           </label>
-          <label class="field"><span>UWS (%)</span>
-            <input id="conversion-rate" type="number" min="0" max="10" step="0.1" value="3.6" />
+          <label class="field p2-tune"><span>UWS (%)</span>
+            <div class="p2-inline-control"><input id="conversion-rate" type="number" min="0" max="10" step="0.1" value="3.6" data-sync-range="conversion-rate-range" />
+            <input id="conversion-rate-range" class="p2-tune-range" type="range" min="0" max="10" step="0.1" value="3.6" data-sync-target="conversion-rate" aria-label="UWS" /></div>
           </label>
         </div>
         <input id="pk-payout" type="hidden" value="60'000" />
@@ -81,29 +82,51 @@
           <div class="p2-mix-track" aria-hidden="true"><span></span></div>
           <input id="pk-share" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
           <div class="p2-mix-labels">
-            <span>Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value">Kapitalrendite –</small></span>
-            <span>Rente <strong id="pk-rent-share-value">–</strong></span>
+            <span>PK-Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span>
+            <span>PK-Rente <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesamtrente">Gesamtrente –</small></span>
           </div>
         </label>
-        <label class="field"><span>Jahresbedarf (CHF)</span>
-          <input id="capital-draw" type="text" inputmode="numeric" value="120'000" />
-        </label>
         <div class="grid-2k">
-          <label class="field"><span>Kapitalrendite (%)</span>
-            <input id="return-rate" type="number" min="0" max="12" step="0.1" value="6.9" />
+          <label class="field p2-tune"><span>Kapitalrendite (%)</span>
+            <div class="p2-inline-control"><input id="return-rate" type="number" min="0" max="12" step="0.1" value="6.9" data-sync-range="return-rate-range" />
+            <input id="return-rate-range" class="p2-tune-range" type="range" min="0" max="12" step="0.1" value="6.9" data-sync-target="return-rate" aria-label="Kapitalrendite" /></div>
           </label>
-          <label class="field"><span>Inflation (%)</span>
-            <input id="inflation" type="number" min="0" max="8" step="0.1" value="1.4" />
+          <label class="field p2-tune"><span>Inflation (%)</span>
+            <div class="p2-inline-control"><input id="inflation" type="number" min="0" max="8" step="0.1" value="1.4" data-sync-range="inflation-range" />
+            <input id="inflation-range" class="p2-tune-range" type="range" min="0" max="8" step="0.1" value="1.4" data-sync-target="inflation" aria-label="Inflation" /></div>
           </label>
         </div>
+        <label class="field field-range p2-demand-field">
+          <span class="p2-demand-head"><span>Jahresbedarf</span><strong id="capital-draw-display">CHF 120'000</strong></span>
+          <div class="p2-demand-slider-wrap">
+            <div class="p2-demand-track" aria-hidden="true"><span id="capital-draw-track-fill"></span></div>
+            <input id="capital-draw-range" class="p2-demand-range" type="range" min="50000" max="250000" step="1000" value="120000" data-sync-target="capital-draw" aria-label="Jahresbedarf" />
+          </div>
+          <input id="capital-draw" class="p2-demand-input" type="text" inputmode="numeric" value="120'000" data-sync-range="capital-draw-range" aria-label="Jahresbedarf in CHF" />
+        </label>
         <div class="grid-2k">
-          <label class="field"><span>Projektionsdauer (Jahre)</span>
-            <input id="projection-years" type="number" min="1" max="60" value="27" />
+          <label class="field p2-tune"><span>Projektionsdauer (Jahre)</span>
+            <div class="p2-inline-control"><input id="projection-years" type="number" min="1" max="60" value="27" data-sync-range="projection-years-range" />
+            <input id="projection-years-range" class="p2-tune-range" type="range" min="1" max="60" value="27" data-sync-target="projection-years" aria-label="Projektionsdauer" /></div>
           </label>
           <div class="field" style="align-self:end;">
             <div class="p2-chart-actions">
-              <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-chart-modal" title="Kapitalentwicklung anzeigen" aria-label="Kapitalentwicklung anzeigen"><span class="p2-button-icon p2-button-icon-capital" aria-hidden="true"></span></button>
-              <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-gap-modal" title="Rentenlücke anzeigen" aria-label="Rentenlücke anzeigen"><span class="p2-button-icon p2-button-icon-gap" aria-hidden="true"></span></button>
+              <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-chart-modal" title="Kapitalentwicklung anzeigen" aria-label="Kapitalentwicklung anzeigen">
+                <svg class="p2-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="4" y="15" width="3" height="5" rx="1" fill="#3b82f6"/>
+                  <rect x="10" y="11" width="3" height="9" rx="1" fill="#3b82f6"/>
+                  <rect x="16" y="7" width="3" height="13" rx="1" fill="#3b82f6"/>
+                  <path d="M4 13 L9 9 L13 11 L20 4" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M16.8 4H20v3.2" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-gap-modal" title="Rentenlücke anzeigen" aria-label="Rentenlücke anzeigen">
+                <svg class="p2-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
+                  <rect x="4" y="11" width="5" height="9" rx="1" fill="#3b82f6"/>
+                  <rect x="15" y="5" width="5" height="15" rx="1" fill="#3b82f6"/>
+                  <path d="M10.5 7.5 H13.5 M12 7.5 V11" fill="none" stroke="#f59e0b" stroke-width="2.3" stroke-linecap="round"/>
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -227,28 +250,28 @@
     <div class="p2-chart-modal-content">
       <div class="p2-chart-modal-header">
         <h4 id="chart-modal-title">Kapitalentwicklung (nominal)</h4>
+        <div class="p2-chart-help">
+          <button type="button" class="p2-chart-info" id="chart-info-btn" aria-label="Hinweise zur Grafik anzeigen" aria-expanded="false">i</button>
+          <div class="p2-chart-note p2-chart-tooltip p2-chart-mode-label" id="chart-method-note" role="tooltip"></div>
+        </div>
         <button type="button" class="p2-modal-close" id="close-chart-modal" aria-label="Kapitalentwicklung schliessen"></button>
       </div>
       <div class="p2-chart-card" id="chart-card">
         <canvas id="simulation-chart" width="800" height="320"></canvas>
       </div>
       <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
-        <div class="p2-chart-share-head">
-          <span>Dein Mix</span>
-          <strong id="chart-share-value">50% Kapital / 50% Rente</strong>
-        </div>
+        <div class="p2-chart-share-head p2-chart-share-summary-hidden"><strong id="chart-share-value">50% Kapital / 50% Rente</strong></div>
         <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
         <input id="chart-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug" />
-        <div class="p2-chart-share-labels"><span>Kapital <strong id="chart-capital-value">–</strong><small id="chart-capital-return-value">Kapitalrendite –</small></span><span>Rente <strong id="chart-rent-value">–</strong></span></div>
+        <div class="p2-chart-share-labels"><span>PK-Kapital <b id="chart-capital-share">50%</b><strong id="chart-capital-value">–</strong><small id="chart-capital-return-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span><span>PK-Rente <b id="chart-rent-share">50%</b><strong id="chart-rent-value">–</strong><small id="chart-total-rent" title="Gesamtrente">Gesamtrente –</small></span></div>
       </div>
       <div class="p2-chart-slider-wrap p2-chart-click-hint">
         <div class="p2-chart-slider-head">
-          <span>Jahresauswahl</span>
+          <strong>Jahresauswahl</strong>
           <strong id="chart-focus-label">Jahr 1</strong>
         </div>
         <div class="p2-chart-focus" id="chart-year-details"></div>
       </div>
-      <div class="p2-chart-note p2-chart-mode-label" id="chart-method-note"></div>
     </div>
   </div>
 
@@ -257,23 +280,23 @@
     <div class="p2-chart-modal-content">
       <div class="p2-chart-modal-header">
         <h4 id="gap-modal-title">Rentenlücke (nominal)</h4>
+        <div class="p2-chart-help">
+          <button type="button" class="p2-chart-info" id="gap-info-btn" aria-label="Hinweise zur Rentenlücke anzeigen" aria-expanded="false">i</button>
+          <div class="p2-chart-note p2-chart-tooltip p2-chart-mode-label" id="gap-chart-note" role="tooltip"></div>
+        </div>
         <button type="button" class="p2-modal-close" id="close-gap-modal" aria-label="Rentenlücke schliessen"></button>
       </div>
       <div class="p2-chart-card"><canvas id="gap-simulation-chart" width="800" height="320"></canvas></div>
       <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
-        <div class="p2-chart-share-head">
-          <span>Dein Mix</span>
-          <strong id="gap-share-value">50% Kapital / 50% Rente</strong>
-        </div>
+        <div class="p2-chart-share-head p2-chart-share-summary-hidden"><strong id="gap-share-value">50% Kapital / 50% Rente</strong></div>
         <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
         <input id="gap-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug in der Lückengrafik" />
-        <div class="p2-chart-share-labels"><span>Kapital <strong id="gap-capital-value">–</strong><small id="gap-capital-return-value">Kapitalrendite –</small></span><span>Rente <strong id="gap-rent-value">–</strong></span></div>
+        <div class="p2-chart-share-labels"><span>PK-Kapital <b id="gap-capital-share">50%</b><strong id="gap-capital-value">–</strong><small id="gap-capital-return-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span><span>PK-Rente <b id="gap-rent-share">50%</b><strong id="gap-rent-value">–</strong><small id="gap-total-rent" title="Gesamtrente">Gesamtrente –</small></span></div>
       </div>
-      <div class="p2-chart-slider-wrap p2-chart-click-hint">
-        <div class="p2-chart-slider-head"><span>Jahresauswahl</span><strong id="gap-focus-label">Jahr 1</strong></div>
-        <div class="p2-chart-focus" id="gap-year-details"></div>
+        <div class="p2-chart-slider-wrap p2-chart-click-hint">
+          <div class="p2-chart-slider-head"><strong>Jahresauswahl</strong><strong id="gap-focus-label">Jahr 1</strong></div>
+        <div class="p2-chart-focus p2-gap-focus" id="gap-year-details"></div>
       </div>
-      <div class="p2-chart-note p2-chart-mode-label" id="gap-chart-note"></div>
     </div>
   </div>
 
