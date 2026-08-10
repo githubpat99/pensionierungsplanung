@@ -53,7 +53,7 @@ const STORAGE_STARTED = 'p2-wizard-started';
 const STORAGE_CHART_MODE = 'p2-chart-mode';
 const STORAGE_FORM_STATE = 'p2-form-state-v2';
 let chartMode = 'nominal';
-let focusYear = 1;
+let focusYear = 0;
 
 // ============================================================
 // Number formatting utilities
@@ -224,7 +224,7 @@ function syncChartModeButtons() {
 
 function clampFocusYear(maxYears) {
   const safeMax = Math.max(1, Number(maxYears) || 1);
-  focusYear = Math.max(1, Math.min(safeMax, Math.round(focusYear || 1)));
+  focusYear = Math.max(0, Math.min(safeMax, Math.round(focusYear || 0)));
   return focusYear;
 }
 
@@ -815,13 +815,12 @@ function updateChart() {
   const rentSeries = [];
   const needSeries = [];
   const visibleYears = Math.min(projYears, Math.max(potentials.length, needs.length));
-
   for (let i = 0; i <= visibleYears; i++) {
     const incomeValue = i === 0
       ? securedIncome + (proj.returnAmounts[0] || 0)
       : (potentials[i - 1] ?? potentials[potentials.length - 1] ?? securedIncome);
     const needValue = i === 0
-      ? (needs[0] ?? 0)
+      ? readField('capital-draw')
       : (needs[i - 1] ?? needs[needs.length - 1] ?? 0);
     incomeSeries.push(incomeValue / inflationFactor(i));
     rentSeries.push((securedIncome * Math.pow(1 + inflation, i)) / inflationFactor(i));
@@ -1107,10 +1106,12 @@ function updateGapChart() {
   const incomeSeries = [];
   const rentSeries = [];
   const needSeries = [];
-  for (let i = 1; i <= years; i++) {
-    const income = (proj.potentials[i - 1] ?? securedIncome) / inflationFactor(i);
+  for (let i = 0; i <= years; i++) {
+    const income = (i === 0
+      ? securedIncome + (proj.returnAmounts[0] || 0)
+      : (proj.potentials[i - 1] ?? securedIncome)) / inflationFactor(i);
     const rent = (securedIncome * Math.pow(1 + inflation, i)) / inflationFactor(i);
-    const need = (proj.needs[i - 1] ?? 0) / inflationFactor(i);
+    const need = (i === 0 ? readField('capital-draw') : (proj.needs[i - 1] ?? 0)) / inflationFactor(i);
     incomeSeries.push(income);
     rentSeries.push(rent);
     needSeries.push(need);
@@ -1137,7 +1138,7 @@ function updateGapChart() {
   const right = mob ? 28 : 18;
   const h = Math.max(120, bottom - top);
   const maxY = Math.max(1, ...incomeSeries, ...needSeries);
-  const xStep = (cssW - left - right) / Math.max(1, years - 1);
+  const xStep = (cssW - left - right) / Math.max(1, years);
   const mapY = (value) => bottom - (value / maxY) * h;
   const mapX = (index) => left + xStep * index;
 
@@ -1154,10 +1155,10 @@ function updateGapChart() {
   }
 
   // A small set of stacked bars keeps the rent gap readable on mobile.
-  const barCount = Math.min(5, years);
+  const barCount = Math.min(5, years + 1);
   const barWidth = Math.min(42, Math.max(20, (cssW - left - right) / (barCount * 1.8)));
   for (let bar = 0; bar < barCount; bar++) {
-    const index = barCount === 1 ? 0 : Math.round((bar / (barCount - 1)) * (years - 1));
+    const index = barCount === 1 ? 0 : Math.round((bar / (barCount - 1)) * years);
     const x = mapX(index) - barWidth / 2;
     const need = Math.max(0, needSeries[index] || 0);
     const income = Math.max(0, incomeSeries[index] || 0);
@@ -1178,7 +1179,7 @@ function updateGapChart() {
       ctx.fillStyle = '#ef4444';
       ctx.fillRect(x, mapY(need), barWidth, gapHeight);
     }
-    if (index === focusIndex - 1) {
+    if (index === focusIndex) {
       ctx.strokeStyle = '#0f172a';
       ctx.lineWidth = 2;
       ctx.strokeRect(x - 2, mapY(Math.max(need, income)) - 2, barWidth + 4, bottom - mapY(Math.max(need, income)) + 4);
@@ -1214,9 +1215,9 @@ function updateGapChart() {
   ctx.textAlign = 'left';
   for (let t = 0; t < tickCount; t++) {
     const r = tickCount === 1 ? 0 : t / (tickCount - 1);
-    const index = barCount === 1 ? 0 : Math.round(r * (years - 1));
+    const index = barCount === 1 ? 0 : Math.round(r * years);
     const x = mapX(index);
-    ctx.fillText(String(retireAge + index + 1), x - 8, bottom + 14);
+    ctx.fillText(String(retireAge + index), x - 8, bottom + 14);
   }
 
   const note = document.getElementById('gap-chart-note');
@@ -1226,8 +1227,8 @@ function updateGapChart() {
   }
 
   if (gapYearDetails) {
-    const need = Math.round(needSeries[focusIndex - 1] || 0);
-    const income = Math.round(incomeSeries[focusIndex - 1] || 0);
+    const need = Math.round(needSeries[focusIndex] || 0);
+    const income = Math.round(incomeSeries[focusIndex] || 0);
     const gap = income - need;
     gapYearDetails.innerHTML =
       `<span class="p2-chart-focus-line p2-chart-focus-gap">${gap >= 0 ? 'Überschuss' : 'Lücke'} CHF ${formatCHF(Math.abs(gap))}</span>` +
@@ -1374,7 +1375,7 @@ function attachEvents() {
     const rect = simulationCanvas.getBoundingClientRect();
     const leftMargin = rect.width < 520 ? 12 : 46;
     const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - leftMargin) / (rect.width - leftMargin)));
-    focusYear = Math.max(1, Math.min(scenario.projYears, Math.round(ratio * scenario.projYears)));
+    focusYear = Math.max(0, Math.min(scenario.projYears, Math.round(ratio * scenario.projYears)));
     updateResults();
   });
 
@@ -1383,7 +1384,7 @@ function attachEvents() {
     const scenario = buildScenarioData();
     const rect = gapCanvas.getBoundingClientRect();
     const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - 12) / (rect.width - 20)));
-    focusYear = Math.max(1, Math.min(scenario.projYears, Math.round(ratio * scenario.projYears)));
+    focusYear = Math.max(0, Math.min(scenario.projYears, Math.round(ratio * scenario.projYears)));
     updateResults();
   });
 
