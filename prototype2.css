@@ -322,6 +322,29 @@ body.p2-show-simulation .p2-card { padding: 7px 10px; min-height: 64px; }
 .field-range > span { display: flex; align-items: center; justify-content: space-between; }
 .p2-mix-head { margin-top: 0; }
 .p2-mix-head > span { color: var(--ink-3); }
+.p2-mix-head > span:first-child {
+  color: var(--blue);
+  font-weight: 700;
+}
+.p2-mix-head .p2-mix-head-right {
+  margin-left: auto;
+  text-align: right;
+  color: #a16207;
+  font-weight: 700;
+}
+.p2-share-block {
+  margin: 4px 0 10px;
+  padding: 10px 10px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.48);
+  background: rgba(255, 255, 255, 0.58);
+}
+.p2-share-block .range-badge {
+  display: none;
+}
+.p2-mix-field {
+  gap: 8px;
+}
 .p2-mix-track,
 .p2-chart-share-track {
   display: none;
@@ -423,6 +446,12 @@ body.p2-show-simulation .p2-card { padding: 7px 10px; min-height: 64px; }
   color: #64748b;
   font-size: 0.82rem;
   font-weight: 800;
+}
+.p2-demand-projection-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  align-items: start;
 }
 .p2-demand-input {
   position: absolute;
@@ -531,6 +560,11 @@ body.p2-show-simulation .p2-card { padding: 7px 10px; min-height: 64px; }
 
 /* 2-column grid – stays 2-col on all screen sizes */
 .grid-2k { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+
+.p2-chart-actions-wrap {
+  margin-top: 14px;
+  margin-bottom: 30px;
+}
 
 /* Chart button */
 .p2-chart-btn {
@@ -886,6 +920,158 @@ body.p2-show-simulation .p2-card { padding: 7px 10px; min-height: 64px; }
 .p2-liquidity-line-note strong {
   color: var(--ink-4);
   font-weight: 600;
+}
+.p2-plan-timeline {
+  margin-top: 10px;
+  padding: 16px 20px 2px;
+  border-radius: 14px;
+  border: 0;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.8) 0%, rgba(248, 250, 252, 0.65) 100%);
+  display: grid;
+  gap: 8px;
+}
+.p2-plan-band {
+  position: relative;
+  margin-top: 6px;
+  border-radius: 999px;
+  overflow: visible;
+  border: 1px solid rgba(30, 41, 59, 0.28);
+  min-height: 24px;
+  --plan-green-end: 82%;
+  --plan-yellow-end: 92%;
+  background:
+    linear-gradient(90deg,
+      #22c55e 0%,
+      #22c55e calc(var(--plan-green-end) - 4%),
+      #facc15 var(--plan-green-end),
+      #fb923c calc(var(--plan-yellow-end) - 1.4%),
+      #ef4444 var(--plan-yellow-end),
+      #dc2626 100%);
+  box-shadow: 0 3px 8px rgba(15, 23, 42, 0.14);
+}
+.p2-plan-band.is-all-ok {
+  background: linear-gradient(90deg, #22c55e 0%, #16a34a 100%);
+}
+.p2-plan-segment {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #0f172a;
+  background: transparent;
+  transition: transform 0.12s ease, box-shadow 0.2s ease;
+}
+.p2-plan-segment strong {
+  font-size: 0.94rem;
+  line-height: 1;
+  font-weight: 800;
+}
+.p2-plan-segment:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+.p2-plan-segment.is-ok {
+  left: 0;
+  width: var(--plan-green-end);
+}
+.p2-plan-segment.is-partial {
+  left: var(--plan-green-end);
+  width: calc(var(--plan-yellow-end) - var(--plan-green-end));
+}
+.p2-plan-segment.is-critical {
+  left: var(--plan-yellow-end);
+  width: calc(100% - var(--plan-yellow-end));
+}
+.p2-plan-segment.is-disabled {
+  opacity: 0.48;
+}
+.p2-plan-segment.is-hidden {
+  display: none;
+}
+.p2-plan-segment.is-current {
+  box-shadow: none;
+}
+.p2-plan-segment.is-ok strong,
+.p2-plan-segment.is-critical strong {
+  opacity: 0;
+}
+.p2-plan-segment.is-partial strong {
+  position: absolute;
+  left: 50%;
+  top: -40px;
+  transform: translateX(-50%);
+  min-width: 58px;
+  padding: 6px 9px;
+  border-radius: 9px;
+  background: linear-gradient(180deg, #fde047 0%, #facc15 100%);
+  border: 0;
+  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.2);
+  color: #334155;
+  font-weight: 600;
+}
+.p2-plan-segment.is-partial strong::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  width: 13px;
+  height: 13px;
+  transform: translateX(-50%) rotate(45deg);
+  background: #facc15;
+  border: 0;
+}
+.p2-plan-meta {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  align-items: start;
+}
+.p2-plan-meta-item {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px;
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(148, 163, 184, 0.28);
+}
+.p2-plan-meta-item small {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--ink-4);
+}
+.p2-plan-meta-item strong {
+  font-size: 0.79rem;
+  color: var(--ink);
+}
+.p2-plan-tip {
+  margin: 0;
+  padding: 7px 9px;
+  border: 1px solid #dbeafe;
+  border-radius: 8px;
+  background: #f8fbff;
+  color: var(--ink-2);
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+.p2-plan-tip.is-ok {
+  border-color: rgba(16, 185, 129, 0.35);
+  background: rgba(236, 253, 245, 0.85);
+}
+.p2-plan-tip.is-partial {
+  border-color: rgba(245, 158, 11, 0.35);
+  background: rgba(255, 251, 235, 0.9);
+}
+.p2-plan-tip.is-critical {
+  border-color: rgba(239, 68, 68, 0.35);
+  background: rgba(254, 242, 242, 0.92);
 }
 .p2-drawer-summary {
   display: grid;
@@ -1297,13 +1483,29 @@ body.p2-show-simulation .p2-card { padding: 7px 10px; min-height: 64px; }
 .p2-chart-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
+  gap: 10px;
 }
 .p2-chart-btn {
   min-width: 0;
-  padding: 7px 10px;
+  padding: 6px 10px;
   font-size: 0.79rem;
   font-weight: 700;
+}
+.p2-chart-actions .p2-icon-button {
+  height: 30px;
+}
+.p2-chart-actions .button-secondary.p2-chart-btn {
+  background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.28);
+}
+.p2-chart-actions .button-secondary.p2-chart-btn:hover {
+  background: linear-gradient(180deg, #2563eb 0%, #1d4ed8 100%);
+}
+.p2-chart-actions .button-secondary.p2-chart-btn:focus-visible {
+  outline: 2px solid rgba(37, 99, 235, 0.3);
+  outline-offset: 2px;
 }
 .p2-chart-mode {
   display: inline-flex;
@@ -1954,6 +2156,27 @@ body.p2-show-simulation .p2-card { padding: 7px 10px; min-height: 64px; }
   }
   .p2-liquidity-grid {
     grid-template-columns: 1fr;
+  }
+  .p2-plan-band {
+    min-height: 24px;
+  }
+  .p2-plan-timeline {
+    padding: 14px 14px 0;
+  }
+  .p2-plan-segment {
+    padding: 0;
+  }
+  .p2-plan-segment strong {
+    font-size: 0.9rem;
+  }
+  .p2-plan-segment.is-partial strong {
+    top: -33px;
+    min-width: 50px;
+    padding: 4px 7px 5px;
+  }
+  .p2-plan-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
   }
   #chart-year-details .p2-capital-year-grid {
     gap: 3px 10px;

@@ -35,6 +35,14 @@ const gapYearDetails = document.getElementById('gap-year-details');
 const gapCoverageBadge = document.getElementById('gap-coverage-badge');
 const gapCoverageInfo = document.getElementById('gap-coverage-info');
 const gapCoverageTip = document.getElementById('gap-coverage-tip');
+const planStateOk = document.getElementById('plan-state-ok');
+const planStatePartial = document.getElementById('plan-state-partial');
+const planStateCritical = document.getElementById('plan-state-critical');
+const planStateOkAge = document.getElementById('plan-state-ok-age');
+const planStatePartialAge = document.getElementById('plan-state-partial-age');
+const planStateCriticalAge = document.getElementById('plan-state-critical-age');
+const planStateTip = document.getElementById('plan-state-tip');
+const planBand = document.getElementById('plan-band');
 const chartShareSlider = document.getElementById('chart-share-slider');
 
 const STEP_META = [
@@ -50,6 +58,7 @@ const STEP_META = [
 
 let currentStep = 0;
 let latestInsightText = '';
+const COVERAGE_GREEN = '#22c55e';
 
 const STORAGE_STEP    = 'p2-wizard-step';
 const STORAGE_STARTED = 'p2-wizard-started';
@@ -365,9 +374,27 @@ function setText(id, text) {
 function syncLinkedRanges() {
   document.querySelectorAll('[data-sync-range]').forEach((input) => {
     const range = document.getElementById(input.dataset.syncRange);
-    if (range) range.value = input.id === 'capital-draw' ? parseFormatted(input.value) : input.value;
+    if (range) range.value = (input.id === 'capital-draw' || input.id === 'pk-capital') ? parseFormatted(input.value) : input.value;
   });
+  updatePkCapitalDisplay();
   updateCapitalDrawDisplay();
+  updateFactorDisplays();
+  updateProjectionYearsDisplay();
+}
+
+function updatePkCapitalDisplay() {
+  const input = document.getElementById('pk-capital');
+  const range = document.getElementById('pk-capital-range');
+  const display = document.getElementById('pk-capital-display');
+  const fill = document.getElementById('pk-capital-track-fill');
+  if (!input || !range) return;
+  const value = parseFormatted(input.value);
+  if (display) display.textContent = formatThousands(value);
+  if (fill) {
+    const min = Number(range.min) || 0;
+    const max = Number(range.max) || 1;
+    fill.style.width = `${Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))}%`;
+  }
 }
 
 function updateCapitalDrawDisplay() {
@@ -377,7 +404,7 @@ function updateCapitalDrawDisplay() {
   const fill = document.getElementById('capital-draw-track-fill');
   if (!input || !range) return;
   const value = parseFormatted(input.value);
-  if (display) display.textContent = `CHF ${formatThousands(value)}`;
+  if (display) display.textContent = formatThousands(value);
   if (fill) {
     const min = Number(range.min) || 0;
     const max = Number(range.max) || 1;
@@ -385,24 +412,129 @@ function updateCapitalDrawDisplay() {
   }
 }
 
+function updateProjectionYearsDisplay() {
+  const input = document.getElementById('projection-years');
+  const range = document.getElementById('projection-years-range');
+  const display = document.getElementById('projection-years-display');
+  const fill = document.getElementById('projection-years-track-fill');
+  if (!input || !range) return;
+  const value = Math.max(1, Number(input.value) || 1);
+  if (display) display.textContent = String(value);
+  if (fill) {
+    const min = Number(range.min) || 1;
+    const max = Number(range.max) || 60;
+    fill.style.width = `${Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))}%`;
+  }
+}
+
+function updateFactorDisplay(inputId, rangeId, displayId, fillId) {
+  const input = document.getElementById(inputId);
+  const range = document.getElementById(rangeId);
+  const display = document.getElementById(displayId);
+  const fill = document.getElementById(fillId);
+  if (!input || !range) return;
+  const value = Number(input.value) || 0;
+  if (display) display.textContent = value.toFixed(1);
+  if (fill) {
+    const min = Number(range.min) || 0;
+    const max = Number(range.max) || 1;
+    fill.style.width = `${Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))}%`;
+  }
+}
+
+function updateFactorDisplays() {
+  updateFactorDisplay('conversion-rate', 'conversion-rate-range', 'conversion-rate-display', 'conversion-rate-track-fill');
+  updateFactorDisplay('return-rate', 'return-rate-range', 'return-rate-display', 'return-rate-track-fill');
+  updateFactorDisplay('inflation', 'inflation-range', 'inflation-display', 'inflation-track-fill');
+}
+
 function syncInputValue(source, target) {
   if (!target) return;
   target.value = target.id === 'capital-draw'
     ? formatThousands(Number(source.value) || 0)
     : source.value;
+  if (target.id === 'pk-capital') updatePkCapitalDisplay();
   if (target.id === 'capital-draw') updateCapitalDrawDisplay();
-}
-
-function hideLiquidityTooltip() {
-  const badge = document.getElementById('liquidity-status-badge');
-  const tip = document.getElementById('liquidity-status-tip');
-  if (tip) tip.classList.add('hidden');
-  if (badge) badge.setAttribute('aria-expanded', 'false');
+  if (target.id === 'conversion-rate' || target.id === 'return-rate' || target.id === 'inflation') updateFactorDisplays();
+  if (target.id === 'projection-years') updateProjectionYearsDisplay();
 }
 
 function hideGapCoverageTip() {
   if (gapCoverageTip) gapCoverageTip.classList.add('hidden');
   if (gapCoverageInfo) gapCoverageInfo.setAttribute('aria-expanded', 'false');
+}
+
+function hidePlanStateTip() {
+  if (planStateTip) planStateTip.classList.add('hidden');
+  [planStateOk, planStatePartial, planStateCritical].forEach((button) => {
+    button?.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function classifyCoverage(deficit, startCapital, endCapital, yearIndex) {
+  if (deficit <= 0) {
+    return { state: 'ok', label: 'Keine Lücke in diesem Jahr', hint: 'In diesem Jahr decken Gesamtrente und Ertrag den Bedarf ohne zusätzlichen Kapitalabbau.' };
+  }
+  if (startCapital <= 0) {
+    return {
+      state: 'critical',
+      label: 'Lücke nicht mehr schliessbar',
+      hint: 'Kein verfügbares Kapital mehr: Die Lücke öffnet sich weiter und kann nicht mehr über Kapitalabbau finanziert werden (-> Kapitalentwicklung).',
+    };
+  }
+  if (startCapital < deficit || (yearIndex > 0 && endCapital <= 0)) {
+    return {
+      state: 'partial',
+      label: 'Lücke nur teilweise schliessbar',
+      hint: 'Das verfügbare Kapital reicht in diesem Jahr nur noch teilweise zur Deckung der Lücke. Ab Folgejahr ist die Lücke nicht mehr finanzierbar (-> Kapitalentwicklung).',
+    };
+  }
+  return {
+    state: 'ok',
+    label: 'Lücke vollständig schliessbar',
+    hint: 'In diesem Jahr kann die Lücke vollständig durch verfügbares Kapital gedeckt werden.',
+  };
+}
+
+function buildCoverageTimeline(scenario, incomeSeries, needSeries) {
+  const years = Math.min(scenario.projYears, Math.max(scenario.projection.potentials.length, scenario.projection.needs.length));
+  const entries = [];
+  for (let index = 0; index <= years; index++) {
+    const income = Math.round(incomeSeries[index] || 0);
+    const need = Math.round(needSeries[index] || 0);
+    const deficit = Math.max(0, need - income);
+    const startCapital = index > 0
+      ? Math.max(0, Math.round(scenario.projection.rawPath[index - 1] || 0))
+      : Math.max(0, Math.round(scenario.projection.rawPath[0] || 0));
+    const endCapital = index > 0
+      ? Math.max(0, Math.round(scenario.projection.rawPath[index] || 0))
+      : startCapital;
+    const coverage = classifyCoverage(deficit, startCapital, endCapital, index);
+    entries.push({
+      index,
+      age: scenario.retireAge + index,
+      deficit,
+      startCapital,
+      endCapital,
+      state: coverage.state,
+      label: coverage.label,
+      hint: coverage.hint,
+    });
+  }
+
+  const firstPartial = entries.find((entry) => entry.state === 'partial') || null;
+  const firstCritical = entries.find((entry) => entry.state === 'critical') || null;
+  const fullUntilAge = firstPartial
+    ? Math.max(scenario.retireAge, firstPartial.age - 1)
+    : (firstCritical ? Math.max(scenario.retireAge, firstCritical.age - 1) : scenario.life);
+
+  return {
+    years,
+    entries,
+    fullUntilAge,
+    firstPartial,
+    firstCritical,
+  };
 }
 
 // ============================================================
@@ -831,53 +963,107 @@ function updateResults() {
   latestInsightText = `${insight} ${netLine} ${thresholdText}`;
   if (insightBody) insightBody.textContent = latestInsightText;
 
-  const liquidityPanel = document.getElementById('liquidity-panel');
-  const liquidityBadge = document.getElementById('liquidity-status-badge');
-  const liquidityTip = document.getElementById('liquidity-status-tip');
-  const yearsToProjectionEnd = depletionAge == null ? Infinity : depletionAge - life;
-  const isNearProjectionEnd = Number.isFinite(yearsToProjectionEnd) && Math.abs(yearsToProjectionEnd) <= 3;
-  const endsTooEarly = Number.isFinite(yearsToProjectionEnd) && yearsToProjectionEnd < -3;
-  if (liquidityPanel) {
-    liquidityPanel.classList.remove('is-alert', 'is-neutral', 'is-ok');
-    if (draw <= 0 || isNearProjectionEnd) liquidityPanel.classList.add('is-neutral');
-    else if (endsTooEarly) liquidityPanel.classList.add('is-alert');
-    else liquidityPanel.classList.add('is-ok');
+  const inflationFactor = (yearIndex) => (chartMode === 'real' ? Math.pow(1 + inflation, yearIndex) : 1);
+  const timelineYears = Math.min(projYears, Math.max(proj.potentials.length, proj.needs.length));
+  const incomeSeries = [];
+  const needSeries = [];
+  for (let i = 0; i <= timelineYears; i++) {
+    const income = (i === 0
+      ? securedIncome + (proj.returnAmounts[0] || 0)
+      : (proj.potentials[i - 1] ?? securedIncome)) / inflationFactor(i);
+    const need = (i === 0 ? draw : (proj.needs[i - 1] ?? 0)) / inflationFactor(i);
+    incomeSeries.push(income);
+    needSeries.push(need);
   }
-  setText('liquidity-free-today', `CHF ${formatCHF(freeCapital)}`);
-  setText('liquidity-bound-today', `CHF ${formatCHF(boundCapital)}`);
-  setText('liquidity-bound-real-estate', `CHF ${formatCHF(boundCapital)}`);
-  setText('liquidity-bound-note', boundCapital > 0 ? '' : 'Aktuell kein gebundenes Kapital erfasst');
-  setText('liquidity-bound-pk-note', scenario.remainingPk > 0 ? `CHF ${formatCHF(scenario.remainingPk)} in Rente umgewandelt` : 'als Rente berücksichtigt');
-  if (liquidityBadge) {
-    liquidityBadge.classList.remove('is-alert', 'is-neutral', 'is-ok');
-    let badgeText = 'Hinweis (i)';
-    let badgeInfo = 'Frei verfügbares und gebundenes Kapital werden separat ausgewiesen.';
-    if (draw <= 0) {
-      badgeText = 'neutral (i)';
-      badgeInfo = `Ohne geplanten Kapitalbezug bleibt das verfügbare Kapital im Projektionshorizont erhalten (bis Alter ${life}).`;
-      liquidityBadge.classList.add('is-neutral');
-    } else if (isNearProjectionEnd) {
-      badgeText = 'nahe Planende (i)';
-      badgeInfo = `Das verfügbare Kapital reicht bis Alter ${depletionAge} und liegt damit innerhalb von +/- 3 Jahren zum Projektionsende (Alter ${life}).`;
-      liquidityBadge.classList.add('is-neutral');
-    } else if (endsTooEarly) {
-      badgeText = `vor Planende (i)`;
-      badgeInfo = `Das verfügbare Kapital reicht bis Alter ${depletionAge} und endet damit mehr als 3 Jahre vor dem Projektionsende (Alter ${life}).`;
-      liquidityBadge.classList.add('is-alert');
+  const timeline = buildCoverageTimeline(scenario, incomeSeries, needSeries);
+  const focusIndex = Math.min(timeline.years, clampFocusYear(timeline.years));
+  const focusEntry = timeline.entries[focusIndex] || timeline.entries[0];
+
+  const setPlanState = (button, labelEl, ageText, indexValue, disabled, isCurrent, tipText, stateClass) => {
+    if (!button || !labelEl) return;
+    labelEl.textContent = ageText;
+    button.dataset.year = String(Math.max(0, indexValue || 0));
+    button.dataset.tip = tipText || '';
+    button.disabled = !!disabled;
+    button.classList.remove('is-current');
+    button.classList.toggle('is-disabled', !!disabled);
+    button.classList.toggle('is-current', !disabled && isCurrent);
+    button.classList.toggle('is-hidden', !!disabled && stateClass !== 'ok');
+    button.setAttribute('aria-label', tipText || `Zustand ${stateClass}`);
+  };
+
+  const partialIndex = timeline.firstPartial ? timeline.firstPartial.index : -1;
+  const criticalIndex = timeline.firstCritical ? timeline.firstCritical.index : -1;
+  const fullIndex = timeline.firstPartial
+    ? Math.max(0, timeline.firstPartial.index - 1)
+    : (timeline.firstCritical ? Math.max(0, timeline.firstCritical.index - 1) : timeline.years);
+  const hasTransitionStates = !!timeline.firstPartial || !!timeline.firstCritical;
+  if (planBand) {
+    const totalYears = Math.max(1, timeline.years);
+    const greenEndPct = hasTransitionStates
+      ? Math.max(4, Math.min(96, (Math.max(0, fullIndex) / totalYears) * 100))
+      : 100;
+    const yellowEndIndex = criticalIndex >= 0 ? criticalIndex : Math.min(totalYears, Math.max(0, partialIndex + 1));
+    const yellowEndPct = hasTransitionStates
+      ? Math.max(greenEndPct + 1.5, Math.min(98, (Math.max(0, yellowEndIndex) / totalYears) * 100))
+      : 100;
+    planBand.style.setProperty('--plan-green-end', `${greenEndPct.toFixed(2)}%`);
+    planBand.style.setProperty('--plan-yellow-end', `${yellowEndPct.toFixed(2)}%`);
+    planBand.classList.toggle('is-all-ok', !hasTransitionStates);
+  }
+
+  const focusState = focusEntry?.state || 'ok';
+  const okTip = `Bis Alter ${timeline.fullUntilAge} kann die Lücke vollständig über verfügbares Kapital geschlossen werden.`;
+  const partialTip = timeline.firstPartial
+    ? `Ab Alter ${timeline.firstPartial.age} ist die Lücke nur teilweise finanzierbar. Danach kippt der Zustand in rot.`
+    : `Im aktuellen Horizont gibt es kein separates Übergangsjahr mit teilweiser Finanzierung.`;
+  const criticalTip = timeline.firstCritical
+    ? `Ab Alter ${timeline.firstCritical.age} ist kein weiterer Kapitalabbau möglich. Die Lücke bleibt ungedeckt (-> Kapitalentwicklung).`
+    : `Im aktuellen Horizont wird kein roter Zustand erreicht.`;
+
+  setPlanState(
+    planStateOk,
+    planStateOkAge,
+    '',
+    fullIndex,
+    false,
+    focusState === 'ok',
+    okTip,
+    'ok',
+  );
+  setPlanState(
+    planStatePartial,
+    planStatePartialAge,
+    timeline.firstPartial ? `Alter ${timeline.firstPartial.age}` : 'Alter –',
+    partialIndex,
+    !timeline.firstPartial,
+    focusState === 'partial',
+    partialTip,
+    'partial',
+  );
+  setPlanState(
+    planStateCritical,
+    planStateCriticalAge,
+    '',
+    criticalIndex,
+    !timeline.firstCritical,
+    focusState === 'critical',
+    criticalTip,
+    'critical',
+  );
+
+  if (planStateTip) {
+    if (focusState === 'critical') {
+      planStateTip.className = 'p2-plan-tip hidden is-critical';
+      planStateTip.textContent = criticalTip;
+    } else if (focusState === 'partial') {
+      planStateTip.className = 'p2-plan-tip hidden is-partial';
+      planStateTip.textContent = partialTip;
     } else {
-      badgeText = 'über Planende (i)';
-      badgeInfo = depletionAge == null
-        ? `Im Projektionshorizont bis Alter ${life} bleibt verfügbares Kapital vorhanden.`
-        : `Das verfügbare Kapital reicht bis Alter ${depletionAge} und damit mehr als 3 Jahre über das Projektionsende (Alter ${life}) hinaus.`;
-      liquidityBadge.classList.add('is-ok');
+      planStateTip.className = 'p2-plan-tip hidden is-ok';
+      planStateTip.textContent = okTip;
     }
-    liquidityBadge.textContent = badgeText;
-    liquidityBadge.dataset.tip = badgeInfo;
-    liquidityBadge.title = '';
-    liquidityBadge.setAttribute('aria-label', `${badgeText}. Info einblenden.`);
-    if (liquidityTip && liquidityBadge.getAttribute('aria-expanded') === 'true') {
-      liquidityTip.textContent = badgeInfo;
-    }
+    hidePlanStateTip();
   }
 
   syncYearControls(scenario);
@@ -893,7 +1079,7 @@ function updateResults() {
 
 function updateChart() {
   const scenario = buildScenarioData();
-  const { retireAge, projYears, freeCapital, boundCapital, pkPayout, totalCapital, weightedReturn: wRet, projection: proj } = scenario;
+  const { retireAge, projYears, freeCapital, boundCapital, pkPayout, totalCapital, securedIncome, weightedReturn: wRet, projection: proj } = scenario;
   const inflation = Math.max(0, readField('inflation') / 100);
   const inflationFactor = (yearIndex) => (chartMode === 'real' ? Math.pow(1 + inflation, yearIndex) : 1);
   const visibleYears = Math.min(projYears, Math.max(0, proj.path.length - 1));
@@ -907,6 +1093,17 @@ function updateChart() {
   const midSeries = boundSeries.map((value, index) => value + otherFreeSeries[index]);
   const capitalSeries = boundSeries.map((value, index) => value + freeSeries[index]);
   const focusIndex = Math.min(visibleYears, clampFocusYear(visibleYears));
+  const incomeSeries = [];
+  const needSeries = [];
+  for (let i = 0; i <= visibleYears; i++) {
+    const income = (i === 0
+      ? securedIncome + (proj.returnAmounts[0] || 0)
+      : (proj.potentials[i - 1] ?? securedIncome)) / inflationFactor(i);
+    const need = (i === 0 ? readField('capital-draw') : (proj.needs[i - 1] ?? 0)) / inflationFactor(i);
+    incomeSeries.push(income);
+    needSeries.push(need);
+  }
+  const coverageTimeline = buildCoverageTimeline(scenario, incomeSeries, needSeries);
 
   const canvas = document.getElementById('simulation-chart');
   if (!canvas) return;
@@ -1034,6 +1231,27 @@ function updateChart() {
   }
   ctx.setLineDash([]);
 
+  const drawMilestoneMarker = (entry, color) => {
+    if (!entry || entry.index <= 0 || entry.index > visibleYears) return;
+    const x = mapX(entry.index);
+    const isGreen = color === COVERAGE_GREEN;
+    ctx.setLineDash(isGreen ? [] : [3, 4]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isGreen ? 2.2 : 1.1;
+    ctx.beginPath();
+    ctx.moveTo(x, capTop);
+    ctx.lineTo(x, capBot);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  };
+
+  const fullCoverageYears = coverageTimeline.firstPartial
+    ? Math.max(0, coverageTimeline.firstPartial.index - 1)
+    : (coverageTimeline.firstCritical ? Math.max(0, coverageTimeline.firstCritical.index - 1) : visibleYears);
+  drawMilestoneMarker({ index: fullCoverageYears }, COVERAGE_GREEN);
+  drawMilestoneMarker(coverageTimeline.firstPartial, '#f59e0b');
+  drawMilestoneMarker(coverageTimeline.firstCritical, '#ef4444');
+
   traceSmoothSeries(boundSeries);
   ctx.lineTo(mapX(boundSeries.length - 1), capBot);
   ctx.lineTo(mapX(0), capBot);
@@ -1143,9 +1361,9 @@ function updateChart() {
     chartYearDetails.innerHTML =
       `<div class="p2-capital-year-grid">` +
       `<span></span><span class="p2-capital-year-colhead">Verfügbar</span><span class="p2-capital-year-colhead">Gebunden</span><span class="p2-capital-year-colhead">Gesamt</span>` +
-      `<span class="p2-capital-year-label">Jahresanfang</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-free">CHF ${formatCHF(freeStart)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-bound">CHF ${formatCHF(boundStart)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-total">CHF ${formatCHF(totalStart)}</span>` +
+      `<span class="p2-capital-year-label">1.1.</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-free">CHF ${formatCHF(freeStart)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-bound">CHF ${formatCHF(boundStart)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-total">CHF ${formatCHF(totalStart)}</span>` +
       `<span class="${deltaLabelClass}">${deltaLabel}</span><span class="p2-chart-focus-line p2-capital-year-value ${freeDeltaClass}">${freeDeltaValue}</span><span class="${boundDeltaCellClass}">${boundDeltaValue}</span><span class="p2-chart-focus-line p2-capital-year-value ${totalDeltaClass}">${totalDeltaValue}</span>` +
-      `<span class="p2-capital-year-label">Jahresende</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-free">CHF ${formatCHF(freeEnd)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-bound">CHF ${formatCHF(boundEnd)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-total">CHF ${formatCHF(totalEnd)}</span>` +
+      `<span class="p2-capital-year-label">31.12.</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-free">CHF ${formatCHF(freeEnd)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-bound">CHF ${formatCHF(boundEnd)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-total">CHF ${formatCHF(totalEnd)}</span>` +
       `</div>`;
   }
 }
@@ -1175,6 +1393,7 @@ function updateGapChart() {
     needSeries.push(need);
   }
   const gapSeries = incomeSeries.map((value, i) => value - (needSeries[i] || 0));
+  const coverageTimeline = buildCoverageTimeline(scenario, incomeSeries, needSeries);
 
   const canvas = document.getElementById('gap-simulation-chart');
   if (!canvas) return;
@@ -1270,7 +1489,7 @@ function updateGapChart() {
     const incomeCurr = incomeSeries[curr] || 0;
     return needPrev > incomePrev || needCurr > incomeCurr;
   });
-  fillAreaBetween(needSeries, incomeSeries, 'rgba(16, 185, 129, 0.10)', (prev, curr) => {
+  fillAreaBetween(needSeries, incomeSeries, 'rgba(34, 197, 94, 0.26)', (prev, curr) => {
     const needPrev = needSeries[prev] || 0;
     const needCurr = needSeries[curr] || 0;
     const incomePrev = incomeSeries[prev] || 0;
@@ -1292,6 +1511,33 @@ function updateGapChart() {
     ctx.stroke();
   }
   ctx.setLineDash([]);
+
+  const drawMilestoneMarker = (entry, color) => {
+    if (!entry || entry.index <= 0) return;
+    const x = mapX(entry.index);
+    const isGreen = color === COVERAGE_GREEN;
+    ctx.setLineDash(isGreen ? [] : [3, 4]);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = isGreen ? 2.2 : 1.1;
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    if (!isGreen) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, top + 5, 2.6, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+
+  const fullCoverageYears = coverageTimeline.firstPartial
+    ? Math.max(0, coverageTimeline.firstPartial.index - 1)
+    : (coverageTimeline.firstCritical ? Math.max(0, coverageTimeline.firstCritical.index - 1) : years);
+  drawMilestoneMarker({ index: fullCoverageYears }, COVERAGE_GREEN);
+  drawMilestoneMarker(coverageTimeline.firstPartial, '#f59e0b');
+  drawMilestoneMarker(coverageTimeline.firstCritical, '#ef4444');
 
   const focusX = mapX(focusIndex);
   ctx.setLineDash([2, 4]);
@@ -1365,32 +1611,10 @@ function updateGapChart() {
   }
 
   if (gapCoverageBadge && gapCoverageInfo && gapCoverageTip) {
-    const gap = Math.round((incomeSeries[focusIndex] || 0) - (needSeries[focusIndex] || 0));
-    const deficit = Math.max(0, Math.round((needSeries[focusIndex] || 0) - (incomeSeries[focusIndex] || 0)));
-    const startCapital = focusIndex > 0
-      ? Math.max(0, Math.round(proj.rawPath[focusIndex - 1] || 0))
-      : Math.max(0, Math.round(proj.rawPath[0] || 0));
-    const endCapital = focusIndex > 0
-      ? Math.max(0, Math.round(proj.rawPath[focusIndex] || 0))
-      : startCapital;
-
-    let statusClass = 'is-ok';
-    let statusLabel = gap >= 0 ? 'Keine Lücke in diesem Jahr' : 'Lücke vollständig schliessbar';
-    let statusHint = gap >= 0
-      ? 'In diesem Jahr decken Gesamtrente und Ertrag den Bedarf ohne zusätzlichen Kapitalabbau.'
-      : 'In diesem Jahr kann die Lücke vollständig durch verfügbares Kapital gedeckt werden.';
-
-    if (deficit > 0) {
-      if (startCapital <= 0) {
-        statusClass = 'is-critical';
-        statusLabel = 'Lücke nicht mehr schliessbar';
-        statusHint = 'Kein verfügbares Kapital mehr: Die Lücke öffnet sich weiter und kann nicht mehr über Kapitalabbau finanziert werden (-> Kapitalentwicklung).';
-      } else if (startCapital < deficit || (focusIndex > 0 && endCapital <= 0)) {
-        statusClass = 'is-partial';
-        statusLabel = 'Lücke nur teilweise schliessbar';
-        statusHint = 'Das verfügbare Kapital reicht in diesem Jahr nur noch teilweise zur Deckung der Lücke. Ab Folgejahr ist die Lücke nicht mehr finanzierbar (-> Kapitalentwicklung).';
-      }
-    }
+    const focusCoverage = coverageTimeline.entries[focusIndex] || coverageTimeline.entries[0];
+    const statusClass = focusCoverage?.state === 'critical' ? 'is-critical' : (focusCoverage?.state === 'partial' ? 'is-partial' : 'is-ok');
+    const statusLabel = focusCoverage?.label || 'Lücke vollständig schliessbar';
+    const statusHint = focusCoverage?.hint || 'In diesem Jahr kann die Lücke vollständig durch verfügbares Kapital gedeckt werden.';
 
     gapCoverageBadge.className = `p2-gap-coverage-badge ${statusClass}`;
     gapCoverageInfo.className = `p2-gap-coverage-info ${statusClass}`;
@@ -1581,27 +1805,6 @@ function attachEvents() {
   chartShareSlider?.addEventListener('input', (e) => onShareSliderInput(e.target.value));
   document.getElementById('gap-share-slider')?.addEventListener('input', (e) => onShareSliderInput(e.target.value));
 
-  const liquidityBadge = document.getElementById('liquidity-status-badge');
-  const liquidityTip = document.getElementById('liquidity-status-tip');
-  liquidityBadge?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (!liquidityTip) return;
-    const isOpen = liquidityBadge.getAttribute('aria-expanded') === 'true';
-    if (isOpen) {
-      hideLiquidityTooltip();
-      return;
-    }
-    liquidityTip.textContent = liquidityBadge.dataset.tip || '';
-    liquidityTip.classList.remove('hidden');
-    liquidityBadge.setAttribute('aria-expanded', 'true');
-  });
-  document.addEventListener('click', (e) => {
-    if (!liquidityBadge || !liquidityTip) return;
-    const target = e.target;
-    if (liquidityBadge.contains(target) || liquidityTip.contains(target)) return;
-    hideLiquidityTooltip();
-  });
-
   gapCoverageInfo?.addEventListener('click', (e) => {
     e.stopPropagation();
     if (!gapCoverageTip) return;
@@ -1621,6 +1824,37 @@ function attachEvents() {
     hideGapCoverageTip();
   });
 
+  [planStateOk, planStatePartial, planStateCritical].forEach((button) => {
+    button?.addEventListener('click', () => {
+      if (button.disabled) return;
+      const year = Number(button.dataset.year);
+      if (!Number.isFinite(year) || year < 0) return;
+      const stateClass = button.classList.contains('is-critical')
+        ? 'is-critical'
+        : (button.classList.contains('is-partial') ? 'is-partial' : 'is-ok');
+      const tip = button.dataset.tip || '';
+      focusYear = Math.round(year);
+      updateResults();
+      hidePlanStateTip();
+      if (planStateTip) {
+        planStateTip.className = `p2-plan-tip ${stateClass}`;
+        planStateTip.textContent = tip;
+        planStateTip.classList.remove('hidden');
+        button.setAttribute('aria-expanded', 'true');
+      }
+    });
+  });
+  document.addEventListener('click', (e) => {
+    if (!planStateTip) return;
+    const target = e.target;
+    const isPlanTarget = (planStateOk && planStateOk.contains(target))
+      || (planStatePartial && planStatePartial.contains(target))
+      || (planStateCritical && planStateCritical.contains(target))
+      || planStateTip.contains(target);
+    if (isPlanTarget) return;
+    hidePlanStateTip();
+  });
+
   chartModeButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const nextMode = button.dataset.chartMode === 'real' ? 'real' : 'nominal';
@@ -1635,7 +1869,7 @@ function attachEvents() {
   // Keyboard escape
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
-      hideLiquidityTooltip();
+      hidePlanStateTip();
       if (smileyModal && !smileyModal.classList.contains('hidden')) {
         smileyModal.classList.add('hidden');
         p2InfoBtn?.setAttribute('aria-expanded', 'false');
@@ -1670,8 +1904,11 @@ function attachEvents() {
       }
       if (el.dataset.syncRange) {
         const range = document.getElementById(el.dataset.syncRange);
-        if (range) range.value = el.id === 'capital-draw' ? parseFormatted(el.value) : el.value;
+        if (range) range.value = (el.id === 'capital-draw' || el.id === 'pk-capital') ? parseFormatted(el.value) : el.value;
+        if (el.id === 'pk-capital') updatePkCapitalDisplay();
         if (el.id === 'capital-draw') updateCapitalDrawDisplay();
+        if (el.id === 'conversion-rate' || el.id === 'return-rate' || el.id === 'inflation') updateFactorDisplays();
+        if (el.id === 'projection-years') updateProjectionYearsDisplay();
       }
       if (el.id === 'pk-payout') el.dataset.userEdited = '1';
       if (['pk-share', 'pk-capital', 'pk-payout', 'conversion-rate'].includes(el.id)) {
@@ -1688,8 +1925,11 @@ function attachEvents() {
       }
       if (el.dataset.syncRange) {
         const range = document.getElementById(el.dataset.syncRange);
-        if (range) range.value = el.id === 'capital-draw' ? parseFormatted(el.value) : el.value;
+        if (range) range.value = (el.id === 'capital-draw' || el.id === 'pk-capital') ? parseFormatted(el.value) : el.value;
+        if (el.id === 'pk-capital') updatePkCapitalDisplay();
         if (el.id === 'capital-draw') updateCapitalDrawDisplay();
+        if (el.id === 'conversion-rate' || el.id === 'return-rate' || el.id === 'inflation') updateFactorDisplays();
+        if (el.id === 'projection-years') updateProjectionYearsDisplay();
       }
       if (el.id === 'pk-payout') el.dataset.userEdited = '1';
       if (['pk-share', 'pk-capital', 'pk-payout', 'conversion-rate'].includes(el.id)) {

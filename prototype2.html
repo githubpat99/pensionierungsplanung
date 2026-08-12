@@ -67,67 +67,95 @@
       <!-- PK input section -->
       <div class="p2-pk">
         <div class="grid-2k">
-          <label class="field"><span>Altersguthaben (CHF)</span>
-            <input id="pk-capital" type="text" inputmode="numeric" value="950'000" />
+          <label class="field field-range p2-demand-field p2-factor-field"><span class="p2-demand-head"><span>Altersguthaben (CHF)</span><strong id="pk-capital-display">950'000</strong></span>
+            <div class="p2-demand-slider-wrap">
+              <div class="p2-demand-track" aria-hidden="true"><span id="pk-capital-track-fill"></span></div>
+              <input id="pk-capital-range" class="p2-demand-range" type="range" min="0" max="3000000" step="1000" value="950000" data-sync-target="pk-capital" aria-label="Altersguthaben" />
+            </div>
+            <input id="pk-capital" class="p2-demand-input" type="text" inputmode="numeric" value="950'000" data-sync-range="pk-capital-range" aria-label="Altersguthaben in CHF" />
           </label>
-          <label class="field p2-tune"><span>UWS (%)</span>
-            <div class="p2-inline-control"><input id="conversion-rate" type="number" min="0" max="10" step="0.1" value="3.6" data-sync-range="conversion-rate-range" />
-            <input id="conversion-rate-range" class="p2-tune-range" type="range" min="0" max="10" step="0.1" value="3.6" data-sync-target="conversion-rate" aria-label="UWS" /></div>
+          <label class="field field-range p2-demand-field p2-factor-field">
+            <span class="p2-demand-head"><span>Umwandlungssatz (%)</span><strong id="conversion-rate-display">3.6</strong></span>
+            <div class="p2-demand-slider-wrap">
+              <div class="p2-demand-track" aria-hidden="true"><span id="conversion-rate-track-fill"></span></div>
+              <input id="conversion-rate-range" class="p2-demand-range" type="range" min="0" max="10" step="0.1" value="3.6" data-sync-target="conversion-rate" aria-label="Umwandlungssatz" />
+            </div>
+            <input id="conversion-rate" class="p2-demand-input" type="number" min="0" max="10" step="0.1" value="3.6" data-sync-range="conversion-rate-range" aria-label="Umwandlungssatz in Prozent" />
           </label>
         </div>
         <input id="pk-payout" type="hidden" value="60'000" />
         <input id="pk-pension" type="hidden" value="0" />
-        <label class="field field-range">
-          <span class="p2-mix-head"><span>Kapitalanteil</span><strong id="pk-share-value" class="range-badge">50%</strong></span>
-          <div class="p2-mix-track" aria-hidden="true"><span></span></div>
-          <input id="pk-share" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
-          <div class="p2-mix-labels">
-            <span>PK-Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span>
-            <span>Pensionskasse <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesamtrente">Gesamtrente –</small></span>
-          </div>
-        </label>
-        <div class="grid-2k">
-          <label class="field p2-tune"><span>Kapitalrendite (%)</span>
-            <div class="p2-inline-control"><input id="return-rate" type="number" min="0" max="12" step="0.1" value="6.9" data-sync-range="return-rate-range" />
-            <input id="return-rate-range" class="p2-tune-range" type="range" min="0" max="12" step="0.1" value="6.9" data-sync-target="return-rate" aria-label="Kapitalrendite" /></div>
+        <div class="p2-share-block">
+          <label class="field field-range p2-mix-field">
+            <span class="p2-mix-head"><span>Kapitalanteil</span><span class="p2-mix-head-right">Rentenanteil</span></span>
+            <div class="p2-mix-track" aria-hidden="true"><span></span></div>
+            <input id="pk-share" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
+            <div class="p2-mix-labels">
+              <span>PK-Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span>
+              <span>Pensionskasse <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesamtrente">Gesamtrente –</small></span>
+            </div>
           </label>
-          <label class="field p2-tune"><span>Inflation (%)</span>
-            <div class="p2-inline-control"><input id="inflation" type="number" min="0" max="8" step="0.1" value="1.4" data-sync-range="inflation-range" />
-            <input id="inflation-range" class="p2-tune-range" type="range" min="0" max="8" step="0.1" value="1.4" data-sync-target="inflation" aria-label="Inflation" /></div>
+          <span id="pk-share-value" class="range-badge" aria-hidden="true">50%</span>
+        </div>
+        <div class="grid-2k">
+          <label class="field field-range p2-demand-field p2-factor-field">
+            <span class="p2-demand-head"><span>Kapitalrendite (%)</span><strong id="return-rate-display">6.9</strong></span>
+            <div class="p2-demand-slider-wrap">
+              <div class="p2-demand-track" aria-hidden="true"><span id="return-rate-track-fill"></span></div>
+              <input id="return-rate-range" class="p2-demand-range" type="range" min="0" max="12" step="0.1" value="6.9" data-sync-target="return-rate" aria-label="Kapitalrendite" />
+            </div>
+            <input id="return-rate" class="p2-demand-input" type="number" min="0" max="12" step="0.1" value="6.9" data-sync-range="return-rate-range" aria-label="Kapitalrendite in Prozent" />
+          </label>
+          <label class="field field-range p2-demand-field p2-factor-field">
+            <span class="p2-demand-head"><span>Inflation (%)</span><strong id="inflation-display">1.4</strong></span>
+            <div class="p2-demand-slider-wrap">
+              <div class="p2-demand-track" aria-hidden="true"><span id="inflation-track-fill"></span></div>
+              <input id="inflation-range" class="p2-demand-range" type="range" min="0" max="8" step="0.1" value="1.4" data-sync-target="inflation" aria-label="Inflation" />
+            </div>
+            <input id="inflation" class="p2-demand-input" type="number" min="0" max="8" step="0.1" value="1.4" data-sync-range="inflation-range" aria-label="Inflation in Prozent" />
           </label>
         </div>
-        <label class="field field-range p2-demand-field">
-          <span class="p2-demand-head"><span>Jahresbedarf</span><strong id="capital-draw-display">CHF 120'000</strong></span>
-          <div class="p2-demand-slider-wrap">
-            <div class="p2-demand-track" aria-hidden="true"><span id="capital-draw-track-fill"></span></div>
-            <input id="capital-draw-range" class="p2-demand-range" type="range" min="50000" max="250000" step="1000" value="120000" data-sync-target="capital-draw" aria-label="Jahresbedarf" />
-          </div>
-          <input id="capital-draw" class="p2-demand-input" type="text" inputmode="numeric" value="120'000" data-sync-range="capital-draw-range" aria-label="Jahresbedarf in CHF" />
-        </label>
-        <div class="grid-2k">
-          <label class="field p2-tune"><span>Projektionsdauer (Jahre)</span>
-            <div class="p2-inline-control"><input id="projection-years" type="number" min="1" max="60" value="27" data-sync-range="projection-years-range" />
-            <input id="projection-years-range" class="p2-tune-range" type="range" min="1" max="60" value="27" data-sync-target="projection-years" aria-label="Projektionsdauer" /></div>
-          </label>
-          <div class="field" style="align-self:end;">
-            <div class="p2-chart-actions">
-              <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-chart-modal" title="Kapitalentwicklung anzeigen" aria-label="Kapitalentwicklung anzeigen">
-                <svg class="p2-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="4" y="15" width="3" height="5" rx="1" fill="#3b82f6"/>
-                  <rect x="10" y="11" width="3" height="9" rx="1" fill="#3b82f6"/>
-                  <rect x="16" y="7" width="3" height="13" rx="1" fill="#3b82f6"/>
-                  <path d="M4 13 L9 9 L13 11 L20 4" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                  <path d="M16.8 4H20v3.2" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-                </svg>
-              </button>
-              <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-gap-modal" title="Rentenlücke anzeigen" aria-label="Rentenlücke anzeigen">
-                <svg class="p2-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
-                  <rect x="4" y="11" width="5" height="9" rx="1" fill="#3b82f6"/>
-                  <rect x="15" y="5" width="5" height="15" rx="1" fill="#3b82f6"/>
-                  <path d="M10.5 7.5 H13.5 M12 7.5 V11" fill="none" stroke="#f59e0b" stroke-width="2.3" stroke-linecap="round"/>
-                </svg>
-              </button>
+        <div class="p2-demand-projection-grid">
+          <label class="field field-range p2-demand-field">
+            <span class="p2-demand-head"><span>Jahresbedarf (CHF)</span><strong id="capital-draw-display">120'000</strong></span>
+            <div class="p2-demand-slider-wrap">
+              <div class="p2-demand-track" aria-hidden="true"><span id="capital-draw-track-fill"></span></div>
+              <input id="capital-draw-range" class="p2-demand-range" type="range" min="50000" max="250000" step="1000" value="120000" data-sync-target="capital-draw" aria-label="Jahresbedarf" />
             </div>
+            <input id="capital-draw" class="p2-demand-input" type="text" inputmode="numeric" value="120'000" data-sync-range="capital-draw-range" aria-label="Jahresbedarf in CHF" />
+          </label>
+          <label class="field field-range p2-demand-field p2-projection-field">
+            <span class="p2-demand-head"><span>Projektionsdauer (Jahre)</span><strong id="projection-years-display">27</strong></span>
+            <div class="p2-demand-slider-wrap">
+              <div class="p2-demand-track" aria-hidden="true"><span id="projection-years-track-fill"></span></div>
+              <input id="projection-years-range" class="p2-demand-range" type="range" min="1" max="60" value="27" data-sync-target="projection-years" aria-label="Projektionsdauer" />
+            </div>
+            <input id="projection-years" class="p2-demand-input" type="number" min="1" max="60" value="27" data-sync-range="projection-years-range" aria-label="Projektionsdauer in Jahren" />
+          </label>
+        </div>
+        <div class="p2-chart-actions-wrap">
+          <div class="p2-chart-actions">
+            <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-chart-modal" title="Kapitalentwicklung anzeigen" aria-label="Kapitalentwicklung anzeigen">
+              <svg class="p2-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 4L3 8h18L12 4z" fill="currentColor"/>
+                <rect x="6" y="9" width="2.2" height="6" rx="0.5" fill="currentColor"/>
+                <rect x="10.9" y="9" width="2.2" height="6" rx="0.5" fill="currentColor"/>
+                <rect x="15.8" y="9" width="2.2" height="6" rx="0.5" fill="currentColor"/>
+                <rect x="4" y="16.2" width="16" height="1.6" rx="0.3" fill="currentColor"/>
+                <rect x="2.8" y="19" width="18.4" height="1.8" rx="0.4" fill="currentColor"/>
+              </svg>
+            </button>
+            <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-gap-modal" title="Rentenlücke anzeigen" aria-label="Rentenlücke anzeigen">
+              <svg class="p2-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
+                <ellipse cx="8" cy="7" rx="2.8" ry="1.3" fill="currentColor"/>
+                <path d="M5.2 7.1v1.2c0 .7 1.3 1.3 2.8 1.3s2.8-.6 2.8-1.3V7.1" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                <ellipse cx="16" cy="5.3" rx="2.8" ry="1.3" fill="currentColor"/>
+                <path d="M13.2 5.4v1.2c0 .7 1.3 1.3 2.8 1.3s2.8-.6 2.8-1.3V5.4" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                <ellipse cx="14" cy="10.7" rx="3.1" ry="1.4" fill="currentColor"/>
+                <path d="M10.9 10.8v2.3c0 .8 1.4 1.5 3.1 1.5s3.1-.7 3.1-1.5v-2.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
+                <path d="M3.5 17.6c1.8-2.2 3.9-3.6 5.8-3.3c1.1.2 1.9.7 2.6 1.2c.7.5 1.1.7 1.8.7h2.1c.8 0 1.2.9.6 1.4c-1.2 1-2.8 1.9-4.7 2.5c-1.8.6-3.6.6-5 .1c-1-.4-2-.8-3.2-.6z" fill="currentColor"/>
+              </svg>
+            </button>
           </div>
         </div>
       </div>
@@ -147,34 +175,19 @@
         </div>
       </div>
 
-      <section class="p2-liquidity-panel" id="liquidity-panel" aria-label="Frei verfügbares und gebundenes Kapital">
-        <div class="p2-liquidity-head">
-          <strong>Frei verfügbar vs. gebunden</strong>
-          <button type="button" class="p2-liquidity-badge" id="liquidity-status-badge" aria-expanded="false" aria-controls="liquidity-status-tip">–</button>
+      <section class="p2-plan-timeline" id="plan-timeline" aria-label="Planungsstatus über den Zeithorizont">
+        <div class="p2-plan-band" id="plan-band" role="group" aria-label="Zustände bis Alter">
+          <button type="button" class="p2-plan-segment is-ok" id="plan-state-ok" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
+            <strong id="plan-state-ok-age" aria-hidden="true"></strong>
+          </button>
+          <button type="button" class="p2-plan-segment is-partial" id="plan-state-partial" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
+            <strong id="plan-state-partial-age">Alter –</strong>
+          </button>
+          <button type="button" class="p2-plan-segment is-critical" id="plan-state-critical" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
+            <strong id="plan-state-critical-age" aria-hidden="true"></strong>
+          </button>
         </div>
-        <div class="p2-liquidity-tip hidden" id="liquidity-status-tip" role="tooltip"></div>
-        <div class="p2-liquidity-grid">
-          <div class="p2-liquidity-card">
-            <span>Frei verfügbar heute</span>
-            <strong id="liquidity-free-today">–</strong>
-          </div>
-          <div class="p2-liquidity-card">
-            <span>Gebunden heute</span>
-            <strong id="liquidity-bound-today">–</strong>
-            <small id="liquidity-bound-note">–</small>
-          </div>
-        </div>
-        <div class="p2-liquidity-breakdown">
-          <strong>Gebundenes Kapital besteht aus</strong>
-          <div class="p2-liquidity-line">
-            <span>Immobilien netto</span>
-            <strong id="liquidity-bound-real-estate">–</strong>
-          </div>
-          <div class="p2-liquidity-line p2-liquidity-line-note">
-            <span>Nicht bezogener PK-Teil</span>
-            <strong id="liquidity-bound-pk-note">als Rente berücksichtigt</strong>
-          </div>
-        </div>
+        <div class="p2-plan-tip hidden" id="plan-state-tip" role="tooltip"></div>
       </section>
 
     </div>
