@@ -11,6 +11,9 @@ const p2InfoBtn    = document.getElementById('p2-info-btn');
 const p2Desc       = document.getElementById('p2-desc');
 const p2Prev       = document.getElementById('p2-prev');
 const p2Next       = document.getElementById('p2-next');
+const step1Cta     = document.getElementById('p2-step1-cta');
+const cantonSelect = document.getElementById('canton');
+const cantonCrest  = document.getElementById('canton-crest');
 const backdrop     = document.getElementById('p2-backdrop');
 const insightToggleBtn = document.getElementById('insight-toggle-btn');
 const insightBody  = document.getElementById('result-insight');
@@ -43,6 +46,8 @@ const planStatePartialAge = document.getElementById('plan-state-partial-age');
 const planStateCriticalAge = document.getElementById('plan-state-critical-age');
 const planStateTip = document.getElementById('plan-state-tip');
 const planBand = document.getElementById('plan-band');
+const planStatus = document.getElementById('plan-status');
+const assumptionsPanel = document.querySelector('.p2-assumptions');
 const chartShareSlider = document.getElementById('chart-share-slider');
 
 const STEP_META = [
@@ -66,6 +71,25 @@ const STORAGE_CHART_MODE = 'p2-chart-mode';
 const STORAGE_FORM_STATE = 'p2-form-state-v2';
 let chartMode = 'nominal';
 let focusYear = 0;
+
+function updateCantonCrest() {
+  if (!cantonSelect || !cantonCrest) return;
+  const canton = cantonSelect.value || 'CH';
+  const cantonColours = {
+    AG: ['#ffffff', '#111827'], AI: ['#ffffff', '#111827'], AR: ['#ffffff', '#dc2626'], BE: ['#dc2626', '#facc15'],
+    BL: ['#dc2626', '#f8fafc'], BS: ['#ffffff', '#dc2626'], FR: ['#ffffff', '#111827'], GE: ['#dc2626', '#facc15'],
+    GL: ['#dc2626', '#f8fafc'], GR: ['#ffffff', '#111827'], JU: ['#dc2626', '#f8fafc'], LU: ['#60a5fa', '#ffffff'],
+    NE: ['#22c55e', '#dc2626'], NW: ['#60a5fa', '#f8fafc'], OW: ['#dc2626', '#ffffff'], SG: ['#22c55e', '#ffffff'],
+    SH: ['#22c55e', '#dc2626'], SO: ['#ffffff', '#dc2626'], SZ: ['#dc2626', '#ffffff'], TG: ['#22c55e', '#ffffff'],
+    TI: ['#dc2626', '#ffffff'], UR: ['#dc2626', '#facc15'], VD: ['#22c55e', '#ffffff'], VS: ['#dc2626', '#ffffff'],
+    ZG: ['#60a5fa', '#ffffff'], ZH: ['#ffffff', '#60a5fa'], CH: ['#dc2626', '#ffffff'],
+  };
+  const [primary, secondary] = cantonColours[canton] || cantonColours.CH;
+  cantonCrest.textContent = canton;
+  cantonCrest.className = `p2-canton-crest canton-${canton.toLowerCase()}`;
+  cantonCrest.style.background = `linear-gradient(145deg, ${primary} 0 48%, ${secondary} 48% 52%, ${primary} 52%)`;
+  cantonCrest.style.color = primary === '#ffffff' ? '#0f172a' : '#ffffff';
+}
 
 // ============================================================
 // Number formatting utilities
@@ -262,6 +286,7 @@ function showStep(n) {
   currentStep = n;
   saveStep(n);
   document.activeElement?.blur();
+  if (assumptionsPanel) assumptionsPanel.open = false;
   document.body.classList.toggle('p2-show-simulation', n === steps.length - 1);
   steps.forEach((s, i) => s.classList.toggle('active', i === n));
   if (p2Progress) p2Progress.textContent = `${n + 1} / ${steps.length}`;
@@ -275,8 +300,8 @@ function showStep(n) {
   p2Prev.textContent           = '←';
   p2Prev.title                 = n === 0 ? '' : 'Zurück';
   p2Prev.style.display         = n === 0 ? 'none' : 'inline-flex';
-  p2Next.style.display         = n === steps.length - 1 ? 'none' : 'inline-flex';
-  p2Next.textContent            = 'Simulation';
+  p2Next.style.display         = 'none';
+  p2Next.textContent            = n === 0 ? 'Zur Simulation' : 'Weiter';
   p2InfoBtn?.setAttribute('aria-expanded', 'false');
 
   requestAnimationFrame(() => window.scrollTo(0, 0));
@@ -1012,6 +1037,17 @@ function updateResults() {
     ? `Ab Alter ${timeline.firstCritical.age} ist kein weiterer Kapitalabbau möglich. Die Lücke bleibt ungedeckt (-> Kapitalentwicklung).`
     : `Im aktuellen Horizont wird kein roter Zustand erreicht.`;
 
+  if (planStatus) {
+    const statusText = timeline.firstCritical
+      ? `Bis Alter ${timeline.fullUntilAge} gedeckt. Ab Alter ${timeline.firstCritical.age} bleibt eine Lücke ungedeckt.`
+      : (timeline.firstPartial
+        ? `Bis Alter ${timeline.fullUntilAge} gedeckt. Ab Alter ${timeline.firstPartial.age} nur teilweise finanzierbar.`
+          : `Die Lücke ist bis Alter ${timeline.fullUntilAge} vollständig gedeckt.`);
+    const statusClass = timeline.firstCritical ? 'is-critical' : (timeline.firstPartial ? 'is-partial' : 'is-ok');
+    planStatus.textContent = statusText;
+    planStatus.className = `p2-plan-status ${statusClass}`;
+  }
+
   setPlanState(
     planStateOk,
     planStateOkAge,
@@ -1664,6 +1700,8 @@ function fillExample() {
 // ============================================================
 
 function attachEvents() {
+  cantonSelect?.addEventListener('change', updateCantonCrest);
+
   // Step navigation
   p2Prev.addEventListener('click', () => {
     saveStarted();
@@ -1673,6 +1711,15 @@ function attachEvents() {
     saveStarted();
     showStep(Math.min(steps.length - 1, currentStep + 1));
   });
+  step1Cta?.addEventListener('click', () => {
+    saveStarted();
+    showStep(1);
+  });
+  planBand?.addEventListener('click', () => {
+    if (currentStep !== 0) return;
+    saveStarted();
+    showStep(1);
+  }, true);
 
   // Header smiley popup
   p2InfoBtn?.addEventListener('click', () => {
@@ -1957,6 +2004,7 @@ syncLinkedRanges();
 chartMode = 'nominal';
 syncChartModeButtons();
 syncPkDisplays();
+updateCantonCrest();
 initDrawerSwipe('drawer-invested');
 initDrawerSwipe('drawer-income');
 showStep(loadStep());

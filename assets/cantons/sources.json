@@ -1,0 +1,32 @@
+[
+  {
+    "Code": "AG",
+    "Source": "Wappen Aargau.svg",
+    "Url": "https://commons.wikimedia.org/wiki/Special:FilePath/Wappen%20Aargau.svg"
+  },
+  {
+    "Code": "GR",
+    "Source": "Wappen Graubünden.svg",
+    "Url": "https://commons.wikimedia.org/wiki/Special:FilePath/Wappen%20Graub%C3%BCnden.svg"
+  },
+  {
+    "Code": "NE",
+    "Source": "Wappen Neuenburg.svg",
+    "Url": "https://commons.wikimedia.org/wiki/Special:FilePath/Wappen%20Neuenburg.svg"
+  },
+  {
+    "Code": "OW",
+    "Source": "Wappen Obwalden.svg",
+    "Url": "https://commons.wikimedia.org/wiki/Special:FilePath/Wappen%20Obwalden.svg"
+  },
+  {
+    "Code": "SZ",
+    "Source": "Wappen Schwyz.svg",
+    "Url": "https://commons.wikimedia.org/wiki/Special:FilePath/Wappen%20Schwyz.svg"
+  },
+  {
+    "Code": "ZH",
+    "Source": "Wappen Zürich.svg",
+    "Url": "https://commons.wikimedia.org/wiki/Special:FilePath/Wappen%20Z%C3%BCrich.svg"
+  }
+]
