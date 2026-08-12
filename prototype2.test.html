@@ -98,10 +98,11 @@
           assert(scenario.totalInvestIncome === Math.round(expected), `Ertrag ${scenario.totalInvestIncome}, erwartet ${expected}`);
           assert(scenario.totalInvestIncome < scenario.totalCapital, 'Jahresertrag ist groesser als das Gesamtvermoegen');
         }],
-        ['Ergebnis-Kachel zeigt denselben Kapitalertrag wie das Modell', () => {
+        ['Ergebnis-Kachel blendet Zusatzwerte aus', () => {
           const scenario = prepareControlledScenario(doc, api);
-          const visible = doc.getElementById('result-invest-return').textContent;
-          assert(visible === `CHF ${formatCHF(scenario.totalInvestIncome)}`, `Anzeige ${visible}, Modell CHF ${formatCHF(scenario.totalInvestIncome)}`);
+          assert(!doc.getElementById('result-invest-return'), 'Kapitalertrag wird noch in der Kachel angezeigt');
+          assert(!doc.getElementById('result-rent-income'), 'Rentenwert wird noch in der Kachel angezeigt');
+          assert(scenario.totalInvestIncome > 0, 'Modellwert fuer Kapitalertrag fehlt');
         }],
         ['Mix-Regler setzt den Kapitalanteil synchron', () => {
           setField(doc, 'pk-share', 80);

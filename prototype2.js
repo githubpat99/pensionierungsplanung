@@ -360,7 +360,16 @@ function updateDrawerChips() {
   const pkPayoutValue = Math.min(readField('pk-payout'), pkCapital);
   const pkPension = Math.round(Math.max(0, pkCapital - pkPayoutValue) * conversion);
   const zusatz = childAllowance + childPension + otherIncome;
-  setText('d-rent-total', `CHF ${formatCHF(ahv + zusatz + pkPension)}`);
+  const rentTotal = ahv + zusatz + pkPension;
+  setText('d-income-total', `CHF ${formatCHF(invReturn + rentTotal)}`);
+  setText('d-income-capital', `CHF ${formatCHF(invReturn)}`);
+  setText('d-income-rent', `CHF ${formatCHF(rentTotal)}`);
+  setText('d-income-capital-section', `CHF ${formatCHF(invReturn)}`);
+  setText('d-income-rent-section', `CHF ${formatCHF(rentTotal)}`);
+  setText('d-income-pk-capital', `CHF ${formatCHF(pkCapitalIncome)}`);
+  setText('d-income-p3a', `CHF ${formatCHF(Math.round(pillar3a * pillar3aReturn))}`);
+  setText('d-income-investments', `CHF ${formatCHF(Math.round(investments * investmentsReturn))}`);
+  setText('d-income-other', `CHF ${formatCHF(Math.round(realEstateIncome + otherAssets * otherReturn))}`);
   setText('d-ahv',      `CHF ${formatCHF(ahv)}`);
   setText('d-zusatz',   `CHF ${formatCHF(zusatz)}`);
   setText('d-pk-rente', `CHF ${formatCHF(pkPension)}`);
@@ -920,46 +929,6 @@ function updateResults() {
     }
   }
 
-  // Smiley:
-  //   😀  capital lasts full projection AND (>=50% of start capital remains OR >=20 years of need left at end)
-  //   😐  capital lasts full projection but more significantly consumed
-  //   🤔  capital runs out before the projection ends
-  const finalCapital = proj.rawPath[proj.rawPath.length - 1] ?? 0;
-  const annualDrawAtEnd = draw > 0 ? draw * Math.pow(1 + inflation, projYears) : 0;
-  const yearsOfCapitalLeft = annualDrawAtEnd > 0 ? finalCapital / annualDrawAtEnd : Infinity;
-  const capitalLastsTerm = draw <= 0 || depletionAge === null || depletionAge >= life;
-  const capitalWellPreserved = draw <= 0 || finalCapital >= freeCapital * 0.5 || yearsOfCapitalLeft >= 20;
-
-  let statusEmoji, statusTitle, smileyTone;
-  if (!capitalLastsTerm) {
-    statusEmoji = '🤔';
-    smileyTone = 'think';
-    statusTitle = `Kapital reicht nur bis Alter ${depletionAge} – Planungsziel nicht erreicht.`;
-  } else if (capitalWellPreserved) {
-    statusEmoji = '😀';
-    smileyTone = 'happy';
-    statusTitle = yearsOfCapitalLeft === Infinity
-      ? 'Kein Kapitalbezug nötig – Kapital bleibt erhalten!'
-      : `Sehr gut – am Ende noch Kapital für ca. ${Math.round(yearsOfCapitalLeft)} Jahre (${Math.round(finalCapital / Math.max(1, freeCapital) * 100)}% des frei verfügbaren Startkapitals).`;
-  } else {
-    statusEmoji = '😐';
-    smileyTone = 'neutral';
-    statusTitle = `Kapital reicht bis zum Planungsziel, aber stark verzehrt (noch ${Math.round(finalCapital / Math.max(1, freeCapital) * 100)}% des frei verfügbaren Startkapitals am Ende).`;
-  }
-
-  const emojiEl = document.getElementById('result-age-emoji');
-  if (emojiEl) {
-    emojiEl.textContent = statusEmoji;
-    emojiEl.title = statusTitle;
-  }
-
-  if (p2InfoBtn) {
-    p2InfoBtn.textContent = statusEmoji;
-    p2InfoBtn.title = statusTitle;
-    p2InfoBtn.classList.remove('p2-smiley-status-think', 'p2-smiley-status-neutral', 'p2-smiley-status-happy');
-    p2InfoBtn.classList.add(`p2-smiley-status-${smileyTone}`);
-  }
-
   latestInsightText = `${insight} ${netLine} ${thresholdText}`;
   if (insightBody) insightBody.textContent = latestInsightText;
 
@@ -1012,6 +981,28 @@ function updateResults() {
     planBand.classList.toggle('is-all-ok', !hasTransitionStates);
   }
 
+  // Smiley follows the same green/yellow/red assessment as the timeline.
+  const statusEmoji = timeline.firstCritical ? '🤔' : (timeline.firstPartial ? '😐' : '😀');
+  const smileyTone = timeline.firstCritical ? 'think' : (timeline.firstPartial ? 'neutral' : 'happy');
+  const statusTitle = timeline.firstCritical
+    ? `Ab Alter ${timeline.firstCritical.age} bleibt eine Lücke ungedeckt.`
+    : (timeline.firstPartial
+      ? `Ab Alter ${timeline.firstPartial.age} ist die Lücke nur teilweise finanzierbar.`
+      : 'Sehr gut – die Lücke ist im gesamten Planungszeitraum gedeckt.');
+
+  const emojiEl = document.getElementById('result-age-emoji');
+  if (emojiEl) {
+    emojiEl.textContent = statusEmoji;
+    emojiEl.title = statusTitle;
+  }
+
+  if (p2InfoBtn) {
+    p2InfoBtn.textContent = statusEmoji;
+    p2InfoBtn.title = statusTitle;
+    p2InfoBtn.classList.remove('p2-smiley-status-think', 'p2-smiley-status-neutral', 'p2-smiley-status-happy');
+    p2InfoBtn.classList.add(`p2-smiley-status-${smileyTone}`);
+  }
+
   const focusState = focusEntry?.state || 'ok';
   const okTip = `Bis Alter ${timeline.fullUntilAge} kann die Lücke vollständig über verfügbares Kapital geschlossen werden.`;
   const partialTip = timeline.firstPartial
@@ -1034,7 +1025,7 @@ function updateResults() {
   setPlanState(
     planStatePartial,
     planStatePartialAge,
-    timeline.firstPartial ? `Alter ${timeline.firstPartial.age}` : 'Alter –',
+    timeline.firstPartial ? String(timeline.firstPartial.age) : '–',
     partialIndex,
     !timeline.firstPartial,
     focusState === 'partial',
@@ -1344,9 +1335,7 @@ function updateChart() {
     const freeDepleted = freeStart <= 0 && freeEnd <= 0;
     const insufficientDrawdown = freeStart > 0 && freeEnd <= 0 && focusIndex < visibleYears;
     const isCriticalDrawdown = freeDepleted || insufficientDrawdown;
-    const deltaLabel = freeDepleted
-      ? 'Kein weiterer Abbau möglich'
-      : (insufficientDrawdown ? 'Nicht genügend Abbau möglich' : (freeDelta > 0 ? 'Zuwachs' : (freeDelta < 0 ? 'Abbau' : 'Unverändert')));
+    const deltaLabel = freeDelta > 0 ? '+' : (freeDelta < 0 ? '-' : '');
     const deltaLabelClass = isCriticalDrawdown ? 'p2-capital-year-label is-critical' : 'p2-capital-year-label';
     const freeDeltaClass = freeDepleted
       ? 'p2-capital-year-change is-critical'
@@ -1604,7 +1593,7 @@ function updateGapChart() {
     const gap = income - need;
     const gapClass = gap >= 0 ? 'p2-chart-focus-gap p2-chart-focus-surplus' : 'p2-chart-focus-gap';
     gapYearDetails.innerHTML =
-      `<span class="p2-chart-focus-line p2-chart-focus-rent">Gesamtrente CHF ${formatCHF(rent)}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-rent">Rente CHF ${formatCHF(rent)}</span>` +
       `<span class="p2-chart-focus-line p2-chart-focus-return">Ertrag CHF ${formatCHF(capitalReturn)}</span>` +
       `<span class="p2-chart-focus-line ${gapClass}">${gap >= 0 ? 'Überschuss' : 'Lücke'} CHF ${formatCHF(Math.abs(gap))}</span>` +
       `<span class="p2-chart-focus-line p2-chart-focus-need">Bedarf CHF ${formatCHF(need)}</span>`;

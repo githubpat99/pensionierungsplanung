@@ -92,7 +92,7 @@
             <input id="pk-share" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
             <div class="p2-mix-labels">
               <span>PK-Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span>
-              <span>Pensionskasse <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesamtrente">Gesamtrente –</small></span>
+              <span>PK-Rente <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesamtrente">Gesamtrente –</small></span>
             </div>
           </label>
           <span id="pk-share-value" class="range-badge" aria-hidden="true">50%</span>
@@ -166,12 +166,12 @@
         <div class="p2-card p2-card-tap p2-card-full" id="card-invested" role="button" tabindex="0" aria-label="Gesamtkapital – Details einblenden">
           <span class="p2-card-badge">i</span>
           <h4>Gesamtkapital</h4>
-          <p class="p2-card-summary"><strong id="result-invested">–</strong><span>investiert <b id="result-invested-amount">–</b></span><span>Ertrag <b id="result-invest-return">–</b></span></p>
+          <p class="p2-card-summary"><strong id="result-invested">–</strong></p>
         </div>
         <div class="p2-card p2-card-tap p2-card-full" id="card-secured" role="button" tabindex="0" aria-label="Gesamteinkommen / Jahr – Details einblenden">
           <span class="p2-card-badge">i</span>
-          <h4>Gesamteinkommen / Jahr</h4>
-          <p class="p2-card-summary"><strong id="result-total">–</strong><span>Renten <b id="result-rent-income">–</b></span><span>Kapitalertrag <b id="result-invest-income">–</b></span></p>
+          <h4>Gesamteinkommen</h4>
+          <p class="p2-card-summary"><strong id="result-total">–</strong></p>
         </div>
       </div>
 
@@ -181,7 +181,7 @@
             <strong id="plan-state-ok-age" aria-hidden="true"></strong>
           </button>
           <button type="button" class="p2-plan-segment is-partial" id="plan-state-partial" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
-            <strong id="plan-state-partial-age">Alter –</strong>
+            <strong id="plan-state-partial-age">–</strong>
           </button>
           <button type="button" class="p2-plan-segment is-critical" id="plan-state-critical" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
             <strong id="plan-state-critical-age" aria-hidden="true"></strong>
@@ -209,7 +209,7 @@
   <div class="p2-backdrop" id="p2-backdrop"></div>
 
   <!-- Drawer: Investiertes Kapital -->
-  <div class="p2-drawer" id="drawer-invested" aria-label="Investiertes Kapital – Details">
+  <div class="p2-drawer p2-capital-drawer" id="drawer-invested" aria-label="Investiertes Kapital – Details">
     <div class="p2-drawer-handle"></div>
     <div class="p2-drawer-header">
       <div class="p2-drawer-title-row">
@@ -262,21 +262,30 @@
     </div>
   </div>
 
-  <!-- Drawer: Gesichertes Einkommen -->
-  <div class="p2-drawer" id="drawer-income" aria-label="Renten – Details">
+  <!-- Drawer: Gesamteinkommen -->
+  <div class="p2-drawer" id="drawer-income" aria-label="Gesamteinkommen pro Jahr – Details">
     <div class="p2-drawer-handle"></div>
     <div class="p2-drawer-header">
       <div class="p2-drawer-title-row">
-        <h3>Renten</h3>
+        <h3>Gesamteinkommen / Jahr</h3>
         <button class="p2-drawer-close" data-drawer="drawer-income" aria-label="Schliessen">✕</button>
       </div>
       <div class="p2-drawer-income-summary">
-        <strong id="d-rent-total">–</strong>
-        <div><span>AHV</span><b id="d-ahv">–</b><span>Zusätze</span><b id="d-zusatz">–</b></div>
-        <div><span>PK</span><b id="d-pk-rente">–</b></div>
+        <strong id="d-income-total">–</strong>
+        <div><span class="p2-income-capital-label">Kapital</span><b class="p2-income-capital-value" id="d-income-capital">–</b><span class="p2-income-rent-label">Rente</span><b class="p2-income-rent-value" id="d-income-rent">–</b></div>
       </div>
     </div>
     <div class="p2-drawer-content">
+      <div class="p2-drawer-section-title"><span>Ertrag aus Kapital</span><strong id="d-income-capital-section">–</strong></div>
+      <div class="p2-drawer-summary-line p2-income-capital-row"><span>PK-Kapitalertrag</span><strong id="d-income-pk-capital">–</strong></div>
+      <div class="p2-drawer-summary-line p2-income-capital-row"><span>Säule 3a</span><strong id="d-income-p3a">–</strong></div>
+      <div class="p2-drawer-summary-line p2-income-capital-row"><span>Wertschriften</span><strong id="d-income-investments">–</strong></div>
+      <div class="p2-drawer-summary-line p2-income-capital-row"><span>Weitere Erträge</span><strong id="d-income-other">–</strong></div>
+      <div class="p2-drawer-section-title p2-income-rent-section"><span>Ertrag aus Rente</span><strong id="d-income-rent-section">–</strong></div>
+      <div class="p2-drawer-summary-line"><span>AHV</span><strong id="d-ahv">–</strong></div>
+      <div class="p2-drawer-summary-line"><span>Zusätze</span><strong id="d-zusatz">–</strong></div>
+      <div class="p2-drawer-summary-line"><span>PK-Rente</span><strong id="d-pk-rente">–</strong></div>
+      <div class="p2-drawer-separator" aria-hidden="true"></div>
       <div class="grid-2k">
         <label class="field"><span>AHV (CHF)</span><input id="ahv" type="number" min="0" value="32760" /></label>
         <label class="field"><span>Kinderzulagen (CHF)</span><input id="child-allowance" type="number" min="0" value="5520" /></label>
