@@ -32,6 +32,9 @@ const chartFocusLabel = document.getElementById('chart-focus-label');
 const gapFocusLabel = document.getElementById('gap-focus-label');
 const chartYearDetails = document.getElementById('chart-year-details');
 const gapYearDetails = document.getElementById('gap-year-details');
+const gapCoverageBadge = document.getElementById('gap-coverage-badge');
+const gapCoverageInfo = document.getElementById('gap-coverage-info');
+const gapCoverageTip = document.getElementById('gap-coverage-tip');
 const chartShareSlider = document.getElementById('chart-share-slider');
 
 const STEP_META = [
@@ -232,7 +235,7 @@ function syncYearControls(scenario) {
   if (!scenario) return;
   const year = clampFocusYear(scenario.projYears);
   const age = scenario.retireAge + year;
-  const label = `Jahr ${year} (Alter ${age})`;
+  const label = `Alter ${age}`;
 
   if (chartYearSlider) {
     chartYearSlider.max = String(Math.max(1, scenario.projYears));
@@ -390,6 +393,18 @@ function syncInputValue(source, target) {
   if (target.id === 'capital-draw') updateCapitalDrawDisplay();
 }
 
+function hideLiquidityTooltip() {
+  const badge = document.getElementById('liquidity-status-badge');
+  const tip = document.getElementById('liquidity-status-tip');
+  if (tip) tip.classList.add('hidden');
+  if (badge) badge.setAttribute('aria-expanded', 'false');
+}
+
+function hideGapCoverageTip() {
+  if (gapCoverageTip) gapCoverageTip.classList.add('hidden');
+  if (gapCoverageInfo) gapCoverageInfo.setAttribute('aria-expanded', 'false');
+}
+
 // ============================================================
 // Swipe-to-close drawer (touch)
 // ============================================================
@@ -469,17 +484,24 @@ function syncPkDisplays() {
   }
   setText('pk-rent-share-value', `CHF ${formatCHF(computed)}/J.`);
   setText('pk-return-share-value', 'Kap.-Ertrag ges. –');
+
+  const splitPct = `${Math.max(0, Math.min(100, pkShare))}%`;
+  ['pk-share', 'chart-share-slider', 'gap-share-slider'].forEach((id) => {
+    const slider = document.getElementById(id);
+    if (slider) slider.style.setProperty('--share-split', splitPct);
+  });
 }
 
 function syncChartShareControls(scenario) {
   const share = Math.max(0, Math.min(100, readField('pk-share')));
   const controls = [
-    { slider: chartShareSlider, value: 'chart-share-value', rent: 'chart-rent-value', capital: 'chart-capital-value', capitalShare: 'chart-capital-share', rentShare: 'chart-rent-share' },
-    { slider: document.getElementById('gap-share-slider'), value: 'gap-share-value', rent: 'gap-rent-value', capital: 'gap-capital-value', capitalShare: 'gap-capital-share', rentShare: 'gap-rent-share' },
+    { slider: chartShareSlider, shareCapital: 'chart-share-capital', shareRent: 'chart-share-rent', rent: 'chart-rent-value', capital: 'chart-capital-value', capitalShare: 'chart-capital-share', rentShare: 'chart-rent-share' },
+    { slider: document.getElementById('gap-share-slider'), shareCapital: 'gap-share-capital', shareRent: 'gap-share-rent', rent: 'gap-rent-value', capital: 'gap-capital-value', capitalShare: 'gap-capital-share', rentShare: 'gap-rent-share' },
   ];
-  controls.forEach(({ slider, value, rent, capital, capitalShare, rentShare }) => {
+  controls.forEach(({ slider, shareCapital, shareRent, rent, capital, capitalShare, rentShare }) => {
     if (slider) slider.value = String(share);
-    setText(value, `${share}% Kapital / ${100 - share}% Rente`);
+    setText(shareCapital, `${share}% Kapital`);
+    setText(shareRent, `${100 - share}% Rente`);
     setText(capitalShare, `${share}%`);
     setText(rentShare, `${100 - share}%`);
     setText(rent, `CHF ${formatCHF(scenario?.pkPension || 0)}/J.`);
@@ -489,10 +511,16 @@ function syncChartShareControls(scenario) {
   });
   setText('pk-return-share-value', `Kap.-Ertrag ges. CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
   setText('pk-total-rent-share-value', `Gesamtrente CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
-  setText('chart-capital-return-value', `Kap.-Ertrag ges. CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
-  setText('gap-capital-return-value', `Kap.-Ertrag ges. CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
-  setText('chart-total-rent', `Gesamtrente CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
-  setText('gap-total-rent', `Gesamtrente CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
+  setText('chart-capital-return-value', `CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
+  setText('gap-capital-return-value', `CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
+  setText('chart-total-rent', `CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
+  setText('gap-total-rent', `CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
+  setText('chart-other-free-value', `CHF ${formatCHF(scenario?.freeCapital || 0)}`);
+  setText('chart-bound-capital-value', `CHF ${formatCHF(scenario?.boundCapital || 0)}`);
+  setText('chart-total-capital-value', `CHF ${formatCHF(scenario?.totalCapital || 0)}`);
+  setText('gap-free-value', `CHF ${formatCHF(scenario?.freeCapital || 0)}`);
+  setText('gap-bound-capital-value', `CHF ${formatCHF(scenario?.boundCapital || 0)}`);
+  setText('gap-total-capital-value', `CHF ${formatCHF(scenario?.totalCapital || 0)}`);
 }
 
 function buildScenarioData() {
@@ -515,7 +543,9 @@ function buildScenarioData() {
   const netRealEstate = Math.max(0, readField('real-estate') - readField('mortgage'));
 
   const investedCapital = Math.round(pillar3a + investments + otherAssets + pkPayout);
-  const totalCapital    = investedCapital + netRealEstate;
+  const freeCapital     = investedCapital;
+  const boundCapital    = netRealEstate;
+  const totalCapital    = freeCapital + boundCapital;
 
   const p3aRet  = readField('pillar3a-return') / 100;
   const wsRet   = readField('investments-return') / 100;
@@ -526,8 +556,8 @@ function buildScenarioData() {
   const pkCapitalIncome = Math.round(pkPayout * baseRet);
 
   const realEstateIncome = readField('real-estate-income');
-  const weightedReturn = totalCapital > 0
-    ? (p3aIncome + wsIncome + otherAssetsIncome + pkCapitalIncome + realEstateIncome) / totalCapital
+  const weightedReturn = freeCapital > 0
+    ? (p3aIncome + wsIncome + otherAssetsIncome + pkCapitalIncome) / freeCapital
     : baseRet;
   const totalInvestIncome = p3aIncome + wsIncome + otherAssetsIncome + pkCapitalIncome + realEstateIncome;
   const rentIncome = Math.round(
@@ -540,7 +570,7 @@ function buildScenarioData() {
   const securedIncome = rentIncome;
   const totalIncome = rentIncome + totalInvestIncome;
 
-  const projection = simulateProjection(totalCapital, securedIncome, weightedReturn, draw, inflation, projYears);
+  const projection = simulateProjection(freeCapital, securedIncome, weightedReturn, realEstateIncome, draw, inflation, projYears);
 
   return {
     projYears,
@@ -561,6 +591,8 @@ function buildScenarioData() {
     totalInvestIncome,
     totalIncome,
     investedCapital,
+    freeCapital,
+    boundCapital,
     totalCapital,
     weightedReturn,
     securedIncome,
@@ -574,7 +606,7 @@ function buildScenarioData() {
 // Simulation engine
 // ============================================================
 
-function simulateProjection(initialCapital, securedIncome, returnRate, draw, inflation, years) {
+function simulateProjection(initialCapital, securedIncome, returnRate, fixedIncome, draw, inflation, years) {
   const path = [Math.max(initialCapital, 0)];
   const rawPath = [initialCapital];
   const needs = [], potentials = [], returnAmounts = [];
@@ -583,14 +615,15 @@ function simulateProjection(initialCapital, securedIncome, returnRate, draw, inf
     const need          = draw * Math.pow(1 + inflation, i);
     const effectiveCap  = Math.max(current, 0);
     const dynamicReturn = effectiveCap * returnRate;
+    const fixedIncomeYear = fixedIncome * Math.pow(1 + inflation, i);
     const securedIncomeYear = securedIncome * Math.pow(1 + inflation, i);
-    const potential     = securedIncomeYear + dynamicReturn;
+    const potential     = securedIncomeYear + fixedIncomeYear + dynamicReturn;
     current += potential - need;
     rawPath.push(current);
     path.push(Math.max(current, 0));
     needs.push(need);
     potentials.push(potential);
-    returnAmounts.push(dynamicReturn);
+    returnAmounts.push(dynamicReturn + fixedIncomeYear);
   }
   return { path, rawPath, needs, potentials, returnAmounts };
 }
@@ -684,13 +717,14 @@ function updateResults() {
     pkCapitalIncome,
     totalInvestIncome,
     totalIncome,
+    freeCapital,
+    boundCapital,
     projection: proj,
   } = scenario;
 
   const firstReturn    = Math.round(proj.returnAmounts[0] || 0);
   const firstPotential = Math.round(proj.potentials[0] || securedIncome);
   const inflatedNeed   = draw * Math.pow(1 + inflation, 1);
-  const investIncome   = firstReturn + Math.round(realEstateIncome);
 
   const depletionIdx  = proj.rawPath.findIndex((v, i) => i > 0 && v <= 0);
   const depletionAge  = depletionIdx > 0 ? retireAge + depletionIdx : null;
@@ -701,7 +735,7 @@ function updateResults() {
 
   // --- Cards ---
   setText('result-invested',        `CHF ${formatCHF(totalCapital)}`);
-  setText('result-invested-amount', `CHF ${formatCHF(investedCapital)}`);
+  setText('result-invested-amount', `frei CHF ${formatCHF(freeCapital)}`);
   setText('result-invest-return',   `CHF ${formatCHF(totalInvestIncome)}`);
   setText('result-total',           `CHF ${formatCHF(totalIncome)}`);
   setText('result-rent-income',     `CHF ${formatCHF(rentIncome)}`);
@@ -755,27 +789,30 @@ function updateResults() {
   }
 
   // Smiley:
-  //   🤩  capital lasts full projection AND (≥50% of start capital remains OR ≥20 years of need left at end)
-  //   🙂  capital lasts full projection but more significantly consumed
+  //   😀  capital lasts full projection AND (>=50% of start capital remains OR >=20 years of need left at end)
+  //   😐  capital lasts full projection but more significantly consumed
   //   🤔  capital runs out before the projection ends
   const finalCapital = proj.rawPath[proj.rawPath.length - 1] ?? 0;
   const annualDrawAtEnd = draw > 0 ? draw * Math.pow(1 + inflation, projYears) : 0;
   const yearsOfCapitalLeft = annualDrawAtEnd > 0 ? finalCapital / annualDrawAtEnd : Infinity;
   const capitalLastsTerm = draw <= 0 || depletionAge === null || depletionAge >= life;
-  const capitalWellPreserved = draw <= 0 || finalCapital >= totalCapital * 0.5 || yearsOfCapitalLeft >= 20;
+  const capitalWellPreserved = draw <= 0 || finalCapital >= freeCapital * 0.5 || yearsOfCapitalLeft >= 20;
 
-  let statusEmoji, statusTitle;
+  let statusEmoji, statusTitle, smileyTone;
   if (!capitalLastsTerm) {
     statusEmoji = '🤔';
+    smileyTone = 'think';
     statusTitle = `Kapital reicht nur bis Alter ${depletionAge} – Planungsziel nicht erreicht.`;
   } else if (capitalWellPreserved) {
-    statusEmoji = '🤩';
+    statusEmoji = '😀';
+    smileyTone = 'happy';
     statusTitle = yearsOfCapitalLeft === Infinity
       ? 'Kein Kapitalbezug nötig – Kapital bleibt erhalten!'
-      : `Sehr gut – am Ende noch Kapital für ca. ${Math.round(yearsOfCapitalLeft)} Jahre (${Math.round(finalCapital / totalCapital * 100)}% des Startkapitals).`;
+      : `Sehr gut – am Ende noch Kapital für ca. ${Math.round(yearsOfCapitalLeft)} Jahre (${Math.round(finalCapital / Math.max(1, freeCapital) * 100)}% des frei verfügbaren Startkapitals).`;
   } else {
-    statusEmoji = '🙂';
-    statusTitle = `Kapital reicht bis zum Planungsziel, aber stark verzehrt (noch ${Math.round(finalCapital / totalCapital * 100)}% am Ende).`;
+    statusEmoji = '😐';
+    smileyTone = 'neutral';
+    statusTitle = `Kapital reicht bis zum Planungsziel, aber stark verzehrt (noch ${Math.round(finalCapital / Math.max(1, freeCapital) * 100)}% des frei verfügbaren Startkapitals am Ende).`;
   }
 
   const emojiEl = document.getElementById('result-age-emoji');
@@ -787,10 +824,61 @@ function updateResults() {
   if (p2InfoBtn) {
     p2InfoBtn.textContent = statusEmoji;
     p2InfoBtn.title = statusTitle;
+    p2InfoBtn.classList.remove('p2-smiley-status-think', 'p2-smiley-status-neutral', 'p2-smiley-status-happy');
+    p2InfoBtn.classList.add(`p2-smiley-status-${smileyTone}`);
   }
 
   latestInsightText = `${insight} ${netLine} ${thresholdText}`;
   if (insightBody) insightBody.textContent = latestInsightText;
+
+  const liquidityPanel = document.getElementById('liquidity-panel');
+  const liquidityBadge = document.getElementById('liquidity-status-badge');
+  const liquidityTip = document.getElementById('liquidity-status-tip');
+  const yearsToProjectionEnd = depletionAge == null ? Infinity : depletionAge - life;
+  const isNearProjectionEnd = Number.isFinite(yearsToProjectionEnd) && Math.abs(yearsToProjectionEnd) <= 3;
+  const endsTooEarly = Number.isFinite(yearsToProjectionEnd) && yearsToProjectionEnd < -3;
+  if (liquidityPanel) {
+    liquidityPanel.classList.remove('is-alert', 'is-neutral', 'is-ok');
+    if (draw <= 0 || isNearProjectionEnd) liquidityPanel.classList.add('is-neutral');
+    else if (endsTooEarly) liquidityPanel.classList.add('is-alert');
+    else liquidityPanel.classList.add('is-ok');
+  }
+  setText('liquidity-free-today', `CHF ${formatCHF(freeCapital)}`);
+  setText('liquidity-bound-today', `CHF ${formatCHF(boundCapital)}`);
+  setText('liquidity-bound-real-estate', `CHF ${formatCHF(boundCapital)}`);
+  setText('liquidity-bound-note', boundCapital > 0 ? '' : 'Aktuell kein gebundenes Kapital erfasst');
+  setText('liquidity-bound-pk-note', scenario.remainingPk > 0 ? `CHF ${formatCHF(scenario.remainingPk)} in Rente umgewandelt` : 'als Rente berücksichtigt');
+  if (liquidityBadge) {
+    liquidityBadge.classList.remove('is-alert', 'is-neutral', 'is-ok');
+    let badgeText = 'Hinweis (i)';
+    let badgeInfo = 'Frei verfügbares und gebundenes Kapital werden separat ausgewiesen.';
+    if (draw <= 0) {
+      badgeText = 'neutral (i)';
+      badgeInfo = `Ohne geplanten Kapitalbezug bleibt das verfügbare Kapital im Projektionshorizont erhalten (bis Alter ${life}).`;
+      liquidityBadge.classList.add('is-neutral');
+    } else if (isNearProjectionEnd) {
+      badgeText = 'nahe Planende (i)';
+      badgeInfo = `Das verfügbare Kapital reicht bis Alter ${depletionAge} und liegt damit innerhalb von +/- 3 Jahren zum Projektionsende (Alter ${life}).`;
+      liquidityBadge.classList.add('is-neutral');
+    } else if (endsTooEarly) {
+      badgeText = `vor Planende (i)`;
+      badgeInfo = `Das verfügbare Kapital reicht bis Alter ${depletionAge} und endet damit mehr als 3 Jahre vor dem Projektionsende (Alter ${life}).`;
+      liquidityBadge.classList.add('is-alert');
+    } else {
+      badgeText = 'über Planende (i)';
+      badgeInfo = depletionAge == null
+        ? `Im Projektionshorizont bis Alter ${life} bleibt verfügbares Kapital vorhanden.`
+        : `Das verfügbare Kapital reicht bis Alter ${depletionAge} und damit mehr als 3 Jahre über das Projektionsende (Alter ${life}) hinaus.`;
+      liquidityBadge.classList.add('is-ok');
+    }
+    liquidityBadge.textContent = badgeText;
+    liquidityBadge.dataset.tip = badgeInfo;
+    liquidityBadge.title = '';
+    liquidityBadge.setAttribute('aria-label', `${badgeText}. Info einblenden.`);
+    if (liquidityTip && liquidityBadge.getAttribute('aria-expanded') === 'true') {
+      liquidityTip.textContent = badgeInfo;
+    }
+  }
 
   syncYearControls(scenario);
   // Sync chart + drawer chips if visible
@@ -805,36 +893,26 @@ function updateResults() {
 
 function updateChart() {
   const scenario = buildScenarioData();
-  const { age, retireAge, projYears, life, totalCapital, securedIncome, weightedReturn: wRet, projection: proj } = scenario;
+  const { retireAge, projYears, freeCapital, boundCapital, pkPayout, totalCapital, weightedReturn: wRet, projection: proj } = scenario;
   const inflation = Math.max(0, readField('inflation') / 100);
   const inflationFactor = (yearIndex) => (chartMode === 'real' ? Math.pow(1 + inflation, yearIndex) : 1);
-  const { path, needs, potentials } = proj;
-
-  const capitalSeries = path.map((value, index) => value / inflationFactor(index));
-  const incomeSeries = [];
-  const rentSeries = [];
-  const needSeries = [];
-  const visibleYears = Math.min(projYears, Math.max(potentials.length, needs.length));
-  for (let i = 0; i <= visibleYears; i++) {
-    const incomeValue = i === 0
-      ? securedIncome + (proj.returnAmounts[0] || 0)
-      : (potentials[i - 1] ?? potentials[potentials.length - 1] ?? securedIncome);
-    const needValue = i === 0
-      ? readField('capital-draw')
-      : (needs[i - 1] ?? needs[needs.length - 1] ?? 0);
-    incomeSeries.push(incomeValue / inflationFactor(i));
-    rentSeries.push((securedIncome * Math.pow(1 + inflation, i)) / inflationFactor(i));
-    needSeries.push(needValue / inflationFactor(i));
-  }
-
-  const gapSeries = incomeSeries.map((value, index) => value - (needSeries[index] || 0));
+  const visibleYears = Math.min(projYears, Math.max(0, proj.path.length - 1));
+  const freeSeries = proj.path
+    .slice(0, visibleYears + 1)
+    .map((value, index) => (value || 0) / inflationFactor(index));
+  const boundSeries = Array.from({ length: visibleYears + 1 }, (_, index) => (boundCapital || 0) / inflationFactor(index));
+  const pkShare = freeCapital > 0 ? Math.max(0, Math.min(1, pkPayout / freeCapital)) : 0;
+  const pkSeries = freeSeries.map((value) => value * pkShare);
+  const otherFreeSeries = freeSeries.map((value, index) => Math.max(0, value - pkSeries[index]));
+  const midSeries = boundSeries.map((value, index) => value + otherFreeSeries[index]);
+  const capitalSeries = boundSeries.map((value, index) => value + freeSeries[index]);
   const focusIndex = Math.min(visibleYears, clampFocusYear(visibleYears));
 
   const canvas = document.getElementById('simulation-chart');
   if (!canvas) return;
   const dpr      = window.devicePixelRatio || 1;
   const cssW     = Math.max(canvas.clientWidth || canvas.width, 280);
-  const cssH     = Math.max(Math.round(cssW * 0.58), 260);
+  const cssH     = Math.max(Math.round(cssW * 0.39), 228);
   canvas.style.height = `${cssH}px`;
   canvas.width   = Math.round(cssW * dpr);
   canvas.height  = Math.round(cssH * dpr);
@@ -843,231 +921,185 @@ function updateChart() {
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.clearRect(0, 0, cssW, cssH);
 
-  const capMax  = Math.max(...capitalSeries, totalCapital, 1);
-  const cashMin = Math.min(...needSeries, ...incomeSeries, 0);
-  const cashMax = Math.max(...needSeries, ...incomeSeries, 1);
-  const cashRng = Math.max(cashMax - cashMin, 1);
+  const capMax  = Math.max(...capitalSeries, totalCapital, 1) * 1.06;
 
   const mob    = cssW < 520;
-  const tM = mob ? 34 : 46;
-  const bM = mob ? 22 : 26;
-  const lM = mob ? 30 : 42;
-  const gap = 14;
-  const avail  = Math.max(120, cssH - tM - bM - gap);
-  const capH   = Math.round(avail * 0.68);
-  const cashH  = avail - capH;
-  const capTop = tM, capBot = capTop + capH;
-  const casTop = capBot + gap, casBot = casTop + cashH;
+  const tM = mob ? 18 : 20;
+  const bM = mob ? 30 : 32;
+  const lM = mob ? 10 : 14;
+  const rM = mob ? 14 : 18;
+  const capH = Math.max(140, cssH - tM - bM);
+  const capTop = tM;
+  const capBot = capTop + capH;
+  const plotW = cssW - lM - rM;
 
-  const mapYC = v => capBot  - (v / capMax)               * capH;
-  const mapX  = i => lM + ((cssW - lM) / projYears) * i;
-  const deltaBaseline = casTop + cashH / 2;
-  const deltaScale = Math.max((cashH / 2) - 14, 1);
-  const mapYK = v => casBot - ((v - cashMin) / cashRng) * cashH;
+  const mapYC = (value) => capBot - (value / Math.max(1, capMax)) * capH;
+  const mapX = (index) => lM + (plotW / Math.max(1, visibleYears)) * index;
 
-  function formatKCHF(value) {
-    return `KCHF ${Math.round(value / 100000) * 100}`;
+  function formatBadgeCHF(value) {
+    return `CHF ${formatCHF(Math.round(value || 0))}`;
   }
 
-  function drawTag(text, x, y, color) {
-    ctx.font = `${mob ? 16.2 : 18}px Inter,sans-serif`;
-    const tagWidth = ctx.measureText(text).width + 10;
-    const tagHeight = mob ? 23 : 26;
-    const drawX = Math.max(3, Math.min(x, cssW - tagWidth - 3));
-    const drawY = Math.max(tagHeight + 1, Math.min(y, cssH - 2));
-    ctx.fillStyle = 'rgba(255,255,255,0.92)';
-    ctx.fillRect(drawX, drawY - tagHeight + 2, tagWidth, tagHeight);
+  function traceSmoothSeries(series) {
+    if (!series.length) return;
+    ctx.beginPath();
+    ctx.moveTo(mapX(0), mapYC(series[0] || 0));
+    for (let index = 1; index < series.length; index++) {
+      const prevX = mapX(index - 1);
+      const prevY = mapYC(series[index - 1] || 0);
+      const currX = mapX(index);
+      const currY = mapYC(series[index] || 0);
+      const midX = (prevX + currX) / 2;
+      const midY = (prevY + currY) / 2;
+      ctx.quadraticCurveTo(prevX, prevY, midX, midY);
+      if (index === series.length - 1) ctx.quadraticCurveTo(currX, currY, currX, currY);
+    }
+  }
+
+  function fillAreaBetweenSeries(lowerSeries, upperSeries, color) {
+    if (!lowerSeries.length || !upperSeries.length) return;
+    ctx.beginPath();
+    upperSeries.forEach((value, index) => {
+      const x = mapX(index);
+      const y = mapYC(value);
+      index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    for (let index = lowerSeries.length - 1; index >= 0; index--) {
+      ctx.lineTo(mapX(index), mapYC(lowerSeries[index] || 0));
+    }
+    ctx.closePath();
     ctx.fillStyle = color;
-    ctx.textAlign = 'left';
-    ctx.fillText(text, drawX + 5, drawY);
+    ctx.fill();
   }
 
-  // Panel backgrounds
-  ctx.fillStyle = 'rgba(148, 163, 184, 0.06)';
-  ctx.fillRect(lM, capTop, cssW - lM, capH);
-  ctx.fillRect(lM, casTop, cssW - lM, cashH);
+  function drawBadge(lines, x, y, align = 'left') {
+    const lineGap = mob ? 13 : 14;
+    const padX = mob ? 8 : 10;
+    const padY = mob ? 7 : 8;
+    const radius = 8;
+    ctx.font = `700 ${mob ? 10.5 : 11.5}px Inter,sans-serif`;
+    const textWidth = Math.max(...lines.map((line) => ctx.measureText(line).width));
+    const width = textWidth + padX * 2;
+    const height = lines.length * lineGap + padY * 2 - 2;
+    const drawX = align === 'right' ? Math.max(6, x - width) : Math.min(cssW - width - 6, x);
+    const drawY = Math.max(6, Math.min(cssH - height - 6, y));
 
-  // Soft fill under capital line for a calmer top panel
-  ctx.beginPath();
-  capitalSeries.forEach((value, index) => {
-    const x = mapX(index);
-    const y = mapYC(value);
-    if (index === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.lineTo(mapX(projYears), capBot);
-  ctx.lineTo(mapX(0), capBot);
-  ctx.closePath();
-  ctx.fillStyle = 'rgba(37, 99, 235, 0.05)';
-  ctx.fill();
-
-  // Focus marker controlled by year slider
-  if (focusIndex > 0) {
-    const focusX = mapX(focusIndex);
-    ctx.setLineDash([2, 4]);
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 1.1;
+    ctx.fillStyle = 'rgba(37, 99, 235, 0.94)';
     ctx.beginPath();
-    ctx.moveTo(focusX, capTop);
-    ctx.lineTo(focusX, casBot);
-    ctx.stroke();
-    ctx.setLineDash([]);
-  }
-
-  // Capital development line
-  ctx.strokeStyle = '#2563eb';
-  ctx.lineWidth = 2.3;
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  capitalSeries.forEach((v, i) => {
-    const x = mapX(i), y = mapYC(v);
-    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Lower panel: total income vs. need with filled gap
-  ctx.strokeStyle = 'rgba(148,163,184,0.35)';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(lM, casTop + cashH / 2);
-  ctx.lineTo(cssW, casTop + cashH / 2);
-  ctx.stroke();
-
-  for (let y = 1; y < incomeSeries.length; y++) {
-    const x0 = mapX(y - 1);
-    const x1 = mapX(y);
-    const incomeY0 = mapYK(incomeSeries[y - 1]);
-    const incomeY1 = mapYK(incomeSeries[y]);
-    const needY0 = mapYK(needSeries[y - 1]);
-    const needY1 = mapYK(needSeries[y]);
-    ctx.fillStyle = incomeSeries[y] >= needSeries[y]
-      ? 'rgba(16,185,129,0.18)'
-      : 'rgba(100,116,139,0.12)';
-    ctx.beginPath();
-    ctx.moveTo(x0, Math.min(incomeY0, needY0));
-    ctx.lineTo(x1, Math.min(incomeY1, needY1));
-    ctx.lineTo(x1, Math.max(incomeY1, needY1));
-    ctx.lineTo(x0, Math.max(incomeY0, needY0));
+    ctx.moveTo(drawX + radius, drawY);
+    ctx.lineTo(drawX + width - radius, drawY);
+    ctx.arcTo(drawX + width, drawY, drawX + width, drawY + radius, radius);
+    ctx.lineTo(drawX + width, drawY + height - radius);
+    ctx.arcTo(drawX + width, drawY + height, drawX + width - radius, drawY + height, radius);
+    ctx.lineTo(drawX + radius, drawY + height);
+    ctx.arcTo(drawX, drawY + height, drawX, drawY + height - radius, radius);
+    ctx.lineTo(drawX, drawY + radius);
+    ctx.arcTo(drawX, drawY, drawX + radius, drawY, radius);
     ctx.closePath();
     ctx.fill();
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.textAlign = 'left';
+    lines.forEach((line, index) => {
+      ctx.fillText(line, drawX + padX, drawY + padY + 9 + index * lineGap);
+    });
   }
 
-  // Soft green area keeps the total-income series visually anchored.
-  const incomeBaseY = mapYK(Math.max(0, cashMin));
-  ctx.beginPath();
-  incomeSeries.forEach((value, index) => {
-    const x = mapX(index);
-    const y = mapYK(value);
-    index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
-  });
-  ctx.lineTo(mapX(incomeSeries.length - 1), incomeBaseY);
-  ctx.lineTo(mapX(0), incomeBaseY);
+  ctx.fillStyle = 'rgba(148, 163, 184, 0.08)';
+  ctx.fillRect(lM, capTop, plotW, capH);
+
+  const yTicks = mob ? 3 : 4;
+  const xTicks = mob ? 4 : 5;
+
+  ctx.strokeStyle = 'rgba(100, 116, 139, 0.35)';
+  ctx.lineWidth = 1;
+  for (let index = 0; index < yTicks; index++) {
+    const ratio = yTicks === 1 ? 0 : index / (yTicks - 1);
+    const y = capBot - ratio * capH;
+    ctx.beginPath();
+    ctx.moveTo(lM, y);
+    ctx.lineTo(cssW - rM, y);
+    ctx.stroke();
+  }
+
+  ctx.setLineDash([3, 5]);
+  for (let index = 0; index < xTicks; index++) {
+    const ratio = xTicks === 1 ? 0 : index / (xTicks - 1);
+    const year = Math.round(ratio * visibleYears);
+    const x = mapX(year);
+    ctx.beginPath();
+    ctx.moveTo(x, capTop);
+    ctx.lineTo(x, capBot);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  traceSmoothSeries(boundSeries);
+  ctx.lineTo(mapX(boundSeries.length - 1), capBot);
+  ctx.lineTo(mapX(0), capBot);
   ctx.closePath();
-  ctx.fillStyle = 'rgba(16,185,129,0.08)';
+  ctx.fillStyle = 'rgba(51, 65, 85, 0.30)';
   ctx.fill();
 
-  // Income line
-  ctx.strokeStyle = 'rgba(255,255,255,0.9)';
-  ctx.lineWidth = mob ? 4 : 4.5;
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  for (let y = 0; y < incomeSeries.length; y++) {
-    const x = mapX(y);
-    if (y === 0) ctx.moveTo(x, mapYK(incomeSeries[y]));
-    else ctx.lineTo(x, mapYK(incomeSeries[y]));
-  }
+  fillAreaBetweenSeries(boundSeries, midSeries, 'rgba(191, 219, 254, 0.72)');
+  fillAreaBetweenSeries(midSeries, capitalSeries, 'rgba(59, 130, 246, 0.38)');
+
+  traceSmoothSeries(midSeries);
+  ctx.strokeStyle = 'rgba(147, 197, 253, 0.95)';
+  ctx.lineWidth = 1.1;
   ctx.stroke();
 
-  ctx.strokeStyle = '#10b981';
+  // Focus marker controlled by year slider
+  const focusX = mapX(focusIndex);
+  ctx.setLineDash([2, 4]);
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 1.75;
+  ctx.beginPath();
+  ctx.moveTo(focusX, capTop);
+  ctx.lineTo(focusX, capBot);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Capital development line
+  traceSmoothSeries(capitalSeries);
+  ctx.strokeStyle = '#2563eb';
   ctx.lineWidth = mob ? 2.4 : 2.8;
-  ctx.beginPath();
-  for (let y = 0; y < incomeSeries.length; y++) {
-    const x = mapX(y);
-    if (y === 0) ctx.moveTo(x, mapYK(incomeSeries[y]));
-    else ctx.lineTo(x, mapYK(incomeSeries[y]));
-  }
   ctx.stroke();
 
-  // Need line
-  ctx.strokeStyle = '#64748b';
-  ctx.lineWidth = mob ? 1.5 : 1.7;
-  ctx.setLineDash([5, 4]);
-  ctx.beginPath();
-  for (let y = 0; y < needSeries.length; y++) {
-    const x = mapX(y);
-    if (y === 0) ctx.moveTo(x, mapYK(needSeries[y]));
-    else ctx.lineTo(x, mapYK(needSeries[y]));
-  }
-  ctx.stroke();
-  ctx.setLineDash([]);
+  const startX = mapX(0);
+  const startY = mapYC(capitalSeries[0] || 0);
+  const endIndex = Math.max(0, capitalSeries.length - 1);
+  const endX = mapX(endIndex);
+  const endY = mapYC(capitalSeries[endIndex] || 0);
+  const focusY = mapYC(capitalSeries[focusIndex] || 0);
 
-  // Direct labels (legend removed)
-  const capEndX = mapX(Math.max(0, capitalSeries.length - 1));
-  const capEndY = mapYC(capitalSeries[capitalSeries.length - 1]);
-  drawTag('Kapitalentwicklung', capEndX - 108, capEndY - 8, '#2563eb');
-
-  const finalGap = gapSeries[gapSeries.length - 1] || 0;
-  const finalIncomeY = mapYK(incomeSeries[incomeSeries.length - 1] || 0);
-  const finalNeedY = mapYK(needSeries[needSeries.length - 1] || 0);
-  const rightTags = [
-    { text: 'Bedarf', y: finalNeedY + 12, color: '#64748b' },
-    { text: 'Gesamteinkommen', y: finalIncomeY - 8, color: '#10b981' },
-  ];
-  const tagGap = mob ? 27 : 31;
-  rightTags[1].y = Math.max(rightTags[1].y, rightTags[0].y + tagGap);
-  const tagOverflow = rightTags[rightTags.length - 1].y - (casBot - 2);
-  if (tagOverflow > 0) rightTags.forEach(tag => { tag.y -= tagOverflow; });
-  rightTags.forEach(tag => drawTag(tag.text, cssW - (tag.text === 'Gesamteinkommen' ? 154 : 62), tag.y, tag.color));
-
-  if (focusIndex > 0) {
-    const capY = mapYC(capitalSeries[focusIndex] || 0);
-    const needY = mapYK(needSeries[focusIndex] || 0);
-    const incomeY = mapYK(incomeSeries[focusIndex] || 0);
-    const focusX = mapX(focusIndex);
-    ctx.fillStyle = '#2563eb';
+  ctx.strokeStyle = '#93c5fd';
+  ctx.lineWidth = mob ? 2.2 : 2.6;
+  ctx.fillStyle = '#eff6ff';
+  [[startX, startY], [focusX, focusY]].forEach(([pointX, pointY]) => {
     ctx.beginPath();
-    ctx.arc(focusX, capY, 3, 0, Math.PI * 2);
+    ctx.arc(pointX, pointY, mob ? 3.8 : 4.1, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = '#10b981';
-    ctx.beginPath();
-    ctx.arc(focusX, incomeY, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#64748b';
-    ctx.beginPath();
-    ctx.arc(focusX, needY, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-  }
+    ctx.stroke();
+  });
 
   // Grid and axis labels
-  ctx.strokeStyle = 'rgba(148,163,184,0.25)'; ctx.fillStyle = '#94a3b8';
-  ctx.font = `${mob ? 14.4 : 16.8}px Inter,sans-serif`;
-  const xT = mob ? 4 : 5;
-  for (let i = 0; i < xT; i++) {
-    const r = xT === 1 ? 0 : i / (xT - 1);
-    const x = lM + r * (cssW - lM);
-    const year = Math.round(r * projYears);
-    const ageAtTick = retireAge + year;
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(x, capTop); ctx.lineTo(x, casBot); ctx.stroke();
-    ctx.textAlign = i === xT - 1 ? 'right' : 'left';
-    ctx.fillText(i === 0 ? 'Jahr 0' : `${ageAtTick}`, x + (i === xT-1 ? -2 : 2), casBot + 14);
+  for (let index = 0; index < xTicks; index++) {
+    const ratio = xTicks === 1 ? 0 : index / (xTicks - 1);
+    const year = Math.round(ratio * visibleYears);
+    const x = mapX(year);
+    const isFocusYear = year === focusIndex;
+    const label = String(retireAge + year);
+    ctx.fillStyle = isFocusYear ? '#0f172a' : '#334155';
+    ctx.font = `${isFocusYear ? '700' : '500'} ${mob ? 11.5 : 12.5}px Inter,sans-serif`;
+    ctx.textAlign = index === 0 ? 'left' : (index === xTicks - 1 ? 'right' : 'center');
+    ctx.fillText(label, x, capBot + 18);
   }
 
-  const yTC = mob ? 3 : 4;
-  for (let i = 0; i < yTC; i++) {
-    const r = yTC === 1 ? 0 : i / (yTC - 1);
-    const y = capBot - r * capH;
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.moveTo(lM, y); ctx.lineTo(cssW, y); ctx.stroke();
-    ctx.textAlign = 'left';
-    ctx.fillText(formatKCHF(capMax * r), lM - 4, y - 3);
-  }
-
-  // Lower panel axis labels
-  ctx.fillStyle = '#94a3b8';
-  ctx.textAlign = 'left';
-  ctx.fillText(formatKCHF(cashMax), lM - 4, casTop + 12);
-  ctx.fillText('KCHF 0', lM - 4, casBot - 3);
+  drawBadge([`Start ${formatBadgeCHF(capitalSeries[0] || 0)}`], startX + 6, startY - 22);
+  drawBadge([
+    `Ende ${formatBadgeCHF(capitalSeries[endIndex] || 0)}`,
+  ], Math.min(cssW - 10, endX + 10), endY - 22, 'right');
 
   // Method note
   const noteEl = document.getElementById('chart-method-note');
@@ -1076,22 +1108,45 @@ function updateChart() {
       ? 'Real = Werte in heutiger Kaufkraft, inflationsbereinigt.'
       : 'Nominal = laufende Franken ohne Inflationsabzug.';
     noteEl.textContent =
-      `${modeLabel} Oben: Kapitalentwicklung und Kapitalrendite (blau). Unten: Gesamteinkommen (grün) gegen Bedarf (grau). ` +
-      `Startkapital CHF ${formatCHF(totalCapital)}, ges. Einkommen CHF ${formatCHF(securedIncome)}, ` +
-      `Rendite ${(Math.round(wRet * 10000) / 100).toFixed(2)}%, Inflation ${readField('inflation').toFixed(1)}%.`;
+      `${modeLabel} Dunkelgrau = gebundenes Kapital, Hellblau = frei verfuegbares Kapital, Blau = PK-Kapitalanteil im frei verfuegbaren Kapital. ` +
+      `Gesamtkapital Start CHF ${formatCHF(totalCapital)}, Rendite ${(Math.round(wRet * 10000) / 100).toFixed(2)}%, ` +
+      `Inflation ${readField('inflation').toFixed(1)}%.`;
   }
 
   if (chartYearDetails) {
-    const ageAtFocus = retireAge + focusIndex;
-    const capAtFocus = Math.round(capitalSeries[focusIndex] || 0);
-    const incomeAtFocus = Math.round(incomeSeries[focusIndex] || 0);
-    const needAtFocus = Math.round(needSeries[focusIndex] || 0);
-    const gapAtFocus = incomeAtFocus - needAtFocus;
+    const boundStart = Math.round(focusIndex > 0 ? (boundSeries[focusIndex - 1] || 0) : (boundSeries[0] || 0));
+    const boundEnd = Math.round(boundSeries[focusIndex] || 0);
+    const freeStart = Math.round(focusIndex > 0 ? (freeSeries[focusIndex - 1] || 0) : (freeSeries[0] || 0));
+    const freeEnd = Math.round(freeSeries[focusIndex] || 0);
+    const totalStart = boundStart + freeStart;
+    const totalEnd = boundEnd + freeEnd;
+    const freeDelta = freeEnd - freeStart;
+    const boundDelta = boundEnd - boundStart;
+    const totalDelta = totalEnd - totalStart;
+    const freeDepleted = freeStart <= 0 && freeEnd <= 0;
+    const insufficientDrawdown = freeStart > 0 && freeEnd <= 0 && focusIndex < visibleYears;
+    const isCriticalDrawdown = freeDepleted || insufficientDrawdown;
+    const deltaLabel = freeDepleted
+      ? 'Kein weiterer Abbau möglich'
+      : (insufficientDrawdown ? 'Nicht genügend Abbau möglich' : (freeDelta > 0 ? 'Zuwachs' : (freeDelta < 0 ? 'Abbau' : 'Unverändert')));
+    const deltaLabelClass = isCriticalDrawdown ? 'p2-capital-year-label is-critical' : 'p2-capital-year-label';
+    const freeDeltaClass = freeDepleted
+      ? 'p2-capital-year-change is-critical'
+      : (freeDelta > 0 ? 'p2-capital-year-change is-gain' : (freeDelta < 0 ? 'p2-capital-year-change is-loss' : 'p2-capital-year-change is-flat'));
+    const totalDeltaClass = freeDepleted
+      ? 'p2-capital-year-change is-critical'
+      : (totalDelta > 0 ? 'p2-capital-year-change is-gain' : (totalDelta < 0 ? 'p2-capital-year-change is-loss' : 'p2-capital-year-change is-flat'));
+    const freeDeltaValue = freeDepleted ? '' : `CHF ${formatCHF(Math.abs(freeDelta))}`;
+    const totalDeltaValue = freeDepleted ? '' : `CHF ${formatCHF(Math.abs(totalDelta))}`;
+    const boundDeltaValue = '';
+    const boundDeltaCellClass = 'p2-chart-focus-line p2-capital-year-value';
     chartYearDetails.innerHTML =
-      `<span class="p2-chart-focus-line p2-chart-focus-capital">Kapital CHF ${formatCHF(capAtFocus)}</span>` +
-      `<span class="p2-chart-focus-line p2-chart-focus-income">Gesamteinkommen CHF ${formatCHF(incomeAtFocus)}</span>` +
-      `<span class="p2-chart-focus-line p2-chart-focus-need">Bedarf CHF ${formatCHF(needAtFocus)}</span>` +
-      `<span class="p2-chart-focus-line p2-chart-focus-gap">${gapAtFocus >= 0 ? 'Überschuss' : 'Lücke'} CHF ${formatCHF(Math.abs(gapAtFocus))}</span>`;
+      `<div class="p2-capital-year-grid">` +
+      `<span></span><span class="p2-capital-year-colhead">Verfügbar</span><span class="p2-capital-year-colhead">Gebunden</span><span class="p2-capital-year-colhead">Gesamt</span>` +
+      `<span class="p2-capital-year-label">Jahresanfang</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-free">CHF ${formatCHF(freeStart)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-bound">CHF ${formatCHF(boundStart)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-total">CHF ${formatCHF(totalStart)}</span>` +
+      `<span class="${deltaLabelClass}">${deltaLabel}</span><span class="p2-chart-focus-line p2-capital-year-value ${freeDeltaClass}">${freeDeltaValue}</span><span class="${boundDeltaCellClass}">${boundDeltaValue}</span><span class="p2-chart-focus-line p2-capital-year-value ${totalDeltaClass}">${totalDeltaValue}</span>` +
+      `<span class="p2-capital-year-label">Jahresende</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-free">CHF ${formatCHF(freeEnd)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-bound">CHF ${formatCHF(boundEnd)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-total">CHF ${formatCHF(totalEnd)}</span>` +
+      `</div>`;
   }
 }
 
@@ -1105,6 +1160,7 @@ function updateGapChart() {
   const focusIndex = Math.min(years, clampFocusYear(years));
   const incomeSeries = [];
   const rentSeries = [];
+  const returnSeries = [];
   const needSeries = [];
   for (let i = 0; i <= years; i++) {
     const income = (i === 0
@@ -1112,8 +1168,10 @@ function updateGapChart() {
       : (proj.potentials[i - 1] ?? securedIncome)) / inflationFactor(i);
     const rent = (securedIncome * Math.pow(1 + inflation, i)) / inflationFactor(i);
     const need = (i === 0 ? readField('capital-draw') : (proj.needs[i - 1] ?? 0)) / inflationFactor(i);
+    const capitalReturn = Math.max(0, income - rent);
     incomeSeries.push(income);
     rentSeries.push(rent);
+    returnSeries.push(capitalReturn);
     needSeries.push(need);
   }
   const gapSeries = incomeSeries.map((value, i) => value - (needSeries[i] || 0));
@@ -1154,42 +1212,103 @@ function updateGapChart() {
     ctx.stroke();
   }
 
-  // A small set of stacked bars keeps the rent gap readable on mobile.
-  const barCount = Math.min(5, years + 1);
-  const barWidth = Math.min(42, Math.max(20, (cssW - left - right) / (barCount * 1.8)));
-  for (let bar = 0; bar < barCount; bar++) {
-    const index = barCount === 1 ? 0 : Math.round((bar / (barCount - 1)) * years);
-    const x = mapX(index) - barWidth / 2;
-    const need = Math.max(0, needSeries[index] || 0);
-    const income = Math.max(0, incomeSeries[index] || 0);
-    const rent = Math.min(income, Math.max(0, rentSeries[index] || 0));
-    const incomeHeight = bottom - mapY(income);
-    const rentHeight = bottom - mapY(rent);
-    const capitalHeight = Math.max(0, incomeHeight - rentHeight);
-    const capitalTop = bottom - capitalHeight;
-    const rentTop = capitalTop - rentHeight;
-    const gapHeight = Math.max(0, rentTop - mapY(need));
+  function fillAreaToBaseline(series, color) {
+    if (!series.length) return;
+    ctx.beginPath();
+    series.forEach((value, index) => {
+      const x = mapX(index);
+      const y = mapY(value);
+      index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.lineTo(mapX(series.length - 1), bottom);
+    ctx.lineTo(mapX(0), bottom);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
 
-    // Keep the stack order fixed: capital at the bottom, rent above it, gap on top.
-    ctx.fillStyle = '#2563eb';
-    ctx.fillRect(x, capitalTop, barWidth, capitalHeight);
-    ctx.fillStyle = '#eab308';
-    ctx.fillRect(x, rentTop, barWidth, rentHeight);
-    if (need > income) {
-      ctx.fillStyle = '#ef4444';
-      ctx.fillRect(x, mapY(need), barWidth, gapHeight);
-    }
-    if (index === focusIndex) {
-      ctx.strokeStyle = '#0f172a';
-      ctx.lineWidth = 2;
-      ctx.strokeRect(x - 2, mapY(Math.max(need, income)) - 2, barWidth + 4, bottom - mapY(Math.max(need, income)) + 4);
+  function fillAreaBetween(lowerSeries, upperSeries, color, predicate) {
+    if (!lowerSeries.length || !upperSeries.length) return;
+    for (let index = 1; index < lowerSeries.length; index++) {
+      const lowerPrev = lowerSeries[index - 1] || 0;
+      const lowerCurr = lowerSeries[index] || 0;
+      const upperPrev = upperSeries[index - 1] || 0;
+      const upperCurr = upperSeries[index] || 0;
+      if (predicate && !predicate(index - 1, index)) continue;
+      ctx.beginPath();
+      ctx.moveTo(mapX(index - 1), mapY(lowerPrev));
+      ctx.lineTo(mapX(index), mapY(lowerCurr));
+      ctx.lineTo(mapX(index), mapY(upperCurr));
+      ctx.lineTo(mapX(index - 1), mapY(upperPrev));
+      ctx.closePath();
+      ctx.fillStyle = color;
+      ctx.fill();
     }
   }
 
-  // Bedarf remains visible as a dashed reference line across the stacked bars.
+  function drawSeriesLine(series, color, width, dashed = false) {
+    if (!series.length) return;
+    ctx.beginPath();
+    series.forEach((value, index) => {
+      const x = mapX(index);
+      const y = mapY(value);
+      index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dashed ? [5, 4] : []);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  fillAreaToBaseline(returnSeries, 'rgba(37, 99, 235, 0.18)');
+  fillAreaBetween(returnSeries, incomeSeries, 'rgba(234, 179, 8, 0.18)');
+  fillAreaBetween(incomeSeries, needSeries, 'rgba(239, 68, 68, 0.14)', (prev, curr) => {
+    const needPrev = needSeries[prev] || 0;
+    const needCurr = needSeries[curr] || 0;
+    const incomePrev = incomeSeries[prev] || 0;
+    const incomeCurr = incomeSeries[curr] || 0;
+    return needPrev > incomePrev || needCurr > incomeCurr;
+  });
+  fillAreaBetween(needSeries, incomeSeries, 'rgba(16, 185, 129, 0.10)', (prev, curr) => {
+    const needPrev = needSeries[prev] || 0;
+    const needCurr = needSeries[curr] || 0;
+    const incomePrev = incomeSeries[prev] || 0;
+    const incomeCurr = incomeSeries[curr] || 0;
+    return incomePrev >= needPrev && incomeCurr >= needCurr;
+  });
+
+  const tickCount = mob ? 4 : 5;
+  ctx.strokeStyle = 'rgba(148,163,184,0.34)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([3, 5]);
+  for (let t = 0; t < tickCount; t++) {
+    const r = tickCount === 1 ? 0 : t / (tickCount - 1);
+    const index = Math.round(r * years);
+    const x = mapX(index);
+    ctx.beginPath();
+    ctx.moveTo(x, top);
+    ctx.lineTo(x, bottom);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  const focusX = mapX(focusIndex);
+  ctx.setLineDash([2, 4]);
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 1.35;
+  ctx.beginPath();
+  ctx.moveTo(focusX, top);
+  ctx.lineTo(focusX, bottom);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  drawSeriesLine(returnSeries, '#2563eb', mob ? 2.4 : 2.8);
+  drawSeriesLine(incomeSeries, '#ca8a04', mob ? 2.5 : 3);
+
+  // Bedarf reference line across the chart.
   ctx.strokeStyle = '#64748b';
   ctx.lineWidth = mob ? 1.8 : 2;
-  ctx.setLineDash([5, 4]);
   ctx.beginPath();
   needSeries.forEach((value, index) => {
     const x = mapX(index);
@@ -1197,43 +1316,90 @@ function updateGapChart() {
     index === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
   });
   ctx.stroke();
-  ctx.setLineDash([]);
 
-  // Keep the y-axis labels above the stacked bars.
+  const focusIncomeY = mapY(incomeSeries[focusIndex] || 0);
+  const focusReturnY = mapY(returnSeries[focusIndex] || 0);
+  const focusNeedY = mapY(needSeries[focusIndex] || 0);
+  ctx.fillStyle = '#ca8a04';
+  ctx.beginPath();
+  ctx.arc(focusX, focusIncomeY, 3, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath();
+  ctx.arc(focusX, focusReturnY, 2.8, 0, Math.PI * 2);
+  ctx.fill();
   ctx.fillStyle = '#64748b';
-  ctx.font = `${mob ? 12 : 14}px Inter,sans-serif`;
-  ctx.textAlign = 'left';
-  for (let i = 0; i < 4; i++) {
-    const r = i / 3;
-    const y = bottom - r * h;
-    ctx.fillText(`KCHF ${Math.round((maxY * r) / 10000) * 10}`, left + 2, y - 3);
-  }
+  ctx.beginPath();
+  ctx.arc(focusX, focusNeedY, 2.8, 0, Math.PI * 2);
+  ctx.fill();
 
-  const tickCount = barCount;
-  ctx.fillStyle = '#64748b';
-  ctx.font = `${mob ? 12 : 14}px Inter,sans-serif`;
   ctx.textAlign = 'left';
   for (let t = 0; t < tickCount; t++) {
     const r = tickCount === 1 ? 0 : t / (tickCount - 1);
-    const index = barCount === 1 ? 0 : Math.round(r * years);
+    const index = Math.round(r * years);
     const x = mapX(index);
+    const isFocusYear = index === focusIndex;
+    ctx.fillStyle = isFocusYear ? '#0f172a' : '#64748b';
+    ctx.font = `${isFocusYear ? '700' : '500'} ${mob ? 12 : 14}px Inter,sans-serif`;
     ctx.fillText(String(retireAge + index), x - 8, bottom + 14);
   }
 
   const note = document.getElementById('gap-chart-note');
   if (note) {
     note.textContent =
-      'Nominal: Blau = Kapital, Gelb = Rente, Rot = Rentenlücke, gestrichelt Grau = Bedarf. Jahresauswahl durch Antippen der Jahreslinie.';
+      'Nominal: Blau unten = Kap.-Ertrag, Gelb darüber = Gesamtrente, Rot = Lücke, Grün = Überschuss, Grau = Bedarf. Jahresauswahl durch Antippen der Jahreslinie.';
   }
 
   if (gapYearDetails) {
     const need = Math.round(needSeries[focusIndex] || 0);
     const income = Math.round(incomeSeries[focusIndex] || 0);
+    const rent = Math.round(rentSeries[focusIndex] || 0);
+    const capitalReturn = Math.max(0, income - rent);
     const gap = income - need;
+    const gapClass = gap >= 0 ? 'p2-chart-focus-gap p2-chart-focus-surplus' : 'p2-chart-focus-gap';
     gapYearDetails.innerHTML =
-      `<span class="p2-chart-focus-line p2-chart-focus-gap">${gap >= 0 ? 'Überschuss' : 'Lücke'} CHF ${formatCHF(Math.abs(gap))}</span>` +
-      `<span class="p2-chart-focus-line p2-chart-focus-need">Bedarf CHF ${formatCHF(need)}</span>` +
-      `<span class="p2-chart-focus-line p2-chart-focus-income">Gesamteinkommen CHF ${formatCHF(income)}</span>`;
+      `<span class="p2-chart-focus-line p2-chart-focus-rent">Gesamtrente CHF ${formatCHF(rent)}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-return">Ertrag CHF ${formatCHF(capitalReturn)}</span>` +
+      `<span class="p2-chart-focus-line ${gapClass}">${gap >= 0 ? 'Überschuss' : 'Lücke'} CHF ${formatCHF(Math.abs(gap))}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-need">Bedarf CHF ${formatCHF(need)}</span>`;
+  }
+
+  if (gapCoverageBadge && gapCoverageInfo && gapCoverageTip) {
+    const gap = Math.round((incomeSeries[focusIndex] || 0) - (needSeries[focusIndex] || 0));
+    const deficit = Math.max(0, Math.round((needSeries[focusIndex] || 0) - (incomeSeries[focusIndex] || 0)));
+    const startCapital = focusIndex > 0
+      ? Math.max(0, Math.round(proj.rawPath[focusIndex - 1] || 0))
+      : Math.max(0, Math.round(proj.rawPath[0] || 0));
+    const endCapital = focusIndex > 0
+      ? Math.max(0, Math.round(proj.rawPath[focusIndex] || 0))
+      : startCapital;
+
+    let statusClass = 'is-ok';
+    let statusLabel = gap >= 0 ? 'Keine Lücke in diesem Jahr' : 'Lücke vollständig schliessbar';
+    let statusHint = gap >= 0
+      ? 'In diesem Jahr decken Gesamtrente und Ertrag den Bedarf ohne zusätzlichen Kapitalabbau.'
+      : 'In diesem Jahr kann die Lücke vollständig durch verfügbares Kapital gedeckt werden.';
+
+    if (deficit > 0) {
+      if (startCapital <= 0) {
+        statusClass = 'is-critical';
+        statusLabel = 'Lücke nicht mehr schliessbar';
+        statusHint = 'Kein verfügbares Kapital mehr: Die Lücke öffnet sich weiter und kann nicht mehr über Kapitalabbau finanziert werden (-> Kapitalentwicklung).';
+      } else if (startCapital < deficit || (focusIndex > 0 && endCapital <= 0)) {
+        statusClass = 'is-partial';
+        statusLabel = 'Lücke nur teilweise schliessbar';
+        statusHint = 'Das verfügbare Kapital reicht in diesem Jahr nur noch teilweise zur Deckung der Lücke. Ab Folgejahr ist die Lücke nicht mehr finanzierbar (-> Kapitalentwicklung).';
+      }
+    }
+
+    gapCoverageBadge.className = `p2-gap-coverage-badge ${statusClass}`;
+    gapCoverageInfo.className = `p2-gap-coverage-info ${statusClass}`;
+    gapCoverageTip.className = `p2-gap-coverage-tip hidden ${statusClass}`;
+    gapCoverageBadge.textContent = statusLabel;
+    gapCoverageTip.textContent = statusHint;
+    gapCoverageInfo.dataset.tip = statusHint;
+    gapCoverageInfo.setAttribute('aria-label', `${statusLabel}. Hinweis einblenden.`);
+    hideGapCoverageTip();
   }
 }
 
@@ -1372,10 +1538,16 @@ function attachEvents() {
   const simulationCanvas = document.getElementById('simulation-chart');
   simulationCanvas?.addEventListener('click', (event) => {
     const scenario = buildScenarioData();
+    const years = Math.min(scenario.projYears, Math.max(0, scenario.projection.path.length - 1));
     const rect = simulationCanvas.getBoundingClientRect();
-    const leftMargin = rect.width < 520 ? 12 : 46;
-    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - leftMargin) / (rect.width - leftMargin)));
-    focusYear = Math.max(0, Math.min(scenario.projYears, Math.round(ratio * scenario.projYears)));
+    const cssW = Math.max(simulationCanvas.clientWidth || rect.width, 280);
+    const mob = rect.width < 520;
+    const leftMargin = mob ? 10 : 14;
+    const rightMargin = mob ? 14 : 18;
+    const plotWidth = Math.max(1, cssW - leftMargin - rightMargin);
+    const offsetX = Number.isFinite(event.offsetX) ? event.offsetX : (event.clientX - rect.left);
+    const ratio = Math.max(0, Math.min(1, (offsetX - leftMargin) / plotWidth));
+    focusYear = Math.max(0, Math.min(years, Math.round(ratio * years)));
     updateResults();
   });
 
@@ -1383,8 +1555,15 @@ function attachEvents() {
   gapCanvas?.addEventListener('click', (event) => {
     const scenario = buildScenarioData();
     const rect = gapCanvas.getBoundingClientRect();
-    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left - 12) / (rect.width - 20)));
-    focusYear = Math.max(0, Math.min(scenario.projYears, Math.round(ratio * scenario.projYears)));
+    const cssW = Math.max(gapCanvas.clientWidth || rect.width, 280);
+    const years = Math.min(scenario.projYears, Math.max(scenario.projection.potentials.length, scenario.projection.needs.length));
+    const mob = rect.width < 520;
+    const leftMargin = mob ? 16 : 24;
+    const rightMargin = mob ? 28 : 18;
+    const plotWidth = Math.max(1, cssW - leftMargin - rightMargin);
+    const offsetX = Number.isFinite(event.offsetX) ? event.offsetX : (event.clientX - rect.left);
+    const ratio = Math.max(0, Math.min(1, (offsetX - leftMargin) / plotWidth));
+    focusYear = Math.max(0, Math.min(years, Math.round(ratio * years)));
     updateResults();
   });
 
@@ -1402,6 +1581,46 @@ function attachEvents() {
   chartShareSlider?.addEventListener('input', (e) => onShareSliderInput(e.target.value));
   document.getElementById('gap-share-slider')?.addEventListener('input', (e) => onShareSliderInput(e.target.value));
 
+  const liquidityBadge = document.getElementById('liquidity-status-badge');
+  const liquidityTip = document.getElementById('liquidity-status-tip');
+  liquidityBadge?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!liquidityTip) return;
+    const isOpen = liquidityBadge.getAttribute('aria-expanded') === 'true';
+    if (isOpen) {
+      hideLiquidityTooltip();
+      return;
+    }
+    liquidityTip.textContent = liquidityBadge.dataset.tip || '';
+    liquidityTip.classList.remove('hidden');
+    liquidityBadge.setAttribute('aria-expanded', 'true');
+  });
+  document.addEventListener('click', (e) => {
+    if (!liquidityBadge || !liquidityTip) return;
+    const target = e.target;
+    if (liquidityBadge.contains(target) || liquidityTip.contains(target)) return;
+    hideLiquidityTooltip();
+  });
+
+  gapCoverageInfo?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!gapCoverageTip) return;
+    const isOpen = gapCoverageInfo.getAttribute('aria-expanded') === 'true';
+    if (isOpen) {
+      hideGapCoverageTip();
+      return;
+    }
+    gapCoverageTip.textContent = gapCoverageInfo.dataset.tip || '';
+    gapCoverageTip.classList.remove('hidden');
+    gapCoverageInfo.setAttribute('aria-expanded', 'true');
+  });
+  document.addEventListener('click', (e) => {
+    if (!gapCoverageInfo || !gapCoverageTip) return;
+    const target = e.target;
+    if (gapCoverageInfo.contains(target) || gapCoverageTip.contains(target)) return;
+    hideGapCoverageTip();
+  });
+
   chartModeButtons.forEach((button) => {
     button.addEventListener('click', () => {
       const nextMode = button.dataset.chartMode === 'real' ? 'real' : 'nominal';
@@ -1416,6 +1635,7 @@ function attachEvents() {
   // Keyboard escape
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Escape') {
+      hideLiquidityTooltip();
       if (smileyModal && !smileyModal.classList.contains('hidden')) {
         smileyModal.classList.add('hidden');
         p2InfoBtn?.setAttribute('aria-expanded', 'false');

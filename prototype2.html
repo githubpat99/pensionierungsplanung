@@ -83,7 +83,7 @@
           <input id="pk-share" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
           <div class="p2-mix-labels">
             <span>PK-Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span>
-            <span>PK-Rente <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesamtrente">Gesamtrente –</small></span>
+            <span>Pensionskasse <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesamtrente">Gesamtrente –</small></span>
           </div>
         </label>
         <div class="grid-2k">
@@ -146,6 +146,36 @@
           <p class="p2-card-summary"><strong id="result-total">–</strong><span>Renten <b id="result-rent-income">–</b></span><span>Kapitalertrag <b id="result-invest-income">–</b></span></p>
         </div>
       </div>
+
+      <section class="p2-liquidity-panel" id="liquidity-panel" aria-label="Frei verfügbares und gebundenes Kapital">
+        <div class="p2-liquidity-head">
+          <strong>Frei verfügbar vs. gebunden</strong>
+          <button type="button" class="p2-liquidity-badge" id="liquidity-status-badge" aria-expanded="false" aria-controls="liquidity-status-tip">–</button>
+        </div>
+        <div class="p2-liquidity-tip hidden" id="liquidity-status-tip" role="tooltip"></div>
+        <div class="p2-liquidity-grid">
+          <div class="p2-liquidity-card">
+            <span>Frei verfügbar heute</span>
+            <strong id="liquidity-free-today">–</strong>
+          </div>
+          <div class="p2-liquidity-card">
+            <span>Gebunden heute</span>
+            <strong id="liquidity-bound-today">–</strong>
+            <small id="liquidity-bound-note">–</small>
+          </div>
+        </div>
+        <div class="p2-liquidity-breakdown">
+          <strong>Gebundenes Kapital besteht aus</strong>
+          <div class="p2-liquidity-line">
+            <span>Immobilien netto</span>
+            <strong id="liquidity-bound-real-estate">–</strong>
+          </div>
+          <div class="p2-liquidity-line p2-liquidity-line-note">
+            <span>Nicht bezogener PK-Teil</span>
+            <strong id="liquidity-bound-pk-note">als Rente berücksichtigt</strong>
+          </div>
+        </div>
+      </section>
 
     </div>
 
@@ -260,10 +290,26 @@
         <canvas id="simulation-chart" width="800" height="320"></canvas>
       </div>
       <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
-        <div class="p2-chart-share-head p2-chart-share-summary-hidden"><strong id="chart-share-value">50% Kapital / 50% Rente</strong></div>
+        <div class="p2-chart-share-head">
+          <strong id="chart-share-capital">50% Kapital</strong>
+          <strong class="p2-chart-share-baseyear">Basisjahr 0</strong>
+          <strong id="chart-share-rent">50% Rente</strong>
+        </div>
         <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
         <input id="chart-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug" />
-        <div class="p2-chart-share-labels"><span>PK-Kapital <b id="chart-capital-share">50%</b><strong id="chart-capital-value">–</strong><small id="chart-capital-return-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span><span>PK-Rente <b id="chart-rent-share">50%</b><strong id="chart-rent-value">–</strong><small id="chart-total-rent" title="Gesamtrente">Gesamtrente –</small></span></div>
+        <div class="p2-chart-share-layout">
+          <div class="p2-chart-share-col">
+            <span>Pensionskasse <strong id="chart-capital-value">–</strong></span>
+            <span>Verfügbar <strong id="chart-other-free-value">–</strong></span>
+            <span>Gebunden <strong id="chart-bound-capital-value">–</strong></span>
+            <span>Gesamt <strong id="chart-total-capital-value">–</strong></span>
+            <span>Ertrag <strong id="chart-capital-return-value">–</strong></span>
+          </div>
+          <div class="p2-chart-share-col p2-chart-share-col-right">
+            <span>Pensionskasse <strong id="chart-rent-value">–</strong></span>
+            <span>Gesamtrente <strong id="chart-total-rent">–</strong></span>
+          </div>
+        </div>
       </div>
       <div class="p2-chart-slider-wrap p2-chart-click-hint">
         <div class="p2-chart-slider-head">
@@ -279,7 +325,7 @@
   <div class="p2-chart-modal hidden" id="gap-modal" role="dialog" aria-modal="true" aria-labelledby="gap-modal-title">
     <div class="p2-chart-modal-content">
       <div class="p2-chart-modal-header">
-        <h4 id="gap-modal-title">Rentenlücke (nominal)</h4>
+        <h4 id="gap-modal-title">Rentensicht (nominal)</h4>
         <div class="p2-chart-help">
           <button type="button" class="p2-chart-info" id="gap-info-btn" aria-label="Hinweise zur Rentenlücke anzeigen" aria-expanded="false">i</button>
           <div class="p2-chart-note p2-chart-tooltip p2-chart-mode-label" id="gap-chart-note" role="tooltip"></div>
@@ -288,13 +334,34 @@
       </div>
       <div class="p2-chart-card"><canvas id="gap-simulation-chart" width="800" height="320"></canvas></div>
       <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
-        <div class="p2-chart-share-head p2-chart-share-summary-hidden"><strong id="gap-share-value">50% Kapital / 50% Rente</strong></div>
+        <div class="p2-chart-share-head">
+          <strong id="gap-share-capital">50% Kapital</strong>
+          <strong class="p2-chart-share-baseyear">Basisjahr 0</strong>
+          <strong id="gap-share-rent">50% Rente</strong>
+        </div>
         <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
         <input id="gap-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug in der Lückengrafik" />
-        <div class="p2-chart-share-labels"><span>PK-Kapital <b id="gap-capital-share">50%</b><strong id="gap-capital-value">–</strong><small id="gap-capital-return-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span><span>PK-Rente <b id="gap-rent-share">50%</b><strong id="gap-rent-value">–</strong><small id="gap-total-rent" title="Gesamtrente">Gesamtrente –</small></span></div>
+        <div class="p2-chart-share-layout">
+          <div class="p2-chart-share-col">
+            <span>Pensionskasse <strong id="gap-capital-value">–</strong></span>
+            <span>Verfügbar <strong id="gap-free-value">–</strong></span>
+            <span>Gebunden <strong id="gap-bound-capital-value">–</strong></span>
+            <span>Gesamt <strong id="gap-total-capital-value">–</strong></span>
+            <span>Ertrag <strong id="gap-capital-return-value">–</strong></span>
+          </div>
+          <div class="p2-chart-share-col p2-chart-share-col-right">
+            <span>Pensionskasse <strong id="gap-rent-value">–</strong></span>
+            <span>Gesamtrente <strong id="gap-total-rent">–</strong></span>
+          </div>
+        </div>
       </div>
         <div class="p2-chart-slider-wrap p2-chart-click-hint">
           <div class="p2-chart-slider-head"><strong>Jahresauswahl</strong><strong id="gap-focus-label">Jahr 1</strong></div>
+        <div class="p2-gap-coverage-status" aria-live="polite">
+          <span class="p2-gap-coverage-badge is-ok" id="gap-coverage-badge">Lücke vollständig schliessbar</span>
+          <button type="button" class="p2-gap-coverage-info is-ok" id="gap-coverage-info" aria-expanded="false" aria-controls="gap-coverage-tip" aria-label="Hinweis zur Deckung der Lücke anzeigen">i</button>
+        </div>
+        <div class="p2-gap-coverage-tip hidden" id="gap-coverage-tip" role="tooltip"></div>
         <div class="p2-chart-focus p2-gap-focus" id="gap-year-details"></div>
       </div>
     </div>

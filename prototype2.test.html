@@ -129,7 +129,8 @@
           gapShare.value = '80';
           gapShare.dispatchEvent(new Event('input', { bubbles: true }));
           assert(doc.getElementById('pk-share').value === '80', 'Luecken-Mix synchronisiert den PK-Anteil nicht');
-          assert(doc.getElementById('gap-share-value').textContent.includes('80% Kapital'), 'Luecken-Mix-Anzeige ist falsch');
+          assert(doc.getElementById('gap-share-capital').textContent.includes('80% Kapital'), 'Luecken-Mix-Kapitalanzeige ist falsch');
+          assert(doc.getElementById('gap-share-rent').textContent.includes('20% Rente'), 'Luecken-Mix-Rentenanzeige ist falsch');
         }],
         ['Grafiken sind nominal-only', () => {
           assert(doc.querySelectorAll('[data-chart-mode="real"]').length === 0, 'Real-Modus ist noch vorhanden');
