@@ -12,7 +12,7 @@
   <link rel="manifest" href="site.webmanifest" />
   <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="app-icon.svg" />
-  <link rel="stylesheet" href="prototype3.css?v=card-title-align-367" />
+  <link rel="stylesheet" href="prototype3.css?v=year-card-clean-2" />
 </head>
 <body class="p3-body">
   <main class="p2-app" id="p2-app">
@@ -408,11 +408,11 @@
       <div class="p2-chart-card" id="chart-card">
         <canvas id="simulation-chart" width="800" height="320"></canvas>
         <div class="p2-chart-legend" aria-label="Legende Kapitalentwicklung">
-          <span class="legend-item"><i class="legend-dot legend-dot-blue"></i>Gesamtkapital</span>
-          <span class="legend-item"><i class="legend-dot legend-dot-blue-soft"></i>Freies Kapital</span>
-          <span class="legend-item"><i class="legend-dot legend-dot-gray"></i>Gebundenes Kapital</span>
+          <span class="legend-item"><i class="legend-dot legend-dot-blue"></i>Gesamt</span>
+          <span class="legend-item"><i class="legend-dot legend-dot-blue-soft"></i>Verfügbar</span>
+          <span class="legend-item"><i class="legend-dot legend-dot-gray"></i>Gebunden</span>
         </div>
-        <p class="p2-chart-caption" id="chart-capital-caption">Die Rente läuft ab Pensionierungsalter. Die Kurve zeigt den verbleibenden Kapitalbestand, der zusätzlich für den Jahresbedarf eingesetzt wird.</p>
+        <p class="p2-chart-caption hidden" id="chart-capital-caption">Die Rente läuft ab Pensionierungsalter. Die Kurve zeigt den verbleibenden Kapitalbestand, der zusätzlich für den Jahresbedarf eingesetzt wird.</p>
       </div>
       <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
         <div class="p2-chart-share-head">
@@ -437,11 +437,9 @@
         </div>
       </div>
       <div class="p2-chart-slider-wrap p2-chart-click-hint">
-        <div class="p2-chart-slider-head">
-          <strong>Jahresauswahl</strong>
-          <strong id="chart-focus-label">Jahr 1</strong>
-        </div>
-        <div class="p2-chart-focus" id="chart-year-details"></div>
+        <div class="p2-year-card" id="chart-year-summary"></div>
+        <button type="button" class="p2-year-details-toggle" id="chart-year-details-toggle" aria-expanded="false" aria-controls="chart-year-details">Details anzeigen</button>
+        <div class="p2-chart-focus hidden" id="chart-year-details"></div>
       </div>
     </div>
   </div>
@@ -504,6 +502,6 @@
     </div>
   </div>
 
-  <script src="prototype3.js?v=merged-capital-details-columns-17"></script>
+  <script src="prototype3.js?v=year-card-clean-2"></script>
 </body>
 </html>

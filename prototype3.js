@@ -50,6 +50,8 @@ const chartYearSlider = document.getElementById('chart-year-slider');
 const chartFocusLabel = document.getElementById('chart-focus-label');
 const gapFocusLabel = document.getElementById('gap-focus-label');
 const chartYearDetails = document.getElementById('chart-year-details');
+const chartYearSummary = document.getElementById('chart-year-summary');
+const chartYearDetailsToggle = document.getElementById('chart-year-details-toggle');
 const gapYearDetails = document.getElementById('gap-year-details');
 const gapCoverageBadge = document.getElementById('gap-coverage-badge');
 const gapCoverageInfo = document.getElementById('gap-coverage-info');
@@ -1299,7 +1301,7 @@ function updateChart() {
   if (!canvas) return;
   const dpr      = window.devicePixelRatio || 1;
   const cssW     = Math.max(canvas.clientWidth || canvas.width, 280);
-  const cssH     = Math.max(Math.round(cssW * 0.39), 228);
+  const cssH     = Math.max(Math.round(cssW * (cssW < 520 ? 0.52 : 0.39)), 228);
   canvas.style.height = `${cssH}px`;
   canvas.width   = Math.round(cssW * dpr);
   canvas.height  = Math.round(cssH * dpr);
@@ -1371,7 +1373,7 @@ function updateChart() {
     const drawX = align === 'right' ? Math.max(6, x - width) : Math.min(cssW - width - 6, x);
     const drawY = Math.max(6, Math.min(cssH - height - 6, y));
 
-    ctx.fillStyle = 'rgba(37, 99, 235, 0.94)';
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
     ctx.moveTo(drawX + radius, drawY);
     ctx.lineTo(drawX + width - radius, drawY);
@@ -1384,12 +1386,31 @@ function updateChart() {
     ctx.arcTo(drawX, drawY, drawX + radius, drawY, radius);
     ctx.closePath();
     ctx.fill();
+    ctx.strokeStyle = '#93c5fd';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
 
-    ctx.fillStyle = '#f8fafc';
+    ctx.fillStyle = '#2563eb';
     ctx.textAlign = 'left';
     lines.forEach((line, index) => {
       ctx.fillText(line, drawX + padX, drawY + padY + 9 + index * lineGap);
     });
+  }
+
+  function drawFocusAgeBadge(age, x, y) {
+    const label = String(age);
+    ctx.font = `700 ${mob ? 12 : 13}px Inter,sans-serif`;
+    const width = Math.max(mob ? 34 : 38, ctx.measureText(label).width + 16);
+    const height = mob ? 28 : 30;
+    const drawX = Math.max(4, Math.min(cssW - width - 4, x - width / 2));
+    const drawY = Math.max(4, Math.min(cssH - height - 4, y));
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.roundRect(drawX, drawY, width, height, 8);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, drawX + width / 2, drawY + height / 2 + 4);
   }
 
   ctx.fillStyle = 'rgba(148, 163, 184, 0.08)';
@@ -1484,7 +1505,7 @@ function updateChart() {
   ctx.strokeStyle = '#93c5fd';
   ctx.lineWidth = mob ? 2.2 : 2.6;
   ctx.fillStyle = '#eff6ff';
-  [[startX, startY], [focusX, focusY]].forEach(([pointX, pointY]) => {
+  [[startX, startY], [focusX, focusY], [endX, endY]].forEach(([pointX, pointY]) => {
     ctx.beginPath();
     ctx.arc(pointX, pointY, mob ? 3.8 : 4.1, 0, Math.PI * 2);
     ctx.fill();
@@ -1498,16 +1519,19 @@ function updateChart() {
     const x = mapX(year);
     const isFocusYear = year === focusIndex;
     const label = String(retireAge + year);
-    ctx.fillStyle = isFocusYear ? '#0f172a' : '#334155';
+    if (isFocusYear) continue;
+    ctx.fillStyle = '#334155';
     ctx.font = `${isFocusYear ? '700' : '500'} ${mob ? 11.5 : 12.5}px Inter,sans-serif`;
     ctx.textAlign = index === 0 ? 'left' : (index === xTicks - 1 ? 'right' : 'center');
     ctx.fillText(label, x, capBot + 18);
   }
 
-  drawBadge([`Start ${formatBadgeCHF(capitalSeries[0] || 0)}`], startX + 6, startY - 22);
+  drawFocusAgeBadge(retireAge + focusIndex, focusX, capBot + 21);
+
+  drawBadge([`Start ${formatBadgeCHF(capitalSeries[0] || 0)}`], startX + 10, startY - 30);
   drawBadge([
     `Ende ${formatBadgeCHF(capitalSeries[endIndex] || 0)}`,
-  ], Math.min(cssW - 10, endX + 10), endY - 22, 'right');
+  ], Math.min(cssW - 10, endX - 10), endY - 30, 'right');
 
   // Method note
   const noteEl = document.getElementById('chart-method-note');
@@ -1571,6 +1595,13 @@ function updateChart() {
       `<span class="p2-capital-year-label"> </span><span class="p2-chart-focus-line p2-capital-year-value ${freeDeltaClass}">${freeDeltaValue}</span><span class="${boundDeltaCellClass}">${boundDeltaValue}</span><span class="p2-chart-focus-line p2-capital-year-value ${totalDeltaClass}">${totalDeltaValue}</span>` +
       `<span class="p2-capital-year-label">31.12.</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-free">CHF ${formatCHF(freeEnd)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-bound">CHF ${formatCHF(boundEnd)}</span><span class="p2-chart-focus-line p2-capital-year-value p2-capital-year-total">CHF ${formatCHF(totalEnd)}</span>` +
       `</div>${capitalStatus ? `<div class="p2-capital-year-status ${capitalStatusClass}">${capitalStatus}</div>` : ''}`;
+    if (chartYearSummary) {
+      chartYearSummary.innerHTML =
+        `<div class="p2-year-card-head"><strong>Alter ${retireAge + focusIndex}</strong></div>` +
+        `<div class="p2-year-card-values"><span><small>Verfügbar</small><strong>CHF ${formatCHF(freeEnd)}</strong></span>` +
+        `<span><small>Gebunden</small><strong>CHF ${formatCHF(boundEnd)}</strong></span>` +
+        `<span><small>Gesamt</small><strong>CHF ${formatCHF(totalEnd)}</strong></span></div>`;
+    }
   }
 }
 
@@ -2004,6 +2035,12 @@ function attachEvents() {
     updateChart();
   });
   closeChartBtn?.addEventListener('click', () => chartModal?.classList.add('hidden'));
+  chartYearDetailsToggle?.addEventListener('click', () => {
+    const isOpen = chartYearDetailsToggle.getAttribute('aria-expanded') === 'true';
+    chartYearDetailsToggle.setAttribute('aria-expanded', String(!isOpen));
+    chartYearDetailsToggle.textContent = isOpen ? 'Details anzeigen' : 'Details ausblenden';
+    chartYearDetails?.classList.toggle('hidden', isOpen);
+  });
   chartInfoBtn?.addEventListener('click', () => {
     const help = chartInfoBtn.parentElement;
     const isOpen = help?.classList.toggle('is-open') || false;
