@@ -12,7 +12,7 @@
   <link rel="manifest" href="site.webmanifest" />
   <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
   <link rel="apple-touch-icon" href="app-icon.svg" />
-  <link rel="stylesheet" href="prototype3.css?v=year-card-clean-2" />
+  <link rel="stylesheet" href="prototype3.css?v=age-pill-restored-1" />
 </head>
 <body class="p3-body">
   <main class="p2-app" id="p2-app">
@@ -116,8 +116,8 @@
             <div class="p2-mix-track" aria-hidden="true"><span></span></div>
             <input id="pk-share" class="p2-tune-range" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
             <div class="p2-mix-labels">
-              <span>PK-Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span>
-              <span>PK-Rente <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesicherte Rente">Gesicherte Rente –</small></span>
+              <span>PK-Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value" title="Einkommen">Einkommen –</small></span>
+              <span>PK-Rente <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Rente">Rente –</small></span>
             </div>
           </label>
           <span id="pk-share-value" class="range-badge" aria-hidden="true">50%</span>
@@ -170,10 +170,10 @@
                 <rect x="4" y="16.2" width="16" height="1.6" rx="0.3" fill="currentColor"/>
                 <rect x="2.8" y="19" width="18.4" height="1.8" rx="0.4" fill="currentColor"/>
               </svg>
-              <span>Kapital</span>
-              <small>Wie entwickelt sich dein Vermögen?</small>
+              <span>Kapital <strong class="p2-chart-action-total" id="chart-action-capital-total">CHF –</strong></span>
+              <small>Deine Vermögensentwicklung</small>
             </button>
-            <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-gap-modal" title="Rentensicht anzeigen" aria-label="Rentensicht anzeigen">
+            <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-gap-modal" title="Einkommenssicht anzeigen" aria-label="Einkommenssicht anzeigen">
               <svg class="p2-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
                 <ellipse cx="8" cy="7" rx="2.8" ry="1.3" fill="currentColor"/>
                 <path d="M5.2 7.1v1.2c0 .7 1.3 1.3 2.8 1.3s2.8-.6 2.8-1.3V7.1" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
@@ -183,8 +183,8 @@
                 <path d="M10.9 10.8v2.3c0 .8 1.4 1.5 3.1 1.5s3.1-.7 3.1-1.5v-2.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
                 <path d="M3.5 17.6c1.8-2.2 3.9-3.6 5.8-3.3c1.1.2 1.9.7 2.6 1.2c.7.5 1.1.7 1.8.7h2.1c.8 0 1.2.9.6 1.4c-1.2 1-2.8 1.9-4.7 2.5c-1.8.6-3.6.6-5 .1c-1-.4-2-.8-3.2-.6z" fill="currentColor"/>
               </svg>
-              <span>Rente</span>
-              <small>Rente, Ertrag und Bedarf im Vergleich</small>
+              <span>Einkommen / J. <strong class="p2-chart-action-total" id="chart-action-income-total">CHF –</strong></span>
+              <small>vs. Bedarf <strong id="chart-action-need-total">CHF –</strong> / J.</small>
             </button>
           </div>
         </div>
@@ -432,7 +432,7 @@
           </div>
           <div class="p2-chart-share-col p2-chart-share-col-right">
             <span>Pensionskasse <strong id="chart-rent-value">–</strong></span>
-            <span>Gesicherte Rente <strong id="chart-total-rent">–</strong></span>
+            <span>Rente <strong id="chart-total-rent">–</strong></span>
           </div>
         </div>
       </div>
@@ -448,25 +448,23 @@
   <div class="p2-chart-modal hidden" id="gap-modal" role="dialog" aria-modal="true" aria-labelledby="gap-modal-title">
     <div class="p2-chart-modal-content">
       <div class="p2-chart-modal-header">
-        <h4 id="gap-modal-title">Rentensicht (nominal)</h4>
+        <h4 id="gap-modal-title">Einkommenssicht (nominal) <strong id="gap-modal-total">CHF – / Jahr</strong></h4>
         <div class="p2-chart-help">
-          <button type="button" class="p2-chart-info" id="gap-info-btn" aria-label="Hinweise zur Rentenlücke anzeigen" aria-expanded="false">i</button>
+          <button type="button" class="p2-chart-info" id="gap-info-btn" aria-label="Hinweise zur Einkommenssicht anzeigen" aria-expanded="false">i</button>
           <div class="p2-chart-note p2-chart-tooltip p2-chart-mode-label" id="gap-chart-note" role="tooltip"></div>
         </div>
         <button type="button" class="p2-modal-close" id="close-gap-modal" aria-label="Rentenlücke schliessen"></button>
       </div>
       <div class="p2-chart-card">
         <canvas id="gap-simulation-chart" width="800" height="320"></canvas>
-        <div class="p2-chart-legend" aria-label="Legende Rentensicht">
-          <span class="legend-item"><i class="legend-dot legend-dot-orange"></i>Gesicherte Rente</span>
-          <span class="legend-item"><i class="legend-dot legend-dot-blue"></i>Kapitalertrag</span>
-          <span class="legend-item"><i class="legend-dot legend-dot-ink"></i>Gesamteinkommen</span>
-          <span class="legend-item"><i class="legend-dot legend-dot-neutral"></i>Bedarf</span>
-          <span class="legend-item"><i class="legend-dot legend-dot-green"></i>Zuwachs / Überschuss</span>
-          <span class="legend-item"><i class="legend-dot legend-dot-orange"></i>Gemanagte Lücke</span>
-          <span class="legend-item"><i class="legend-dot legend-dot-red"></i>Ungedeckter Rest</span>
+        <div class="p2-chart-legend" aria-label="Legende Einkommenssicht">
+          <span class="legend-item gap-total-income-legend"><i class="legend-dot legend-dot-blue"></i>Gesamteinkommen</span>
+          <span class="legend-item gap-need-legend"><i class="legend-dot legend-dot-neutral"></i>Bedarf</span>
+          <span class="legend-item gap-detail-legend hidden"><i class="legend-dot legend-dot-orange"></i>Rente</span>
+          <span class="legend-item gap-detail-legend hidden"><i class="legend-dot legend-dot-blue"></i>Kapitalertrag + weitere Erträge</span>
         </div>
-        <p class="p2-chart-caption" id="gap-chart-caption">Gesamteinkommen aus gesicherter Rente und Kapitalertrag im Verhältnis zum Jahresbedarf.</p>
+        <button type="button" class="p2-gap-details-toggle" id="gap-details-toggle" aria-expanded="false">Details anzeigen</button>
+        <p class="p2-chart-caption hidden" id="gap-chart-caption">Gesamteinkommen aus Rente, Kapitalertrag und weiteren Erträgen im Verhältnis zum Jahresbedarf.</p>
       </div>
       <div class="p2-chart-share" aria-label="Verhältnis Kapitalbezug und Rente">
         <div class="p2-chart-share-head">
@@ -476,32 +474,34 @@
         </div>
         <div class="p2-chart-share-track" aria-hidden="true"><span></span></div>
         <input id="gap-share-slider" type="range" min="0" max="100" value="50" aria-label="Anteil Kapitalbezug in der Lückengrafik" />
-        <div class="p2-chart-share-layout">
-          <div class="p2-chart-share-col">
-            <span>Pensionskasse <strong id="gap-capital-value">–</strong></span>
-            <span>Verfügbar <strong id="gap-free-value">–</strong></span>
-            <span>Gebunden <strong id="gap-bound-capital-value">–</strong></span>
-            <span>Gesamt <strong id="gap-total-capital-value">–</strong></span>
-            <span>Ertrag <strong id="gap-capital-return-value">–</strong></span>
-          </div>
-          <div class="p2-chart-share-col p2-chart-share-col-right">
-            <span>Pensionskasse <strong id="gap-rent-value">–</strong></span>
-            <span>Gesicherte Rente <strong id="gap-total-rent">–</strong></span>
-          </div>
+        <div class="p2-income-summary-list">
+          <span><b>PK-Kapital</b><strong id="gap-capital-value">–</strong></span>
+          <span class="gap-income-detail hidden"><b>PK-Rente</b><strong id="gap-rent-value">–</strong></span>
+          <span class="gap-income-detail hidden"><b>Gesamtrente</b><strong id="gap-total-rent">–</strong></span>
+          <span class="gap-income-detail hidden"><b>Kapitalertrag</b><strong id="gap-capital-return-value">–</strong></span>
+          <span class="gap-income-detail hidden"><b>Weitere Erträge</b><strong id="gap-other-income">–</strong></span>
+          <span class="p2-income-summary-total gap-income-detail hidden"><b>Gesamteinkommen</b><strong id="gap-total-income">–</strong></span>
         </div>
       </div>
         <div class="p2-chart-slider-wrap p2-chart-click-hint">
-          <div class="p2-chart-slider-head"><strong>Jahresauswahl</strong><strong id="gap-focus-label">Jahr 1</strong></div>
-        <div class="p2-gap-coverage-status" aria-live="polite">
-          <span class="p2-gap-coverage-badge is-ok" id="gap-coverage-badge">Lücke vollständig schliessbar</span>
-          <button type="button" class="p2-gap-coverage-info is-ok" id="gap-coverage-info" aria-expanded="false" aria-controls="gap-coverage-tip" aria-label="Hinweis zur Deckung der Lücke anzeigen">i</button>
+        <div class="p2-gap-year-head">
+          <span class="p2-gap-year-status p2-gap-coverage-status" aria-live="polite">
+            <span class="p2-gap-coverage-badge is-ok" id="gap-coverage-badge">Lücke vollständig schliessbar</span>
+            <button type="button" class="p2-gap-coverage-info is-ok" id="gap-coverage-info" aria-expanded="false" aria-controls="gap-coverage-tip" aria-label="Hinweis zur Deckung der Lücke anzeigen">i</button>
+          </span>
+          <strong id="gap-focus-label">Alter 65</strong>
         </div>
         <div class="p2-gap-coverage-tip hidden" id="gap-coverage-tip" role="tooltip"></div>
-        <div class="p2-chart-focus p2-gap-focus" id="gap-year-details"></div>
+        <div class="p2-income-year-card" id="gap-year-summary">
+          <div><span>Einkommen</span><strong id="gap-summary-income">–</strong></div>
+          <div><span>Bedarf</span><strong id="gap-summary-need">–</strong></div>
+        </div>
+        <button type="button" class="p2-gap-year-details-toggle" id="gap-year-details-toggle" aria-expanded="false" aria-controls="gap-year-details">Jahresdetails anzeigen</button>
+        <div class="p2-chart-focus p2-gap-focus hidden" id="gap-year-details"></div>
       </div>
     </div>
   </div>
 
-  <script src="prototype3.js?v=year-card-clean-2"></script>
+  <script src="prototype3.js?v=age-pill-restored-1"></script>
 </body>
 </html>

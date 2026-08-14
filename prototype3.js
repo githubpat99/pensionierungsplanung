@@ -30,6 +30,9 @@ const gapModal = document.getElementById('gap-modal');
 const openGapBtn = document.getElementById('open-gap-modal');
 const closeGapBtn = document.getElementById('close-gap-modal');
 const gapInfoBtn = document.getElementById('gap-info-btn');
+const gapDetailsToggle = document.getElementById('gap-details-toggle');
+const gapYearDetailsToggle = document.getElementById('gap-year-details-toggle');
+const gapModalTotal = document.getElementById('gap-modal-total');
 const smileyModal = document.getElementById('smiley-modal');
 const closeSmileyModalBtn = document.getElementById('close-smiley-modal');
 const smileyModalText = document.getElementById('smiley-modal-text');
@@ -53,6 +56,8 @@ const chartYearDetails = document.getElementById('chart-year-details');
 const chartYearSummary = document.getElementById('chart-year-summary');
 const chartYearDetailsToggle = document.getElementById('chart-year-details-toggle');
 const gapYearDetails = document.getElementById('gap-year-details');
+const gapSummaryIncome = document.getElementById('gap-summary-income');
+const gapSummaryNeed = document.getElementById('gap-summary-need');
 const gapCoverageBadge = document.getElementById('gap-coverage-badge');
 const gapCoverageInfo = document.getElementById('gap-coverage-info');
 const gapCoverageTip = document.getElementById('gap-coverage-tip');
@@ -89,6 +94,7 @@ const STORAGE_CHART_MODE = 'p3-chart-mode';
 const STORAGE_FORM_STATE = 'p3-form-state-v2';
 let chartMode = 'nominal';
 let focusYear = 0;
+let showGapDetails = false;
 
 function updateCantonCrest() {
   if (!cantonSelect || !cantonCrest) return;
@@ -783,7 +789,7 @@ function syncPkDisplays() {
       : formatThousands(computed);
   }
   setText('pk-rent-share-value', `CHF ${formatCHF(computed)}/J.`);
-  setText('pk-return-share-value', 'Kap.-Ertrag ges. –');
+  setText('pk-return-share-value', 'Einkommen –');
 
   const splitPct = `${Math.max(0, Math.min(100, pkShare))}%`;
   ['pk-share', 'chart-share-slider', 'gap-share-slider'].forEach((id) => {
@@ -809,12 +815,15 @@ function syncChartShareControls(scenario) {
     const track = slider?.previousElementSibling?.querySelector('span');
     if (track) track.style.width = `${share}%`;
   });
-  setText('pk-return-share-value', `Kap.-Ertrag ges. CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
-  setText('pk-total-rent-share-value', `Gesicherte Rente CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
+  setText('pk-return-share-value', `Einkommen CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
+  setText('pk-total-rent-share-value', `Rente CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
   setText('chart-capital-return-value', `CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
-  setText('gap-capital-return-value', `CHF ${formatCHF(scenario?.totalInvestIncome || 0)}/J.`);
+  setText('gap-capital-return-value', `CHF ${formatCHF((scenario?.totalInvestIncome || 0) - (scenario?.realEstateIncome || 0))}/J.`);
+  setText('gap-other-income', `CHF ${formatCHF(scenario?.realEstateIncome || 0)}/J.`);
+  setText('gap-total-income', `CHF ${formatCHF(scenario?.totalIncome || 0)}/J.`);
   setText('chart-total-rent', `CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
   setText('gap-total-rent', `CHF ${formatCHF(scenario?.securedIncome || 0)}/J.`);
+  setText('gap-modal-total', `CHF ${formatCHF(scenario?.totalIncome || 0)} / Jahr`);
   setText('chart-other-free-value', `CHF ${formatCHF(scenario?.freeCapital || 0)}`);
   setText('chart-bound-capital-value', `CHF ${formatCHF(scenario?.boundCapital || 0)}`);
   setText('chart-total-capital-value', `CHF ${formatCHF(scenario?.totalCapital || 0)}`);
@@ -912,11 +921,12 @@ function simulateProjection(initialCapital, securedIncome, returnRate, fixedInco
   const needs = [], potentials = [], returnAmounts = [];
   let current = initialCapital;
   for (let i = 1; i <= years; i++) {
-    const need          = draw * Math.pow(1 + inflation, i);
+    const inflationYears = i - 1;
+    const need          = draw * Math.pow(1 + inflation, inflationYears);
     const effectiveCap  = Math.max(current, 0);
     const dynamicReturn = effectiveCap * returnRate;
-    const fixedIncomeYear = fixedIncome * Math.pow(1 + inflation, i);
-    const securedIncomeYear = securedIncome * Math.pow(1 + inflation, i);
+    const fixedIncomeYear = fixedIncome * Math.pow(1 + inflation, inflationYears);
+    const securedIncomeYear = securedIncome * Math.pow(1 + inflation, inflationYears);
     const potential     = securedIncomeYear + fixedIncomeYear + dynamicReturn;
     current += potential - need;
     rawPath.push(current);
@@ -1038,6 +1048,9 @@ function updateResults() {
   setText('result-bound',           `CHF ${formatCHF(boundCapital)}`);
   setText('result-capital-income',  `CHF ${formatCHF(totalInvestIncome)}`);
   setText('result-rent-income',     `CHF ${formatCHF(rentIncome)}`);
+  setText('chart-action-capital-total', `CHF ${formatCHF(totalCapital)}`);
+  setText('chart-action-income-total', `CHF ${formatCHF(totalIncome)}`);
+  setText('chart-action-need-total', `CHF ${formatCHF(draw)}`);
   updateResultDetails(scenario);
   setText('result-invested-amount', `frei CHF ${formatCHF(freeCapital)}`);
   setText('result-invest-return',   `CHF ${formatCHF(totalInvestIncome)}`);
@@ -1541,7 +1554,7 @@ function updateChart() {
       : 'Nominal = laufende Franken ohne Inflationsabzug.';
     noteEl.textContent =
       `${modeLabel} Dunkelgrau = gebundenes Kapital, Hellblau = freies Kapital, Blau = Gesamtkapital. ` +
-      `Die Rente läuft ab Pensionierungsalter und wird in der Rentensicht zusammen mit Bedarf und Lücke dargestellt. ` +
+      `Die gesicherten Renten und Erträge werden in der Einkommenssicht zusammen mit Bedarf und Lücke dargestellt. ` +
       `Gesamtkapital Start CHF ${formatCHF(totalCapital)}, Rendite ${(Math.round(wRet * 10000) / 100).toFixed(2)}%, ` +
       `Inflation ${readField('inflation').toFixed(1)}%.`;
   }
@@ -1717,8 +1730,47 @@ function updateGapChart() {
     ctx.setLineDash([]);
   }
 
-  fillAreaToBaseline(rentSeries, 'rgba(217, 154, 0, 0.18)');
-  fillAreaBetween(rentSeries, incomeSeries, 'rgba(37, 99, 235, 0.18)');
+  function drawGapEndpointBadge(label, value, x, y, align, offset, color = '#2563eb') {
+    const text = `CHF ${formatCHF(Math.round(value || 0))}`;
+    ctx.font = `700 ${mob ? 9.5 : 11}px Inter,sans-serif`;
+    const width = ctx.measureText(text).width + 14;
+    const height = mob ? 22 : 25;
+    const drawX = align === 'right' ? Math.max(4, x - width - 8) : Math.min(cssW - width - 4, x + 8);
+    const drawY = Math.max(4, Math.min(cssH - height - 4, y + offset));
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = color === '#64748b' ? '#94a3b8' : '#93c5fd';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.roundRect(drawX, drawY, width, height, 7);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = color;
+    ctx.textAlign = 'left';
+    ctx.fillText(text, drawX + 7, drawY + height / 2 + 3.5);
+  }
+
+  function drawGapFocusAgeBadge(age, x, y) {
+    const label = String(age);
+    ctx.font = `700 ${mob ? 12 : 13}px Inter,sans-serif`;
+    const width = Math.max(mob ? 34 : 38, ctx.measureText(label).width + 16);
+    const height = mob ? 28 : 30;
+    const drawX = Math.max(4, Math.min(cssW - width - 4, x - width / 2));
+    const drawY = Math.max(4, Math.min(cssH - height - 4, y));
+    ctx.fillStyle = '#2563eb';
+    ctx.beginPath();
+    ctx.roundRect(drawX, drawY, width, height, 8);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText(label, drawX + width / 2, drawY + height / 2 + 4);
+  }
+
+  if (showGapDetails) {
+    fillAreaToBaseline(rentSeries, 'rgba(217, 154, 0, 0.18)');
+    fillAreaBetween(rentSeries, incomeSeries, 'rgba(37, 99, 235, 0.18)');
+  } else {
+    fillAreaToBaseline(incomeSeries, 'rgba(37, 99, 235, 0.16)');
+  }
   fillAreaBetween(incomeSeries, needSeries, 'rgba(217, 154, 0, 0.12)', (prev, curr) => {
     const needPrev = needSeries[prev] || 0;
     const needCurr = needSeries[curr] || 0;
@@ -1797,8 +1849,9 @@ function updateGapChart() {
   ctx.stroke();
   ctx.setLineDash([]);
 
-  drawSeriesLine(rentSeries, '#d99a00', mob ? 2.1 : 2.4, true);
-  drawSeriesLine(incomeSeries, '#162033', mob ? 2.5 : 3);
+  if (showGapDetails) drawSeriesLine(rentSeries, '#d99a00', mob ? 2.1 : 2.4, true);
+  if (showGapDetails) drawSeriesLine(returnSeries, '#2563eb', mob ? 2.1 : 2.4);
+  drawSeriesLine(incomeSeries, '#2563eb', mob ? 2.5 : 3);
 
   // Bedarf reference line across the chart.
   ctx.strokeStyle = '#64748b';
@@ -1813,7 +1866,7 @@ function updateGapChart() {
 
   const focusIncomeY = mapY(incomeSeries[focusIndex] || 0);
   const focusNeedY = mapY(needSeries[focusIndex] || 0);
-  ctx.fillStyle = '#162033';
+  ctx.fillStyle = '#2563eb';
   ctx.beginPath();
   ctx.arc(focusX, focusIncomeY, 3, 0, Math.PI * 2);
   ctx.fill();
@@ -1827,12 +1880,38 @@ function updateGapChart() {
   ctx.arc(focusX, focusNeedY, 2.8, 0, Math.PI * 2);
   ctx.fill();
 
+  const endpointLabels = [
+    { label: 'Einkommen', value: incomeSeries[0] || 0, y: mapY(incomeSeries[0] || 0), color: '#2563eb' },
+    { label: 'Bedarf', value: needSeries[0] || 0, y: mapY(needSeries[0] || 0), color: '#64748b' },
+  ].sort((a, b) => a.y - b.y);
+  endpointLabels.forEach((entry, index) => {
+    ctx.fillStyle = entry.color;
+    ctx.beginPath();
+    ctx.arc(mapX(0), entry.y, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    drawGapEndpointBadge('Start ' + entry.label, entry.value, mapX(0), entry.y, 'left', index === 0 ? -28 : 8, entry.color);
+  });
+  const endEndpointLabels = [
+    { label: 'Einkommen', value: incomeSeries[years] || 0, y: mapY(incomeSeries[years] || 0), color: '#2563eb' },
+    { label: 'Bedarf', value: needSeries[years] || 0, y: mapY(needSeries[years] || 0), color: '#64748b' },
+  ].sort((a, b) => a.y - b.y);
+  endEndpointLabels.forEach((entry, index) => {
+    ctx.fillStyle = entry.color;
+    ctx.beginPath();
+    ctx.arc(mapX(years), entry.y, 3.2, 0, Math.PI * 2);
+    ctx.fill();
+    drawGapEndpointBadge('Ende ' + entry.label, entry.value, mapX(years), entry.y, 'right', index === 0 ? -28 : 8, entry.color);
+  });
+
+  drawGapFocusAgeBadge(retireAge + focusIndex, focusX, bottom + 18);
+
   ctx.textAlign = 'left';
   for (let t = 0; t < tickCount; t++) {
     const r = tickCount === 1 ? 0 : t / (tickCount - 1);
     const index = Math.round(r * years);
     const x = mapX(index);
     const isFocusYear = index === focusIndex;
+    if (isFocusYear) continue;
     ctx.fillStyle = isFocusYear ? '#0f172a' : '#64748b';
     ctx.font = `${isFocusYear ? '700' : '500'} ${mob ? 12 : 14}px Inter,sans-serif`;
     ctx.fillText(String(retireAge + index), x - 8, bottom + 14);
@@ -1841,13 +1920,13 @@ function updateGapChart() {
   const note = document.getElementById('gap-chart-note');
   if (note) {
     note.textContent =
-      'Nominal: Goldfläche unten = gesicherte Rente, Blauflaeche darüber = Kapitalertrag, Dunkelblau = Gesamteinkommen, Grau = Bedarf, Amber = gemanagte Lücke, helles Coral = ungedeckter Rest. Jahresauswahl durch Antippen der Jahreslinie.';
+      'Nominal: Goldfläche unten = gesicherte Rente, Blauflaeche darüber = Kapitalertrag und weitere Erträge, Dunkelblau = Gesamteinkommen, Grau = Bedarf, Amber = gemanagte Lücke, helles Coral = ungedeckter Rest. Jahresauswahl durch Antippen der Jahreslinie.';
   }
 
   const gapCaption = document.getElementById('gap-chart-caption');
   if (gapCaption) {
     gapCaption.textContent =
-      `Gesamteinkommen aus gesicherter Rente und Kapitalertrag. Festgelegter Jahresbedarf: CHF ${formatCHF(readField('capital-draw'))}.`;
+      `Gesamteinkommen aus gesicherter Rente, Kapitalertrag und weiteren Erträgen. Festgelegter Jahresbedarf: CHF ${formatCHF(readField('capital-draw'))}.`;
   }
 
   if (gapYearDetails) {
@@ -1864,14 +1943,16 @@ function updateGapChart() {
       ? 'p2-chart-focus-gap p2-chart-focus-surplus'
       : (uncoveredAmount > 0 ? 'p2-chart-focus-gap' : 'p2-chart-focus-gap p2-chart-focus-gap-covered');
     gapYearDetails.innerHTML =
-      `<span class="p2-chart-focus-line p2-chart-focus-rent">Gesicherte Rente CHF ${formatCHF(rent)}</span>` +
+      `<span class="p2-chart-focus-line p2-chart-focus-rent">Rente CHF ${formatCHF(rent)}</span>` +
       `<span class="p2-chart-focus-line p2-chart-focus-return">Ertrag CHF ${formatCHF(capitalReturn)}</span>` +
       `<span class="p2-chart-focus-line ${gapClass}">${gap >= 0 ? 'Überschuss' : 'Lücke'} CHF ${formatCHF(Math.abs(gap))}</span>` +
       `<span class="p2-chart-focus-line p2-chart-focus-need">Bedarf CHF ${formatCHF(need)}</span>` +
       (gap < 0
-        ? `<span class="p2-chart-focus-line p2-chart-focus-covered">Davon gedeckt CHF ${formatCHF(coveredByCapital)}</span>` +
+        ? `<span class="p2-chart-focus-line p2-chart-focus-covered">Gedeckt CHF ${formatCHF(coveredByCapital)}</span>` +
           (uncoveredAmount > 0 ? `<span class="p2-chart-focus-line p2-chart-focus-uncovered">Ungedeckt CHF ${formatCHF(uncoveredAmount)}</span>` : '')
         : '');
+    if (gapSummaryIncome) gapSummaryIncome.textContent = `CHF ${formatCHF(income)}`;
+    if (gapSummaryNeed) gapSummaryNeed.textContent = `CHF ${formatCHF(need)}`;
   }
 
   if (gapCoverageBadge && gapCoverageInfo && gapCoverageTip) {
@@ -2061,6 +2142,19 @@ function attachEvents() {
     const help = gapInfoBtn.parentElement;
     const isOpen = help?.classList.toggle('is-open') || false;
     gapInfoBtn.setAttribute('aria-expanded', String(isOpen));
+  });
+  gapDetailsToggle?.addEventListener('click', () => {
+    showGapDetails = !showGapDetails;
+    gapDetailsToggle.setAttribute('aria-expanded', String(showGapDetails));
+    gapDetailsToggle.textContent = showGapDetails ? 'Details ausblenden' : 'Details anzeigen';
+    document.querySelectorAll('.gap-detail-legend, .gap-income-detail').forEach((item) => item.classList.toggle('hidden', !showGapDetails));
+    if (gapModal && !gapModal.classList.contains('hidden')) updateGapChart();
+  });
+  gapYearDetailsToggle?.addEventListener('click', () => {
+    const isOpen = gapYearDetailsToggle.getAttribute('aria-expanded') === 'true';
+    gapYearDetailsToggle.setAttribute('aria-expanded', String(!isOpen));
+    gapYearDetailsToggle.textContent = isOpen ? 'Jahresdetails anzeigen' : 'Jahresdetails ausblenden';
+    gapYearDetails?.classList.toggle('hidden', isOpen);
   });
   gapModal?.addEventListener('click', (e) => {
     if (e.target === gapModal) gapModal.classList.add('hidden');

@@ -2025,6 +2025,11 @@ body.p2-show-simulation.drawer-open {
   min-width: 0;
 }
 .p2-chart-modal-header h4 { min-width: 0; flex: 1; font-size: 0.97rem; }
+.p2-chart-modal-header h4 strong {
+  color: var(--blue);
+  font-size: 1.05em;
+  white-space: nowrap;
+}
 .p2-chart-help { position: relative; margin-left: 8px; }
 .p2-chart-info {
   width: 24px;
@@ -2086,9 +2091,20 @@ body.p2-show-simulation.drawer-open {
 .p2-chart-actions .p2-svg-icon { flex: 0 0 auto; }
 .p2-chart-actions .p2-chart-btn span {
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow: visible;
+  text-overflow: clip;
   white-space: nowrap;
+}
+.p2-chart-actions .p2-chart-action-total {
+  margin-left: 5px;
+  color: currentColor;
+  font-size: 1.05em;
+  font-weight: 800;
+  white-space: nowrap;
+}
+.p2-chart-actions .p2-chart-btn small strong {
+  color: currentColor;
+  font-weight: 800;
 }
 .p2-chart-actions .button-secondary.p2-chart-btn {
   background: linear-gradient(180deg, #3b82f6 0%, #2563eb 100%);
@@ -2249,6 +2265,33 @@ body.p2-show-simulation.drawer-open {
 .p2-chart-share-col-right {
   align-content: start;
 }
+.p2-income-summary-list {
+  display: grid;
+  gap: 3px;
+  font-size: 0.74rem;
+}
+.p2-income-summary-list > span {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 3px 0;
+  color: var(--ink-3);
+}
+.p2-income-summary-list b,
+.p2-income-summary-list strong { font-weight: 700; }
+.p2-income-summary-list strong { color: var(--ink); text-align: right; white-space: nowrap; }
+.p2-income-summary-list span:nth-child(2) strong,
+.p2-income-summary-list span:nth-child(3) strong { color: var(--orange); }
+.p2-income-summary-list span:nth-child(4) strong,
+.p2-income-summary-list span:nth-child(5) strong { color: var(--blue); }
+.p2-income-summary-total {
+  margin-top: 4px;
+  padding-top: 7px !important;
+  border-top: 1px solid var(--border-light);
+}
+.p2-income-summary-total b,
+.p2-income-summary-total strong { color: var(--blue); }
 #chart-capital-return-value {
   color: var(--ink);
 }
@@ -2467,7 +2510,7 @@ body.p2-show-simulation.drawer-open {
 }
 .p2-chart-focus-capital { color: var(--blue); }
 .p2-chart-focus-income { color: #10b981; }
-.p2-chart-focus-need { color: #64748b; }
+.p2-chart-focus-need { color: #475569; }
 .p2-chart-focus-gap { color: #ef4444; }
 .p2-chart-focus .p2-chart-focus-gap.p2-chart-focus-surplus { color: #10b981; }
 #chart-year-details {
@@ -2573,7 +2616,7 @@ body.p2-show-simulation.drawer-open {
 .p2-gap-focus .p2-chart-focus-gap { color: #ef4444; grid-row: 2; }
 .p2-gap-focus .p2-chart-focus-gap-covered { color: var(--orange); }
 .p2-gap-focus .p2-chart-focus-gap.p2-chart-focus-surplus { color: #10b981; }
-.p2-gap-focus .p2-chart-focus-need { color: #64748b; grid-row: 1; }
+.p2-gap-focus .p2-chart-focus-need { color: #475569; grid-row: 1; }
 .p2-gap-focus .p2-chart-focus-covered {
   grid-column: 2;
   color: var(--blue);
@@ -2695,6 +2738,83 @@ body.p2-show-simulation.drawer-open {
   flex-wrap: wrap;
   gap: 10px 16px;
 }
+.p2-gap-details-toggle {
+  display: block;
+  width: 100%;
+  min-height: 34px;
+  margin: 8px 0 0;
+  border: 1px solid var(--blue-light);
+  border-radius: var(--r-sm);
+  padding: 7px 10px;
+  background: var(--blue-lighter);
+  color: var(--blue);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.p2-gap-details-toggle:active,
+.p2-gap-details-toggle[aria-expanded="true"] {
+  background: var(--blue-light);
+}
+.p2-income-year-card {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin-top: 7px;
+  padding: 10px 12px;
+  border: 1px solid var(--border-light);
+  border-radius: var(--r-md);
+  background: var(--white);
+}
+.p2-income-year-card > div { display: grid; gap: 2px; }
+.p2-income-year-card span { color: var(--ink-3); font-size: 0.72rem; text-align: right; }
+.p2-income-year-card strong { color: var(--blue); font-size: 0.9rem; text-align: right; white-space: nowrap; }
+.p2-income-year-card > div:last-child strong { color: #475569; }
+.p2-gap-year-details-toggle {
+  display: block;
+  width: 100%;
+  min-height: 32px;
+  margin: 7px 0 0;
+  border: 1px solid var(--blue-light);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+  background: var(--blue-lighter);
+  color: var(--blue);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+.p2-gap-year-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 5px 8px;
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--ink);
+  font-size: 0.76rem;
+}
+.p2-gap-year-head strong:last-child { font-size: 0.78rem; }
+.p2-gap-year-status.p2-gap-coverage-status {
+  margin: 0;
+  justify-content: flex-start;
+  gap: 6px;
+}
+.p2-gap-year-status .p2-gap-coverage-badge { font-size: 0.72rem; }
+.p2-gap-year-status .p2-gap-coverage-info {
+  width: 20px;
+  height: 20px;
+  font-size: 0.7rem;
+}
+.gap-total-income-legend { color: var(--blue); }
+.gap-need-legend { color: #475569; }
+.gap-detail-legend,
+.gap-income-detail { display: none; }
+.gap-detail-legend:not(.hidden),
+.gap-income-detail:not(.hidden) { display: inline-flex; }
+.p2-income-summary-list > .gap-income-detail:not(.hidden) { display: flex; }
 .legend-item { display: inline-flex; align-items: center; gap: 5px; font-size: 0.79rem; color: var(--ink-3); }
 .legend-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .legend-dot-blue   { background: var(--blue); }
@@ -2786,9 +2906,19 @@ body.p2-show-simulation.drawer-open {
   .p2-chart-modal-content {
     width: 100%;
     max-height: calc(100dvh - 16px);
-    padding: 10px;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    padding: 10px 10px 24px;
     border-radius: 14px;
     gap: 9px;
+  }
+  #gap-modal .p2-chart-modal-content {
+    overflow-y: scroll;
+    padding-bottom: 32px;
+  }
+  #gap-modal .p2-chart-card {
+    overflow: visible;
   }
   .p2-chart-modal-header {
     display: flex;
@@ -3224,7 +3354,7 @@ body.p3-body.p2-show-simulation .p2-chart-actions .p2-chart-btn::after {
   content: '→';
   position: absolute;
   right: 14px;
-  top: 12px;
+  top: 4px;
   color: var(--blue);
   font-size: 1.25rem;
   font-weight: 700;
@@ -4561,11 +4691,24 @@ body.p3-body.p2-show-simulation .p3-hero {
     height: 18px;
   }
   body.p3-body.p2-show-simulation .p2-chart-actions .p2-chart-btn span {
-    font-size: 0.76rem;
+    font-size: 0.6rem;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+  }
+  body.p3-body.p2-show-simulation .p2-chart-actions .p2-chart-action-total {
+    display: block;
+    margin-left: 0;
+    margin-top: 2px;
+    font-size: 1rem;
+    line-height: 1.05;
   }
   body.p3-body.p2-show-simulation .p2-chart-actions .p2-chart-btn small {
     font-size: 0.63rem;
     line-height: 1.15;
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
   }
 
   body.p3-body.p2-show-simulation .p2-drawer {
