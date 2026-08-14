@@ -3,16 +3,29 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Pensionsplaner – Variante 2</title>
-  <link rel="stylesheet" href="prototype2.css" />
+  <title>Dein Ruhestands-Check</title>
+  <link rel="stylesheet" href="prototype3.css" />
 </head>
-<body>
+<body class="p3-body">
   <main class="p2-app" id="p2-app">
+
+    <section class="p3-hero" aria-labelledby="p3-hero-title">
+      <div class="p3-hero-copy">
+        <p class="p3-eyebrow">Dein Ruhestands-Check</p>
+        <h1 id="p3-hero-title">Plane deinen Ruhestand.</h1>
+        <p class="p3-hero-text">Drei Fragen. Klare Antworten.</p>
+      </div>
+      <div class="p3-guide" aria-label="Dein digitaler Begleiter">
+        <div class="p3-guide-bubble">Ich begleite dich durch deine Planung.</div>
+        <button type="button" class="p3-back-slot" id="p3-back-slot" aria-label="Zurück zu deinen Angaben">←</button>
+        <div class="p3-guide-avatar" aria-label="Dein freundlicher Begleiter" role="img"></div>
+      </div>
+    </section>
 
     <!-- Compact sticky header -->
     <div class="p2-header">
       <div class="p2-header-bar">
-        <h2 class="p2-title" id="p2-title">Ihre Situation</h2>
+        <h2 class="p2-title" id="p2-title">Deine Angaben</h2>
         <div class="p2-nav">
           <button id="p2-prev" class="button button-secondary" title="Zurück" aria-label="Zurück">←</button>
           <button id="p2-next" class="button button-primary">Simulation</button>
@@ -20,6 +33,7 @@
         <button class="p2-info-btn p2-info-smiley" id="p2-info-btn" aria-expanded="false" aria-label="Info einblenden">🙂</button>
       </div>
       <p class="p2-desc hidden" id="p2-desc">Deine Grunddaten – werden live in der Simulation verwendet.</p>
+      <p class="p3-simulation-status" id="p3-simulation-status" aria-live="polite"></p>
     </div>
 
     <!-- Step 1: Personal data -->
@@ -27,12 +41,12 @@
       <div class="p2-fields">
         <div class="p2-step1-layout">
           <div class="p2-step1-left">
-            <label class="field field-compact"><span>Alter</span><div class="p2-inline-control"><input id="age" type="number" min="18" max="100" value="56" data-sync-range="age-range" /><input id="age-range" class="p2-tune-range" type="range" min="18" max="100" value="56" data-sync-target="age" aria-label="Alter" /></div></label>
-            <label class="field field-compact"><span>Pensionierungsalter</span><div class="p2-inline-control"><input id="retire-age" type="number" min="55" max="80" value="65" data-sync-range="retire-age-range" /><input id="retire-age-range" class="p2-tune-range" type="range" min="55" max="80" value="65" data-sync-target="retire-age" aria-label="Pensionierungsalter" /></div></label>
-            <label class="field field-compact field-projection"><span>Planung bis Alter</span><div class="p2-inline-control"><input id="life-expectancy" type="number" min="75" max="120" value="92" data-sync-range="life-expectancy-range" /><input id="life-expectancy-range" class="p2-tune-range" type="range" min="75" max="120" value="92" data-sync-target="life-expectancy" aria-label="Planung bis Alter" /></div></label>
+            <label class="field field-compact"><span class="p3-field-label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.7-3.5 3.1-5.3 7-5.3s6.3 1.8 7 5.3"/></svg>Alter</span><div class="p2-inline-control"><input id="age" type="number" min="18" max="100" value="56" data-sync-range="age-range" /><input id="age-range" class="p2-tune-range" type="range" min="18" max="100" value="56" data-sync-target="age" aria-label="Alter" /></div></label>
+            <label class="field field-compact"><span class="p3-field-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 4v16M5 8h14M9 4v3M13 4v3M17 4v3"/><path d="M9 13l3 3 6-6"/></svg>Pension</span><div class="p2-inline-control"><input id="retire-age" type="number" min="55" max="80" value="65" data-sync-range="retire-age-range" /><input id="retire-age-range" class="p2-tune-range" type="range" min="55" max="80" value="65" data-sync-target="retire-age" aria-label="Pension" /></div></label>
+            <label class="field field-compact field-projection"><span class="p3-field-label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/><path d="M12 4v2M20 12h-2"/></svg>Planung bis</span><div class="p2-inline-control"><input id="life-expectancy" type="number" min="75" max="120" value="92" data-sync-range="life-expectancy-range" /><input id="life-expectancy-range" class="p2-tune-range" type="range" min="75" max="120" value="92" data-sync-target="life-expectancy" aria-label="Planung bis" /></div></label>
           </div>
           <div class="p2-step1-right">
-            <label class="field field-compact"><span>Kanton</span>
+            <label class="field field-compact"><span class="p3-field-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 7.5-7 10-4-2.5-7-5.5-7-10V6z"/><path d="M9 11h6M12 8v6"/></svg>Kanton</span>
               <span class="p2-canton-control">
                 <span class="p2-canton-crest" id="canton-crest" aria-hidden="true">SG</span>
                 <select id="canton" aria-label="Kanton auswählen">
@@ -45,7 +59,7 @@
                 </select>
               </span>
             </label>
-            <label class="field"><span>Zivilstand</span>
+            <label class="field"><span class="p3-field-label"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20S4 15.5 4 9.5A4 4 0 0 1 12 7a4 4 0 0 1 8 2.5c0 6-8 10.5-8 10.5z"/></svg>Zivilstand</span>
               <div class="radio-group radio-group-inline">
                 <label><input type="radio" name="marital-status" value="ledig" /> ledig</label>
                 <label><input type="radio" name="marital-status" value="verheiratet" checked /> verheiratet</label>
@@ -53,7 +67,7 @@
                 <label><input type="radio" name="marital-status" value="geschieden" /> geschieden</label>
               </div>
             </label>
-            <label class="field field-compact field-kids"><span>Kinder</span>
+            <label class="field field-compact field-kids"><span class="p3-field-label"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.5"/><path d="M3 20c.5-3.5 2.5-5.5 6-5.5s5.5 2 6 5.5M15 15c3 0 5 1.5 5.5 5"/></svg>Kinder</span>
               <div class="radio-group radio-group-inline">
                 <label><input type="radio" name="children" value="nein" /> nein</label>
                 <label><input type="radio" name="children" value="ja" checked /> ja</label>
@@ -73,7 +87,7 @@
           <label class="field field-range p2-demand-field p2-factor-field"><span class="p2-demand-head"><span>Altersguthaben (CHF)</span><strong id="pk-capital-display">950'000</strong></span>
             <div class="p2-demand-slider-wrap">
               <div class="p2-demand-track" aria-hidden="true"><span id="pk-capital-track-fill"></span></div>
-              <input id="pk-capital-range" class="p2-demand-range" type="range" min="0" max="3000000" step="1000" value="950000" data-sync-target="pk-capital" aria-label="Altersguthaben" />
+              <input id="pk-capital-range" class="p2-demand-range p2-tune-range" type="range" min="0" max="3000000" step="1000" value="950000" data-sync-target="pk-capital" aria-label="Altersguthaben" />
             </div>
             <input id="pk-capital" class="p2-demand-input" type="text" inputmode="numeric" value="950'000" data-sync-range="pk-capital-range" aria-label="Altersguthaben in CHF" />
           </label>
@@ -84,7 +98,7 @@
           <label class="field field-range p2-mix-field">
             <span class="p2-mix-head"><span>Kapitalanteil</span><span class="p2-mix-head-right">Rentenanteil</span></span>
             <div class="p2-mix-track" aria-hidden="true"><span></span></div>
-            <input id="pk-share" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
+            <input id="pk-share" class="p2-tune-range" type="range" min="0" max="100" value="50" aria-label="Kapitalanteil" />
             <div class="p2-mix-labels">
               <span>PK-Kapital <strong id="pk-capital-share-value">–</strong><small id="pk-return-share-value" title="Gesamtkapitalrendite">Kap.-Ertrag ges. –</small></span>
               <span>PK-Rente <strong id="pk-rent-share-value">–</strong><small id="pk-total-rent-share-value" title="Gesicherte Rente">Gesicherte Rente –</small></span>
@@ -97,7 +111,7 @@
             <span class="p2-demand-head"><span>Jahresbedarf (CHF)</span><strong id="capital-draw-display">120'000</strong></span>
             <div class="p2-demand-slider-wrap">
               <div class="p2-demand-track" aria-hidden="true"><span id="capital-draw-track-fill"></span></div>
-              <input id="capital-draw-range" class="p2-demand-range" type="range" min="50000" max="250000" step="1000" value="120000" data-sync-target="capital-draw" aria-label="Jahresbedarf" />
+              <input id="capital-draw-range" class="p2-demand-range p2-tune-range" type="range" min="50000" max="250000" step="1000" value="120000" data-sync-target="capital-draw" aria-label="Jahresbedarf" />
             </div>
             <input id="capital-draw" class="p2-demand-input" type="text" inputmode="numeric" value="120'000" data-sync-range="capital-draw-range" aria-label="Jahresbedarf in CHF" />
           </label>
@@ -109,7 +123,7 @@
               <span class="p2-demand-head"><span>Umwandlungssatz (%)</span><strong id="conversion-rate-display">3.6</strong></span>
               <div class="p2-demand-slider-wrap">
                 <div class="p2-demand-track" aria-hidden="true"><span id="conversion-rate-track-fill"></span></div>
-                <input id="conversion-rate-range" class="p2-demand-range" type="range" min="0" max="10" step="0.1" value="3.6" data-sync-target="conversion-rate" aria-label="Umwandlungssatz" />
+                <input id="conversion-rate-range" class="p2-demand-range p2-tune-range" type="range" min="0" max="10" step="0.1" value="3.6" data-sync-target="conversion-rate" aria-label="Umwandlungssatz" />
               </div>
               <input id="conversion-rate" class="p2-demand-input" type="number" min="0" max="10" step="0.1" value="3.6" data-sync-range="conversion-rate-range" aria-label="Umwandlungssatz in Prozent" />
             </label>
@@ -117,7 +131,7 @@
               <span class="p2-demand-head"><span>Kapitalrendite (%)</span><strong id="return-rate-display">6.9</strong></span>
               <div class="p2-demand-slider-wrap">
                 <div class="p2-demand-track" aria-hidden="true"><span id="return-rate-track-fill"></span></div>
-                <input id="return-rate-range" class="p2-demand-range" type="range" min="0" max="12" step="0.1" value="6.9" data-sync-target="return-rate" aria-label="Kapitalrendite" />
+                <input id="return-rate-range" class="p2-demand-range p2-tune-range" type="range" min="0" max="12" step="0.1" value="6.9" data-sync-target="return-rate" aria-label="Kapitalrendite" />
               </div>
               <input id="return-rate" class="p2-demand-input" type="number" min="0" max="12" step="0.1" value="6.9" data-sync-range="return-rate-range" aria-label="Kapitalrendite in Prozent" />
             </label>
@@ -125,17 +139,17 @@
               <span class="p2-demand-head"><span>Inflation (%)</span><strong id="inflation-display">1.4</strong></span>
               <div class="p2-demand-slider-wrap">
                 <div class="p2-demand-track" aria-hidden="true"><span id="inflation-track-fill"></span></div>
-                <input id="inflation-range" class="p2-demand-range" type="range" min="0" max="8" step="0.1" value="1.4" data-sync-target="inflation" aria-label="Inflation" />
+                <input id="inflation-range" class="p2-demand-range p2-tune-range" type="range" min="0" max="8" step="0.1" value="1.4" data-sync-target="inflation" aria-label="Inflation" />
               </div>
               <input id="inflation" class="p2-demand-input" type="number" min="0" max="8" step="0.1" value="1.4" data-sync-range="inflation-range" aria-label="Inflation in Prozent" />
             </label>
             <label class="field field-range p2-demand-field p2-projection-field">
-              <span class="p2-demand-head"><span>Projektionsdauer (Jahre)</span><strong id="projection-years-display">27</strong></span>
+              <span class="p2-demand-head"><span>Planung bis Alter</span><strong id="projection-years-display">92</strong></span>
               <div class="p2-demand-slider-wrap">
                 <div class="p2-demand-track" aria-hidden="true"><span id="projection-years-track-fill"></span></div>
-                <input id="projection-years-range" class="p2-demand-range" type="range" min="1" max="60" value="27" data-sync-target="projection-years" aria-label="Projektionsdauer" />
+                <input id="projection-years-range" class="p2-demand-range p2-tune-range" type="range" min="1" max="60" value="27" aria-label="Planung bis Alter" />
               </div>
-              <input id="projection-years" class="p2-demand-input" type="number" min="1" max="60" value="27" data-sync-range="projection-years-range" aria-label="Projektionsdauer in Jahren" />
+              <input id="projection-years" class="p2-demand-input" type="number" min="75" max="120" value="92" aria-label="Planung bis Alter" />
             </label>
           </div>
         </details>
@@ -150,7 +164,8 @@
                 <rect x="4" y="16.2" width="16" height="1.6" rx="0.3" fill="currentColor"/>
                 <rect x="2.8" y="19" width="18.4" height="1.8" rx="0.4" fill="currentColor"/>
               </svg>
-              <span>Kapitalentwicklung</span>
+              <span>Kapital</span>
+              <small>Wie entwickelt sich dein Vermögen?</small>
             </button>
             <button type="button" class="button button-secondary p2-chart-btn p2-icon-button" id="open-gap-modal" title="Rentensicht anzeigen" aria-label="Rentensicht anzeigen">
               <svg class="p2-svg-icon" viewBox="0 0 24 24" aria-hidden="true">
@@ -162,7 +177,8 @@
                 <path d="M10.9 10.8v2.3c0 .8 1.4 1.5 3.1 1.5s3.1-.7 3.1-1.5v-2.3" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/>
                 <path d="M3.5 17.6c1.8-2.2 3.9-3.6 5.8-3.3c1.1.2 1.9.7 2.6 1.2c.7.5 1.1.7 1.8.7h2.1c.8 0 1.2.9.6 1.4c-1.2 1-2.8 1.9-4.7 2.5c-1.8.6-3.6.6-5 .1c-1-.4-2-.8-3.2-.6z" fill="currentColor"/>
               </svg>
-              <span>Rentensicht</span>
+              <span>Rente</span>
+              <small>Rente, Ertrag und Bedarf im Vergleich</small>
             </button>
           </div>
         </div>
@@ -186,26 +202,40 @@
     </div>
 
     <section class="p2-plan-timeline" id="plan-timeline" aria-label="Planungsstatus über den Zeithorizont">
-      <div class="p2-plan-band" id="plan-band" role="group" aria-label="Zustände bis Alter">
-        <button type="button" class="p2-plan-segment is-ok" id="plan-state-ok" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
-          <strong id="plan-state-ok-age" aria-hidden="true"></strong>
-        </button>
-        <button type="button" class="p2-plan-segment is-partial" id="plan-state-partial" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
-          <strong id="plan-state-partial-age">–</strong>
-        </button>
-        <button type="button" class="p2-plan-segment is-critical" id="plan-state-critical" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
-          <strong id="plan-state-critical-age" aria-hidden="true"></strong>
-        </button>
+      <div class="p3-status-copy"><button type="button" class="p3-status-icon" id="p3-status-toggle" aria-label="Details zur Planung anzeigen" aria-expanded="false">✓</button><div><strong>Sehr gut!</strong><p>Deine Planung trägt bis zum gewählten Zielalter.</p></div></div>
+      <div class="p3-band-wrap">
+        <div class="p2-plan-band" id="plan-band" role="group" aria-label="Zustände bis Alter">
+          <button type="button" class="p2-plan-segment is-ok" id="plan-state-ok" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
+            <strong id="plan-state-ok-age" aria-hidden="true"></strong>
+          </button>
+          <button type="button" class="p2-plan-segment is-partial" id="plan-state-partial" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
+            <strong id="plan-state-partial-age">–</strong>
+          </button>
+          <button type="button" class="p2-plan-segment is-critical" id="plan-state-critical" data-year="0" aria-expanded="false" aria-controls="plan-state-tip">
+            <strong id="plan-state-critical-age" aria-hidden="true"></strong>
+          </button>
+        </div>
+        <div class="p3-timeline-labels"><span><strong id="p3-current-age">56</strong><small>heute</small></span><span><strong id="p3-target-age">92</strong><small>Ziel</small></span></div>
       </div>
       <p class="p2-plan-status" id="plan-status" aria-live="polite"></p>
       <div class="p2-plan-tip hidden" id="plan-state-tip" role="tooltip"></div>
     </section>
-    <div class="p2-step1-questions" aria-label="Fragen zur Pensionierungsplanung">
-      <div class="p2-question-bubble p2-question-bubble-left">Reicht mein Geld?</div>
-      <div class="p2-question-bubble p2-question-bubble-right">Was kann ich mir leisten?</div>
-      <div class="p2-question-bubble p2-question-bubble-bottom">Wo entsteht eine Lücke?</div>
+    <div class="p3-entry-actions" aria-label="Ruhestands-Check starten">
+      <button type="button" class="p3-entry-tile p3-entry-questions" id="p3-questions-tile" aria-expanded="false" aria-controls="p3-questions-list" aria-label="Die drei Fragen ansehen">
+        <strong>3 Fragen</strong>
+        <span>Dein Check in drei Schritten</span>
+      </button>
+      <button type="button" class="p3-entry-tile p3-entry-check" id="p3-check-tile" aria-label="Ruhestands-Check starten">
+        <strong>Check</strong>
+        <span>Jetzt starten</span>
+      </button>
     </div>
-    <button type="button" class="button button-primary p2-step1-cta" id="p2-step1-cta">Simulation starten</button>
+    <div class="p3-questions-list hidden" id="p3-questions-list" role="region" aria-label="Die drei Fragen">
+      <p><strong>1.</strong> Reicht mein Geld?</p>
+      <p><strong>2.</strong> Was kann ich mir leisten?</p>
+      <p><strong>3.</strong> Wo entsteht eine Lücke?</p>
+    </div>
+    <button type="button" class="button button-primary p2-step1-cta" id="p2-step1-cta">Meinen Ruhestands-Check starten</button>
 
   </main>
 
@@ -426,6 +456,6 @@
     </div>
   </div>
 
-  <script src="prototype2.js"></script>
+  <script src="prototype3.js"></script>
 </body>
 </html>

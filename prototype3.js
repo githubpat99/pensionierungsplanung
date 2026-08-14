@@ -12,6 +12,11 @@ const p2Desc       = document.getElementById('p2-desc');
 const p2Prev       = document.getElementById('p2-prev');
 const p2Next       = document.getElementById('p2-next');
 const step1Cta     = document.getElementById('p2-step1-cta');
+const p3CheckTile  = document.getElementById('p3-check-tile');
+const p3QuestionsTile = document.getElementById('p3-questions-tile');
+const p3QuestionsList = document.getElementById('p3-questions-list');
+const p3StatusToggle = document.getElementById('p3-status-toggle');
+const p3BackSlot   = document.getElementById('p3-back-slot');
 const cantonSelect = document.getElementById('canton');
 const cantonCrest  = document.getElementById('canton-crest');
 const backdrop     = document.getElementById('p2-backdrop');
@@ -52,11 +57,11 @@ const chartShareSlider = document.getElementById('chart-share-slider');
 
 const STEP_META = [
   {
-    title: 'Ihre Situation',
+    title: 'Dein Ruhestands-Check',
     desc:  'Alter, Kanton und Lebenserwartung – Grundlage für die Projektion.',
   },
   {
-    title: 'PK Simulation',
+    title: 'Dein Ruhestands-Check',
     desc:  'PK-Felder direkt eingeben. Kacheln tippen für Detaileingaben.',
   },
 ];
@@ -65,10 +70,10 @@ let currentStep = 0;
 let latestInsightText = '';
 const COVERAGE_GREEN = '#22c55e';
 
-const STORAGE_STEP    = 'p2-wizard-step';
-const STORAGE_STARTED = 'p2-wizard-started';
-const STORAGE_CHART_MODE = 'p2-chart-mode';
-const STORAGE_FORM_STATE = 'p2-form-state-v2';
+const STORAGE_STEP    = 'p3-wizard-step';
+const STORAGE_STARTED = 'p3-wizard-started';
+const STORAGE_CHART_MODE = 'p3-chart-mode';
+const STORAGE_FORM_STATE = 'p3-form-state-v2';
 let chartMode = 'nominal';
 let focusYear = 0;
 
@@ -113,6 +118,10 @@ function readField(id) {
   }
   const el = document.getElementById(id);
   if (!el) return 0;
+  if (id === 'projection-years') {
+    const retireAge = Number(document.getElementById('retire-age')?.value) || 65;
+    return Math.max(1, (Number(el.value) || retireAge + 1) - retireAge);
+  }
   if (el.type === 'number' || el.type === 'range') return Number(el.value) || 0;
   return parseFormatted(el.value);
 }
@@ -452,13 +461,53 @@ function updateProjectionYearsDisplay() {
   const display = document.getElementById('projection-years-display');
   const fill = document.getElementById('projection-years-track-fill');
   if (!input || !range) return;
-  const value = Math.max(1, Number(input.value) || 1);
-  if (display) display.textContent = String(value);
+  const targetAge = Math.max(75, Number(input.value) || 92);
+  const retireAge = Number(document.getElementById('retire-age')?.value) || 65;
+  const value = Math.max(1, targetAge - retireAge);
+  if (display) display.textContent = String(targetAge);
   if (fill) {
     const min = Number(range.min) || 1;
     const max = Number(range.max) || 60;
     fill.style.width = `${Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100))}%`;
   }
+}
+
+function syncPlanningFields(sourceId) {
+  const retireAge = Number(document.getElementById('retire-age')?.value) || 65;
+  const lifeInput = document.getElementById('life-expectancy');
+  const projectionInput = document.getElementById('projection-years');
+  const projectionRange = document.getElementById('projection-years-range');
+  if (!lifeInput || !projectionInput) return;
+
+  const sourceInput = sourceId === 'life-expectancy' ? lifeInput : projectionInput;
+  if (sourceInput && sourceInput.value === '') return;
+  if ((sourceId === 'life-expectancy' || sourceId === 'projection-years') && Number(sourceInput.value) < 75) return;
+
+  let targetAge;
+  let projectionYears;
+  if (sourceId === 'projection-years-range') {
+    projectionYears = Math.max(1, Number(projectionRange?.value) || 1);
+    targetAge = retireAge + projectionYears;
+  } else {
+    targetAge = sourceId === 'life-expectancy' || sourceId === 'life-expectancy-range'
+      ? Number(lifeInput.value)
+      : Number(projectionInput.value);
+    targetAge = Math.max(75, targetAge || 92);
+    projectionYears = Math.max(1, targetAge - retireAge);
+  }
+  lifeInput.value = targetAge;
+  projectionInput.value = targetAge;
+  if (projectionRange) projectionRange.value = projectionYears;
+  updateProjectionYearsDisplay();
+}
+
+function normalizePlanningField(input) {
+  if (!input || input.value !== '') return;
+  const retireAge = Number(document.getElementById('retire-age')?.value) || 65;
+  input.value = input.id === 'life-expectancy' || input.id === 'projection-years'
+    ? retireAge + 1
+    : input.value;
+  syncPlanningFields(input.id);
 }
 
 function updateFactorDisplay(inputId, rangeId, displayId, fillId) {
@@ -1003,6 +1052,7 @@ function updateResults() {
       : 100;
     planBand.style.setProperty('--plan-green-end', `${greenEndPct.toFixed(2)}%`);
     planBand.style.setProperty('--plan-yellow-end', `${yellowEndPct.toFixed(2)}%`);
+    planBand.style.setProperty('--plan-red-start', `${criticalIndex >= 0 ? yellowEndPct.toFixed(2) : '100'}%`);
     planBand.classList.toggle('is-all-ok', !hasTransitionStates);
   }
 
@@ -1047,6 +1097,32 @@ function updateResults() {
     planStatus.textContent = statusText;
     planStatus.className = `p2-plan-status ${statusClass}`;
   }
+
+  const p3StatusCopy = document.querySelector('.p3-status-copy');
+  const p3GuideAvatar = document.querySelector('.p3-guide-avatar');
+  const p3SimulationStatus = document.getElementById('p3-simulation-status');
+  if (p3StatusCopy) {
+    const statusTone = timeline.firstCritical ? 'is-critical' : (timeline.firstPartial ? 'is-partial' : 'is-ok');
+    const statusHeading = timeline.firstCritical ? 'Achtung' : (timeline.firstPartial ? 'Im Blick behalten' : 'Sehr gut!');
+    const statusDescription = timeline.firstCritical
+      ? `Ab Alter ${timeline.firstCritical.age} bleibt eine Lücke ungedeckt.`
+      : (timeline.firstPartial ? `Bis Alter ${timeline.fullUntilAge} vollständig gedeckt.` : `Deine Planung ist bis Alter ${timeline.fullUntilAge} vollständig gedeckt.`);
+    p3StatusCopy.className = `p3-status-copy ${statusTone}`;
+    p3StatusCopy.querySelector('strong')?.replaceChildren(document.createTextNode(statusHeading));
+    p3StatusCopy.querySelector('p')?.replaceChildren(document.createTextNode(statusDescription));
+    p3GuideAvatar?.classList.remove('is-ok', 'is-partial', 'is-critical');
+    p3GuideAvatar?.classList.add(statusTone);
+    const simulationMessage = timeline.firstCritical
+      ? 'Hier sind Massnahmen erforderlich.'
+      : (timeline.firstPartial ? 'Prüf bitte deine Angaben.' : 'Das sieht aber gut aus.');
+    if (p3SimulationStatus) {
+      p3SimulationStatus.textContent = simulationMessage;
+      p3SimulationStatus.className = `p3-simulation-status ${statusTone}`;
+    }
+  }
+  setText('p3-current-age', readField('age'));
+  setText('p3-planned-age', timeline.fullUntilAge);
+  setText('p3-target-age', scenario.life);
 
   setPlanState(
     planStateOk,
@@ -1760,11 +1836,25 @@ function attachEvents() {
     saveStarted();
     showStep(1);
   });
-  planBand?.addEventListener('click', () => {
+  p3CheckTile?.addEventListener('click', () => step1Cta?.click());
+  p3QuestionsTile?.addEventListener('click', () => {
+    const isOpen = !p3QuestionsList?.classList.contains('hidden');
+    p3QuestionsList?.classList.toggle('hidden', isOpen);
+    p3QuestionsTile.setAttribute('aria-expanded', String(!isOpen));
+  });
+  p3StatusToggle?.addEventListener('click', () => {
+    const isHidden = planStateTip?.classList.toggle('hidden');
+    p3StatusToggle.setAttribute('aria-expanded', String(!isHidden));
+  });
+  p3BackSlot?.addEventListener('click', () => showStep(0));
+  planBand?.addEventListener('click', (event) => {
     if (currentStep !== 0) return;
-    saveStarted();
-    showStep(1);
-  }, true);
+    const segment = event.target.closest('.p2-plan-segment');
+    if (!segment || segment.disabled || !planStateTip) return;
+    planStateTip.textContent = segment.dataset.tip || '';
+    planStateTip.classList.toggle('hidden');
+    segment.setAttribute('aria-expanded', String(!planStateTip.classList.contains('hidden')));
+  });
 
   // Header smiley popup
   p2InfoBtn?.addEventListener('click', () => {
@@ -1978,6 +2068,9 @@ function attachEvents() {
 
   // Live recalc on every input/select change
   document.querySelectorAll('input, select').forEach((el) => {
+    el.addEventListener('blur', () => {
+      if (['life-expectancy', 'projection-years'].includes(el.id)) normalizePlanningField(el);
+    });
     el.addEventListener('input', () => {
       if (el.dataset.syncTarget) {
         const target = document.getElementById(el.dataset.syncTarget);
@@ -1990,6 +2083,9 @@ function attachEvents() {
         if (el.id === 'capital-draw') updateCapitalDrawDisplay();
         if (el.id === 'conversion-rate' || el.id === 'return-rate' || el.id === 'inflation') updateFactorDisplays();
         if (el.id === 'projection-years') updateProjectionYearsDisplay();
+      }
+      if (['life-expectancy', 'life-expectancy-range', 'projection-years', 'projection-years-range', 'retire-age', 'retire-age-range'].includes(el.id)) {
+        syncPlanningFields(el.id);
       }
       if (el.id === 'pk-payout') el.dataset.userEdited = '1';
       if (['pk-share', 'pk-capital', 'pk-payout', 'conversion-rate'].includes(el.id)) {
@@ -2011,6 +2107,9 @@ function attachEvents() {
         if (el.id === 'capital-draw') updateCapitalDrawDisplay();
         if (el.id === 'conversion-rate' || el.id === 'return-rate' || el.id === 'inflation') updateFactorDisplays();
         if (el.id === 'projection-years') updateProjectionYearsDisplay();
+      }
+      if (['life-expectancy', 'life-expectancy-range', 'projection-years', 'projection-years-range', 'retire-age', 'retire-age-range'].includes(el.id)) {
+        syncPlanningFields(el.id);
       }
       if (el.id === 'pk-payout') el.dataset.userEdited = '1';
       if (['pk-share', 'pk-capital', 'pk-payout', 'conversion-rate'].includes(el.id)) {
@@ -2046,6 +2145,7 @@ window.p2TestApi = {
 initFormattedFields();
 loadFormState();
 syncLinkedRanges();
+syncPlanningFields('life-expectancy');
 chartMode = 'nominal';
 syncChartModeButtons();
 syncPkDisplays();
