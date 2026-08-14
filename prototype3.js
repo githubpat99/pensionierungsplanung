@@ -2036,11 +2036,6 @@ function attachEvents() {
     showStep(1);
   });
   p3CheckTile?.addEventListener('click', () => step1Cta?.click());
-  p3QuestionsTile?.addEventListener('click', () => {
-    const isOpen = !p3QuestionsList?.classList.contains('hidden');
-    p3QuestionsList?.classList.toggle('hidden', isOpen);
-    p3QuestionsTile.setAttribute('aria-expanded', String(!isOpen));
-  });
   p3StatusToggle?.addEventListener('click', () => {
     const isHidden = planStateTip?.classList.toggle('hidden');
     p3StatusToggle.setAttribute('aria-expanded', String(!isHidden));

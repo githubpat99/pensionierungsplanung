@@ -240,20 +240,32 @@
       <p class="p2-plan-status" id="plan-status" aria-live="polite"></p>
       <div class="p2-plan-tip hidden" id="plan-state-tip" role="tooltip"></div>
     </section>
-    <div class="p3-entry-actions" aria-label="Ruhestands-Check starten">
-      <button type="button" class="p3-entry-tile p3-entry-questions" id="p3-questions-tile" aria-expanded="false" aria-controls="p3-questions-list" aria-label="Die drei Fragen ansehen">
-        <strong>3 Fragen</strong>
-        <span>Dein Check in drei Schritten</span>
+    <div class="p3-questions-list" id="p3-questions-list" role="region" aria-label="Die drei Fragen">
+      <button type="button" class="p3-question-card" id="p3-questions-tile" aria-expanded="false" aria-controls="p3-questions-list">
+        <strong>1</strong>
+        <span class="p3-question-icon" aria-hidden="true">▣</span>
+        <b>Reicht mein<br>Geld?</b>
+        <small>Wir prüfen deine<br>finanzielle Basis.</small>
       </button>
-      <button type="button" class="p3-entry-tile p3-entry-check" id="p3-check-tile" aria-label="Ruhestands-Check starten">
-        <strong>Check</strong>
-        <span>Jetzt starten</span>
+      <button type="button" class="p3-question-card" aria-label="Was kann ich mir leisten?">
+        <strong>2</strong>
+        <span class="p3-question-icon" aria-hidden="true">⌂</span>
+        <b>Was kann ich<br>mir leisten?</b>
+        <small>Wir berechnen deinen<br>möglichen Lebensstil.</small>
+      </button>
+      <button type="button" class="p3-question-card p3-question-card-warm" aria-label="Wo entsteht eine Lücke?">
+        <strong>3</strong>
+        <span class="p3-question-icon" aria-hidden="true">▥</span>
+        <b>Wo entsteht<br>eine Lücke?</b>
+        <small>Wir zeigen dir deine<br>Rentenlücke auf.</small>
       </button>
     </div>
-    <div class="p3-questions-list hidden" id="p3-questions-list" role="region" aria-label="Die drei Fragen">
-      <p><strong>1.</strong> Reicht mein Geld?</p>
-      <p><strong>2.</strong> Was kann ich mir leisten?</p>
-      <p><strong>3.</strong> Wo entsteht eine Lücke?</p>
+    <div class="p3-entry-actions" aria-label="Ruhestands-Check starten">
+      <button type="button" class="p3-entry-tile p3-entry-check" id="p3-check-tile" aria-label="Ruhestands-Check starten">
+        <span class="p3-check-icon" aria-hidden="true"></span>
+        <span class="p3-check-copy"><strong>Check starten</strong><small>Starte jetzt deine Auswertung</small></span>
+        <span class="p3-check-arrow" aria-hidden="true">›</span>
+      </button>
     </div>
     <button type="button" class="button button-primary p2-step1-cta" id="p2-step1-cta">Meinen Ruhestands-Check starten</button>
 
