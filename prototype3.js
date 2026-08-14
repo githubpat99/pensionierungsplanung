@@ -33,6 +33,17 @@ const gapInfoBtn = document.getElementById('gap-info-btn');
 const smileyModal = document.getElementById('smiley-modal');
 const closeSmileyModalBtn = document.getElementById('close-smiley-modal');
 const smileyModalText = document.getElementById('smiley-modal-text');
+const resultDetailTitle = document.getElementById('result-detail-title');
+const resultDetailTotal = document.getElementById('result-detail-total');
+const resultDetailPeriod = document.getElementById('result-detail-period');
+const resultDetailSecondary = document.getElementById('result-detail-secondary');
+const resultDetailSecondaryTotal = document.getElementById('result-detail-secondary-total');
+const resultDetailKicker = document.getElementById('result-detail-kicker');
+const resultDetailList = document.getElementById('result-detail-list');
+const resultDetailNote = document.getElementById('result-detail-note');
+const resultDetailEdit = document.getElementById('result-detail-edit');
+let activeDetailKind = 'invested';
+let activeEditKind = 'invested';
 const chartCard    = document.getElementById('chart-card');
 const chartModeButtons = Array.from(document.querySelectorAll('[data-chart-mode]'));
 const chartYearSlider = document.getElementById('chart-year-slider');
@@ -333,6 +344,7 @@ function openDrawer(id) {
   activeDrawer = drawer;
   drawer.classList.add('open');
   backdrop.classList.add('open');
+  document.body.classList.add('drawer-open');
   updateDrawerChips();
 }
 
@@ -342,6 +354,7 @@ function closeDrawer(id) {
   target.classList.remove('open');
   backdrop.classList.remove('open');
   activeDrawer = null;
+  document.body.classList.remove('drawer-open');
 }
 
 function updateDrawerChips() {
@@ -368,6 +381,22 @@ function updateDrawerChips() {
   );
 
   setText('d-inv-total',  `CHF ${formatCHF(invTotal)}`);
+  setText('d-free-total', `CHF ${formatCHF(pillar3a + investments + otherAssets + pkPayout)}`);
+  setText('d-edit-invest-income', `CHF ${formatCHF(invReturn)}`);
+  setText('d-bound-total', `CHF ${formatCHF(Math.max(0, realEstate - mortgage))}`);
+  setText('d-available-p3a', `CHF ${formatCHF(pillar3a)}`);
+  setText('d-available-p3a-income', `CHF ${formatCHF(Math.round(pillar3a * pillar3aReturn))}`);
+  setText('d-available-investments', `CHF ${formatCHF(investments)}`);
+  setText('d-available-investments-income', `CHF ${formatCHF(Math.round(investments * investmentsReturn))}`);
+  setText('d-available-pk', `CHF ${formatCHF(pkPayout)}`);
+  setText('d-available-pk-income', `CHF ${formatCHF(pkCapitalIncome)}`);
+  setText('d-available-pk-edit-income', `CHF ${formatCHF(pkCapitalIncome)}`);
+  setText('d-available-pk-capital', `CHF ${formatCHF(pkPayout)}`);
+  setText('d-available-other-assets', `CHF ${formatCHF(otherAssets)}`);
+  setText('d-available-other-assets-income', `CHF ${formatCHF(Math.round(otherAssets * otherReturn))}`);
+  setText('d-available-direct-income', `CHF ${formatCHF(realEstateIncome)}`);
+  setText('d-available-total', `CHF ${formatCHF(pillar3a + investments + otherAssets + pkPayout)}`);
+  setText('d-available-income-total', `CHF ${formatCHF(invReturn)}`);
   setText('d-inv-invested', `CHF ${formatCHF(pillar3a + investments + otherAssets + pkPayout)}`);
   setText('d-inv-return', `CHF ${formatCHF(invReturn)}`);
   setText('d-inv-return-section', `CHF ${formatCHF(invReturn)}`);
@@ -376,11 +405,13 @@ function updateDrawerChips() {
   setText('d-p3a', `CHF ${formatCHF(pillar3a)}`);
   setText('d-ws', `CHF ${formatCHF(investments)}`);
   setText('d-pk-capital', `CHF ${formatCHF(pkPayout)}`);
+  setText('d-available-pk-capital', `CHF ${formatCHF(pkPayout)}`);
   setText('d-real-estate', `CHF ${formatCHF(realEstate)}`);
   setText('d-mortgage', `CHF ${formatCHF(mortgage)}`);
   setText('d-other-assets', `CHF ${formatCHF(otherAssets)}`);
   setText('d-p3a-return', `CHF ${formatCHF(Math.round(pillar3a * pillar3aReturn))}`);
   setText('d-ws-return', `CHF ${formatCHF(Math.round(investments * investmentsReturn))}`);
+  setText('d-real-estate-income-return', `CHF ${formatCHF(realEstateIncome)}`);
   setText('d-pk-rate', `${(otherReturn * 100).toFixed(1)}%`);
   setText('d-pk-return', `CHF ${formatCHF(pkCapitalIncome)}`);
   setText('d-other-return', `CHF ${formatCHF(Math.round(realEstateIncome + otherAssets * otherReturn))}`);
@@ -396,6 +427,7 @@ function updateDrawerChips() {
   const zusatz = childAllowance + childPension + otherIncome;
   const rentTotal = ahv + zusatz + pkPension;
   setText('d-income-total', `CHF ${formatCHF(invReturn + rentTotal)}`);
+  setText('d-income-edit-total', `CHF ${formatCHF(rentTotal)}`);
   setText('d-income-capital', `CHF ${formatCHF(invReturn)}`);
   setText('d-income-rent', `CHF ${formatCHF(rentTotal)}`);
   setText('d-income-capital-section', `CHF ${formatCHF(invReturn)}`);
@@ -407,6 +439,57 @@ function updateDrawerChips() {
   setText('d-ahv',      `CHF ${formatCHF(ahv)}`);
   setText('d-zusatz',   `CHF ${formatCHF(zusatz)}`);
   setText('d-pk-rente', `CHF ${formatCHF(pkPension)}`);
+}
+
+function updateResultDetails(scenario) {
+  const values = {
+    invested: {
+      title: 'Verfügbares Kapital / Ertrag', total: scenario.freeCapital, secondary: scenario.totalInvestIncome, period: 'für die Planung verfügbar', kicker: 'Zusammensetzung', edit: 'drawer-invested',
+      rows: [['Säule 3a', readField('pillar3a')], ['Wertschriften', readField('investments')], ['Kapital aus PK', scenario.pkPayout], ['Übriges Vermögen', readField('other-assets')]],
+      note: 'Dieses Kapital steht für die Finanzierung des Ruhestands zur Verfügung.',
+    },
+    bound: {
+      title: 'Kapital gebunden', total: scenario.boundCapital, period: 'gebundenes Nettovermögen', kicker: 'Immobilien und Schulden', edit: 'drawer-invested',
+      rows: [['Immobilien', readField('real-estate')], ['Schulden / Hypotheken', -Math.abs(readField('mortgage'))], ['Netto gebunden', scenario.boundCapital]],
+      note: 'Das gebundene Kapital ist in Immobilien gebunden und wird nicht als frei verfügbares Kapital gerechnet.',
+    },
+    'capital-income': {
+      title: 'Verfügbares Kapital / Ertrag', total: scenario.freeCapital, secondary: scenario.totalInvestIncome, period: 'für die Planung verfügbar', kicker: 'Zusammensetzung', edit: 'drawer-invested',
+      rows: [['PK-Kapitalertrag', scenario.pkCapitalIncome], ['Säule 3a', scenario.p3aIncome], ['Wertschriften', scenario.wsIncome], ['Weitere Erträge', scenario.otherAssetsIncome + scenario.realEstateIncome]],
+      note: 'Diese Erträge fliessen in die jährliche Einkommensprojektion ein.',
+    },
+    'rent-income': {
+      title: 'Einkommen aus Rente', total: scenario.rentIncome, period: 'pro Jahr, gesichert', kicker: 'Gesicherte Renten', edit: 'drawer-income',
+      rows: [['AHV', readField('ahv')], ['Zusätze', readField('child-allowance') + readField('child-pension') + readField('other-income')], ['PK-Rente', scenario.pkPension]],
+      note: 'Die PK-Rente wird über die PK-Kapital-/Rentenverteilung angepasst.',
+    },
+  };
+  const detail = values[activeDetailKind] || values.invested;
+  resultDetailTitle.textContent = detail.title;
+  resultDetailTotal.textContent = `CHF ${formatCHF(detail.total)}`;
+  resultDetailPeriod.textContent = detail.period;
+  resultDetailSecondary.classList.toggle('hidden', detail.secondary == null);
+  if (detail.secondary != null) resultDetailSecondaryTotal.textContent = `CHF ${formatCHF(detail.secondary)}`;
+  resultDetailKicker.textContent = detail.kicker;
+  resultDetailList.innerHTML = detail.rows.map(([label, value]) => `<div class="p2-result-detail-row"><span>${label}</span><strong>CHF ${formatCHF(value)}</strong></div>`).join('');
+  resultDetailNote.textContent = detail.note;
+  resultDetailEdit.dataset.drawer = detail.edit;
+}
+
+function setEditMode(kind) {
+  updateDrawerChips();
+  const drawer = document.getElementById('drawer-invested');
+  const isBound = kind === 'bound';
+  const isCapitalIncome = kind === 'capital-income';
+  drawer?.classList.toggle('capital-bound-edit-mode', isBound);
+  drawer?.classList.toggle('capital-income-edit-mode', isCapitalIncome);
+  const title = document.getElementById('capital-edit-title');
+  const period = document.getElementById('capital-edit-period');
+  const total = document.getElementById('d-inv-total');
+  if (title) title.textContent = isBound ? 'Details zum Bearbeiten' : 'Verfügbares Kapital / Ertrag';
+  if (period) period.textContent = isBound ? 'gebundenes Nettovermögen' : 'für die Planung verfügbar';
+  if (total) total.textContent = (isBound ? document.getElementById('d-bound-total') : document.getElementById('d-free-total'))?.textContent || '–';
+  document.getElementById('p2-edit-income-summary')?.classList.toggle('hidden', isBound);
 }
 
 function setText(id, text) {
@@ -949,7 +1032,11 @@ function updateResults() {
     : 'Unbegrenzt';
 
   // --- Cards ---
-  setText('result-invested',        `CHF ${formatCHF(totalCapital)}`);
+  setText('result-invested',        `CHF ${formatCHF(freeCapital)}`);
+  setText('result-bound',           `CHF ${formatCHF(boundCapital)}`);
+  setText('result-capital-income',  `CHF ${formatCHF(totalInvestIncome)}`);
+  setText('result-rent-income',     `CHF ${formatCHF(rentIncome)}`);
+  updateResultDetails(scenario);
   setText('result-invested-amount', `frei CHF ${formatCHF(freeCapital)}`);
   setText('result-invest-return',   `CHF ${formatCHF(totalInvestIncome)}`);
   setText('result-total',           `CHF ${formatCHF(totalIncome)}`);
@@ -1877,15 +1964,27 @@ function attachEvents() {
     }
   });
 
-  // Card tap → open drawers
-  const cardInvested = document.getElementById('card-invested');
-  const cardSecured  = document.getElementById('card-secured');
-  cardInvested?.addEventListener('click', () => openDrawer('drawer-invested'));
-  cardSecured?.addEventListener('click',  () => openDrawer('drawer-income'));
-  [cardInvested, cardSecured].forEach((card) => {
+  // Card tap -> open read-only result details
+  document.querySelectorAll('.p2-result-card').forEach((card) => {
+    card?.addEventListener('click', () => {
+      activeDetailKind = card.id === 'card-bound' ? 'bound'
+        : (card.id === 'card-capital-income' ? 'capital-income'
+          : (card.id === 'card-rent-income' ? 'rent-income' : 'invested'));
+      updateResultDetails(buildScenarioData());
+      openDrawer('drawer-result-detail');
+    });
     card?.addEventListener('keydown', (e) => {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); card.click(); }
     });
+  });
+  resultDetailEdit?.addEventListener('click', () => {
+    const drawer = resultDetailEdit.dataset.drawer;
+    closeDrawer('drawer-result-detail');
+    activeEditKind = activeDetailKind;
+    if (drawer) {
+      openDrawer(drawer);
+      if (drawer === 'drawer-invested') setEditMode(activeEditKind);
+    }
   });
 
   // Drawer close buttons
@@ -2068,8 +2167,16 @@ function attachEvents() {
 
   // Live recalc on every input/select change
   document.querySelectorAll('input, select').forEach((el) => {
+    el.addEventListener('focus', () => {
+      if (el.id === 'capital-draw' || el.id === 'pk-capital') el.select();
+    });
     el.addEventListener('blur', () => {
       if (['life-expectancy', 'projection-years'].includes(el.id)) normalizePlanningField(el);
+      if (el.id === 'capital-draw' || el.id === 'pk-capital') {
+        el.value = formatThousands(parseFormatted(el.value));
+        if (el.id === 'capital-draw') updateCapitalDrawDisplay();
+        if (el.id === 'pk-capital') updatePkCapitalDisplay();
+      }
     });
     el.addEventListener('input', () => {
       if (el.dataset.syncTarget) {

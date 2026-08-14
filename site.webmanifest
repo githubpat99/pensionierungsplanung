@@ -1,0 +1,19 @@
+{
+  "name": "Dein Ruhestands-Check",
+  "short_name": "Ruhestands-Check",
+  "lang": "de-CH",
+  "start_url": "./prototype3.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f5f7fb",
+  "theme_color": "#2563eb",
+  "icons": [
+    {
+      "src": "./app-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -4,7 +4,15 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dein Ruhestands-Check</title>
-  <link rel="stylesheet" href="prototype3.css" />
+  <meta name="theme-color" content="#2563eb" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="Ruhestands-Check" />
+  <link rel="manifest" href="site.webmanifest" />
+  <link rel="icon" href="app-icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="app-icon.svg" />
+  <link rel="stylesheet" href="prototype3.css?v=marker-gold-1" />
 </head>
 <body class="p3-body">
   <main class="p2-app" id="p2-app">
@@ -83,13 +91,21 @@
 
       <!-- PK input section -->
       <div class="p2-pk">
-        <div class="grid-2k p2-primary-grid">
+        <div class="grid-2k p2-primary-fields">
           <label class="field field-range p2-demand-field p2-factor-field"><span class="p2-demand-head"><span>Altersguthaben (CHF)</span><strong id="pk-capital-display">950'000</strong></span>
             <div class="p2-demand-slider-wrap">
               <div class="p2-demand-track" aria-hidden="true"><span id="pk-capital-track-fill"></span></div>
               <input id="pk-capital-range" class="p2-demand-range p2-tune-range" type="range" min="0" max="3000000" step="1000" value="950000" data-sync-target="pk-capital" aria-label="Altersguthaben" />
             </div>
             <input id="pk-capital" class="p2-demand-input" type="text" inputmode="numeric" value="950'000" data-sync-range="pk-capital-range" aria-label="Altersguthaben in CHF" />
+          </label>
+          <label class="field field-range p2-demand-field">
+            <span class="p2-demand-head"><span>Jahresbedarf (CHF)</span><strong id="capital-draw-display">120'000</strong></span>
+            <div class="p2-demand-slider-wrap">
+              <div class="p2-demand-track" aria-hidden="true"><span id="capital-draw-track-fill"></span></div>
+              <input id="capital-draw-range" class="p2-demand-range p2-tune-range" type="range" min="50000" max="250000" step="1000" value="120000" data-sync-target="capital-draw" aria-label="Jahresbedarf" />
+            </div>
+            <input id="capital-draw" class="p2-demand-input" type="text" inputmode="numeric" value="120'000" data-sync-range="capital-draw-range" aria-label="Jahresbedarf in CHF" />
           </label>
         </div>
         <input id="pk-payout" type="hidden" value="60'000" />
@@ -105,16 +121,6 @@
             </div>
           </label>
           <span id="pk-share-value" class="range-badge" aria-hidden="true">50%</span>
-        </div>
-        <div class="p2-demand-projection-grid p2-primary-grid">
-          <label class="field field-range p2-demand-field">
-            <span class="p2-demand-head"><span>Jahresbedarf (CHF)</span><strong id="capital-draw-display">120'000</strong></span>
-            <div class="p2-demand-slider-wrap">
-              <div class="p2-demand-track" aria-hidden="true"><span id="capital-draw-track-fill"></span></div>
-              <input id="capital-draw-range" class="p2-demand-range p2-tune-range" type="range" min="50000" max="250000" step="1000" value="120000" data-sync-target="capital-draw" aria-label="Jahresbedarf" />
-            </div>
-            <input id="capital-draw" class="p2-demand-input" type="text" inputmode="numeric" value="120'000" data-sync-range="capital-draw-range" aria-label="Jahresbedarf in CHF" />
-          </label>
         </div>
         <details class="p2-assumptions">
           <summary>Simulation verfeinern</summary>
@@ -187,15 +193,29 @@
       <!-- Result cards hub -->
       <div class="p2-section-label">Ihr Ergebnis <span class="p2-section-hint">(Kacheln tippen für Details)</span></div>
       <div class="p2-cards">
-        <div class="p2-card p2-card-tap p2-card-full" id="card-invested" role="button" tabindex="0" aria-label="Gesamtkapital – Details einblenden">
+        <div class="p2-card p2-card-tap p2-result-card" id="card-invested" role="button" tabindex="0" aria-label="Verfügbares Kapital – Details einblenden">
           <span class="p2-card-badge">i</span>
-          <h4>Gesamtkapital</h4>
+          <h4>Verfügbares Kapital</h4>
           <p class="p2-card-summary"><strong id="result-invested">–</strong></p>
+          <small>für die Planung verfügbar</small>
         </div>
-        <div class="p2-card p2-card-tap p2-card-full" id="card-secured" role="button" tabindex="0" aria-label="Gesamteinkommen / Jahr – Details einblenden">
+        <div class="p2-card p2-card-tap p2-result-card" id="card-bound" role="button" tabindex="0" aria-label="Kapital gebunden – Details einblenden">
           <span class="p2-card-badge">i</span>
-          <h4>Gesamteinkommen</h4>
-          <p class="p2-card-summary"><strong id="result-total">–</strong></p>
+          <h4>Kapital gebunden</h4>
+          <p class="p2-card-summary"><strong id="result-bound">–</strong></p>
+          <small>Immobilien abzüglich Schulden</small>
+        </div>
+        <div class="p2-card p2-card-tap p2-result-card" id="card-capital-income" role="button" tabindex="0" aria-label="Einkommen aus Kapital – Details einblenden">
+          <span class="p2-card-badge">i</span>
+          <h4>Einkommen aus Kapital</h4>
+          <p class="p2-card-summary"><strong id="result-capital-income">–</strong></p>
+          <small>pro Jahr</small>
+        </div>
+        <div class="p2-card p2-card-tap p2-result-card" id="card-rent-income" role="button" tabindex="0" aria-label="Einkommen aus Rente – Details einblenden">
+          <span class="p2-card-badge">i</span>
+          <h4>Einkommen aus Rente</h4>
+          <p class="p2-card-summary"><strong id="result-rent-income">–</strong></p>
+          <small>pro Jahr, gesichert</small>
         </div>
       </div>
 
@@ -253,88 +273,114 @@
   <!-- Drawer backdrop -->
   <div class="p2-backdrop" id="p2-backdrop"></div>
 
-  <!-- Drawer: Investiertes Kapital -->
-  <div class="p2-drawer p2-capital-drawer" id="drawer-invested" aria-label="Investiertes Kapital – Details">
+  <!-- Read-only result details -->
+  <div class="p2-drawer p2-result-detail-drawer" id="drawer-result-detail" aria-label="Ergebnisdetails">
     <div class="p2-drawer-handle"></div>
     <div class="p2-drawer-header">
       <div class="p2-drawer-title-row">
-        <h3>Gesamtkapital</h3>
+        <h3 id="result-detail-title">Details</h3>
+        <button class="p2-drawer-close" data-drawer="drawer-result-detail" aria-label="Schliessen">✕</button>
+      </div>
+      <div class="p2-result-detail-summary">
+        <strong id="result-detail-total">–</strong>
+        <span id="result-detail-period">–</span>
+        <div class="p2-result-detail-secondary hidden" id="result-detail-secondary">
+          <span>Ertrag pro Jahr</span><strong id="result-detail-secondary-total">–</strong>
+        </div>
+      </div>
+    </div>
+    <div class="p2-drawer-content">
+      <div class="p2-drawer-subheading" id="result-detail-kicker">Übersicht</div>
+      <div class="p2-result-detail-list" id="result-detail-list"></div>
+      <p class="p2-result-detail-note" id="result-detail-note"></p>
+      <button type="button" class="button button-primary p2-result-detail-edit" id="result-detail-edit">Bearbeiten</button>
+    </div>
+  </div>
+
+  <!-- Drawer: Investiertes Kapital -->
+  <div class="p2-drawer p2-edit-drawer p2-capital-drawer" id="drawer-invested" aria-label="Verfügbares Kapital / Ertrag">
+    <div class="p2-drawer-handle"></div>
+    <div class="p2-drawer-header">
+      <div class="p2-drawer-title-row">
+        <h3 id="capital-edit-title">Verfügbares Kapital / Ertrag</h3>
         <button class="p2-drawer-close" data-drawer="drawer-invested" aria-label="Schliessen">✕</button>
       </div>
       <div class="p2-drawer-capital-summary">
         <strong id="d-inv-total">–</strong>
-        <span>investiert <b id="d-inv-invested">–</b></span>
-        <span>Ertrag <b id="d-inv-return">–</b></span>
+        <span id="capital-edit-period">für die Planung verfügbar</span>
+        <div class="p2-edit-income-summary" id="p2-edit-income-summary">
+          <span>Ertrag pro Jahr</span><strong id="d-edit-invest-income">–</strong>
+        </div>
+        <span id="d-inv-return" hidden>–</span>
+        <span id="d-bound-total" hidden>–</span>
+        <span id="d-free-total" hidden>–</span>
       </div>
     </div>
     <div class="p2-drawer-content">
-      <div class="p2-drawer-subheading">Übersicht</div>
-      <div class="p2-drawer-summary">
-        <div class="p2-drawer-section-title"><span>investiert</span><strong id="d-inv-invested-section">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>Säule 3a</span><strong id="d-p3a">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>Wertschriften</span><strong id="d-ws">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>Kapital aus PK</span><strong id="d-pk-capital">–</strong></div>
-        <div class="p2-drawer-section-title"><span>weiteres Vermögen</span><strong id="d-other-total">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>Immobilien</span><strong id="d-real-estate">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>Schulden / Hypotheken</span><strong id="d-mortgage">–</strong></div>
-        <div class="p2-drawer-summary-line"><span>übriges Vermögen</span><strong id="d-other-assets">–</strong></div>
+      <div class="p2-available-composition">
+        <div class="p2-composition-list">
+          <div class="p2-composition-head"><span>Betrag</span><span>Kapital / Ertrag</span><span>Ertrag</span></div>
+          <div><strong id="d-available-p3a">–</strong><span>Säule 3a</span><strong id="d-available-p3a-income">–</strong></div>
+          <div><strong id="d-available-investments">–</strong><span>Wertschriften</span><strong id="d-available-investments-income">–</strong></div>
+          <div><strong id="d-available-other-assets">–</strong><span>Übriges Vermögen</span><strong id="d-available-other-assets-income">–</strong></div>
+          <div><strong>–</strong><span>Weitere Erträge</span><strong id="d-available-direct-income">–</strong></div>
+          <div><strong id="d-available-pk">–</strong><span>Kapital aus PK</span><strong id="d-available-pk-income">–</strong></div>
+          <div class="p2-composition-total"><strong id="d-available-total">–</strong><span>Verf. Kap.</span><strong id="d-available-income-total">–</strong></div>
+        </div>
       </div>
-      <div class="p2-drawer-subheading">Berechnung anpassen</div>
-      <div class="p2-drawer-section-title p2-drawer-earnings-title"><span>Ertrag</span><strong id="d-inv-return-section">–</strong></div>
+      <div class="p2-drawer-subheading">Ertrag</div>
+      <div class="p2-edit-income-head"><span>Betrag (CHF)</span><span>Zins (%)</span><span>Ertrag/Jahr</span></div>
       <div class="p2-drawer-input-row">
-        <label class="field"><span>Säule 3a (CHF)</span><input id="pillar3a" type="number" min="0" value="85000" /></label>
-        <label class="field"><span>Zins (%)</span><input id="pillar3a-return" type="number" min="0" max="10" step="0.1" value="4.5" /></label>
+        <label class="field"><span>Säule 3a</span><input id="pillar3a" type="number" min="0" value="85000" /></label>
+        <label class="field"><span class="sr-only">Zins (%)</span><input id="pillar3a-return" type="number" min="0" max="10" step="0.1" value="4.5" aria-label="Zins Säule 3a in Prozent" /></label>
         <div class="p2-drawer-return"><strong id="d-p3a-return">–</strong></div>
       </div>
       <div class="p2-drawer-input-row">
-        <label class="field"><span>Wertschriften (CHF)</span><input id="investments" type="number" min="0" value="15000" /></label>
-        <label class="field"><span>Zins (%)</span><input id="investments-return" type="number" min="0" max="10" step="0.1" value="5" /></label>
+        <label class="field"><span>Wertschriften</span><input id="investments" type="number" min="0" value="15000" /></label>
+        <label class="field"><span class="sr-only">Zins (%)</span><input id="investments-return" type="number" min="0" max="10" step="0.1" value="5" aria-label="Zins Wertschriften in Prozent" /></label>
         <div class="p2-drawer-return"><strong id="d-ws-return">–</strong></div>
       </div>
-      <div class="p2-drawer-input-row p2-drawer-earnings-row">
-        <span>Ertrag aus PK</span>
-        <span>Kapitalrendite <b id="d-pk-rate">–</b></span>
-        <strong id="d-pk-return">–</strong>
+      <div class="p2-edit-available-fields">
+        <div class="p2-edit-three-column-row">
+          <label class="field"><span class="sr-only">Übriges Vermögen (CHF)</span><input id="other-assets" type="number" min="0" value="0" aria-label="Übriges Vermögen in CHF" /></label>
+          <span>Übriges Vermögen</span>
+          <strong>–</strong>
+        </div>
+        <div class="p2-edit-three-column-row p2-edit-direct-income-row">
+          <span aria-hidden="true"></span>
+          <span>Weitere Erträge</span>
+          <label class="field"><span class="sr-only">Weitere Erträge (CHF)</span><input id="real-estate-income" type="number" min="0" value="10000" aria-label="Weitere Erträge in CHF" /></label>
+        </div>
+        <div class="p2-edit-three-column-row p2-edit-readonly-row">
+          <strong id="d-available-pk-capital">–</strong>
+          <span>Kapital aus PK</span>
+          <strong id="d-available-pk-edit-income">–</strong>
+        </div>
+        <p class="p2-readonly-income-note">PK-Kapital wird über die PK-Verteilung angepasst.</p>
       </div>
-      <div class="p2-drawer-earnings-row p2-drawer-other-row"><span>Weitere Erträge</span><strong id="d-other-return">–</strong></div>
-      <div class="p2-drawer-separator" aria-hidden="true"></div>
-      <div class="grid-2k">
-        <label class="field"><span>Immobilien (CHF)</span><input id="real-estate" type="number" min="0" value="1600000" /></label>
-        <label class="field"><span>Schulden / Hypotheken (CHF)</span><input id="mortgage" type="number" min="0" value="930000" /></label>
-      </div>
-      <div class="grid-2k">
-        <label class="field"><span>Übriges Vermögen (CHF)</span><input id="other-assets" type="number" min="0" value="0" /></label>
-        <label class="field"><span>Weitere Erträge (CHF)</span><input id="real-estate-income" type="number" min="0" value="10000" /></label>
+      <div class="p2-edit-bound-fields">
+        <div class="p2-drawer-subheading">Gebundenes Vermögen</div>
+        <div class="grid-2k"><label class="field"><span>Immobilien (CHF)</span><input id="real-estate" type="number" min="0" value="1600000" /></label><label class="field"><span>Schulden / Hypotheken (CHF)</span><input id="mortgage" type="number" min="0" value="930000" /></label></div>
       </div>
     </div>
   </div>
 
   <!-- Drawer: Gesamteinkommen -->
-  <div class="p2-drawer" id="drawer-income" aria-label="Gesamteinkommen pro Jahr – Details">
+  <div class="p2-drawer p2-edit-drawer" id="drawer-income" aria-label="Einkommen aus Rente bearbeiten">
     <div class="p2-drawer-handle"></div>
     <div class="p2-drawer-header">
       <div class="p2-drawer-title-row">
-        <h3>Gesamteinkommen / Jahr</h3>
+        <h3>Details zum Bearbeiten</h3>
         <button class="p2-drawer-close" data-drawer="drawer-income" aria-label="Schliessen">✕</button>
       </div>
       <div class="p2-drawer-income-summary">
-        <strong id="d-income-total">–</strong>
-        <div><span class="p2-income-capital-label">Kapitalertrag</span><b class="p2-income-capital-value" id="d-income-capital">–</b><span class="p2-income-rent-label">Gesicherte Rente</span><b class="p2-income-rent-value" id="d-income-rent">–</b></div>
+        <strong id="d-income-edit-total">–</strong>
+        <span>Einkommen aus Rente / Jahr</span>
+        <strong id="d-income-total" hidden>–</strong>
       </div>
     </div>
     <div class="p2-drawer-content">
-      <div class="p2-drawer-subheading">Übersicht</div>
-      <div class="p2-drawer-section-title"><span>Ertrag aus Kapital</span><strong id="d-income-capital-section">–</strong></div>
-      <div class="p2-drawer-summary-line p2-income-capital-row"><span>PK-Kapitalertrag</span><strong id="d-income-pk-capital">–</strong></div>
-      <div class="p2-drawer-summary-line p2-income-capital-row"><span>Säule 3a</span><strong id="d-income-p3a">–</strong></div>
-      <div class="p2-drawer-summary-line p2-income-capital-row"><span>Wertschriften</span><strong id="d-income-investments">–</strong></div>
-      <div class="p2-drawer-summary-line p2-income-capital-row"><span>Weitere Erträge</span><strong id="d-income-other">–</strong></div>
-      <div class="p2-drawer-section-title p2-income-rent-section"><span>Gesicherte Rente</span><strong id="d-income-rent-section">–</strong></div>
-      <div class="p2-drawer-summary-line"><span>AHV</span><strong id="d-ahv">–</strong></div>
-      <div class="p2-drawer-summary-line"><span>Zusätze</span><strong id="d-zusatz">–</strong></div>
-      <div class="p2-drawer-summary-line"><span>PK-Rente</span><strong id="d-pk-rente">–</strong></div>
-      <div class="p2-drawer-subheading">Berechnung anpassen</div>
-      <div class="p2-drawer-separator" aria-hidden="true"></div>
+      <div class="p2-drawer-subheading">Gesicherte Rente</div>
       <div class="grid-2k">
         <label class="field"><span>AHV (CHF)</span><input id="ahv" type="number" min="0" value="32760" /></label>
         <label class="field"><span>Kinderzulagen (CHF)</span><input id="child-allowance" type="number" min="0" value="5520" /></label>
@@ -343,6 +389,8 @@
         <label class="field"><span>Kinderrenten (CHF)</span><input id="child-pension" type="number" min="0" value="11376" /></label>
         <label class="field"><span>Übrige Renten (CHF)</span><input id="other-income" type="number" min="0" value="0" /></label>
       </div>
+      <div class="p2-readonly-income-row"><span>PK-Rente</span><strong id="d-pk-rente">–</strong></div>
+      <p class="p2-readonly-income-note">Die PK-Rente wird indirekt über die PK-Kapital-/Rentenverteilung angepasst.</p>
     </div>
   </div>
 
@@ -456,6 +504,6 @@
     </div>
   </div>
 
-  <script src="prototype3.js"></script>
+  <script src="prototype3.js?v=merged-capital-details-columns-17"></script>
 </body>
 </html>
