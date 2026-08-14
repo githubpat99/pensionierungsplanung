@@ -1619,6 +1619,29 @@ body.p3-body.p2-show-simulation .p2-pk {
   font-size: 0.67rem;
   line-height: 1.15;
 }
+body.p2-show-simulation .p2-result-card h4 {
+  display: block;
+  min-height: 1.15rem;
+  margin: 0 0 3px;
+  line-height: 1.15;
+}
+body.p2-show-simulation .p2-result-card .p2-card-summary {
+  display: block;
+  margin: 0;
+}
+body.p2-show-simulation #card-invested h4,
+body.p2-show-simulation #card-bound h4,
+body.p2-show-simulation #card-capital-income h4,
+body.p2-show-simulation #card-rent-income h4 {
+  display: block;
+  margin-right: 0;
+}
+body.p2-show-simulation #card-invested .p2-card-summary,
+body.p2-show-simulation #card-bound .p2-card-summary,
+body.p2-show-simulation #card-capital-income .p2-card-summary,
+body.p2-show-simulation #card-rent-income .p2-card-summary {
+  display: block;
+}
 .p2-result-detail-summary {
   display: grid;
   gap: 3px;
@@ -3008,26 +3031,6 @@ body.p2-show-simulation.drawer-open {
     padding: 9px 10px 7px;
     min-height: 0;
     border-radius: 11px;
-  }
-
-  body.p2-show-simulation #card-invested h4,
-  body.p2-show-simulation #card-invested .p2-card-summary,
-  body.p2-show-simulation #card-secured h4,
-  body.p2-show-simulation #card-secured .p2-card-summary {
-    display: inline;
-  }
-
-  body.p2-show-simulation #card-invested h4 {
-    margin-right: 8px;
-  }
-
-  body.p2-show-simulation #card-secured h4 {
-    margin-right: 8px;
-  }
-
-  body.p2-show-simulation #card-invested .p2-card-summary > strong,
-  body.p2-show-simulation #card-secured .p2-card-summary > strong {
-    display: inline;
   }
 
   body.p2-show-simulation .p2-card h4 {
