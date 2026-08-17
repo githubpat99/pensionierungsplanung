@@ -76,7 +76,7 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 .edit-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .edit-tag{font-size:10.5px;font-weight:780;padding:5px 8px;border-radius:999px;background:#f6f9fc;border:1px solid #e4ebf2;color:#55667d;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .edit-actions{margin:0}
-.linkbtn{border:1px solid #d8e2ee;background:#fff;color:var(--blue);font-weight:850;border-radius:999px;padding:8px 11px;white-space:nowrap;font-size:12px}.linkbtn:disabled{opacity:.5;cursor:not-allowed}
+.linkbtn{border:1px solid #d8e2ee;background:#fff;color:var(--blue);font-weight:850;border-radius:999px;padding:8px 11px;white-space:nowrap;font-size:12px}.linkbtn:disabled{opacity:.5;cursor:not-allowed}.primary:disabled{background:#cbd5e1;color:#64748b;cursor:not-allowed;opacity:1}
 .linkbtn::after{content:""}
 
 
@@ -114,10 +114,11 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 .advice-option{width:100%;text-align:left;border:1px solid var(--line);border-radius:16px;background:#fff;padding:13px 14px;display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center}
 .advice-option .ico{width:36px;height:36px;border-radius:12px;background:var(--blue2);display:grid;place-items:center;font-size:18px}
 .advice-option b{display:block;font-size:13px}.advice-option span{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}.advice-option .arrow{color:var(--blue);font-weight:900}
-.advice-topics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.advice-topic{border:1px solid var(--line);border-radius:14px;background:#fff;padding:11px 10px;font-size:12px;font-weight:800;text-align:left}.advice-topic.active{border-color:var(--blue);background:var(--blue2);color:var(--blue)}
+.advice-topics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.advice-topic{border:1px solid var(--line);border-radius:14px;background:#fff;padding:11px 10px;font-size:12px;font-weight:800;text-align:left}.advice-topic.active{border-color:var(--blue);background:var(--blue2);color:var(--blue)}.advice-topic:disabled{opacity:.52;cursor:not-allowed}.advice-topic.active:disabled{opacity:1}
 .handoff-box{margin-top:12px;padding:13px;border-radius:15px;background:#fbfcfe;border:1px solid var(--line)}.handoff-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:850;color:var(--muted);margin-bottom:7px}.handoff-list{display:grid;gap:6px;font-size:12px;color:#475569}.handoff-list div{display:flex;justify-content:space-between;gap:10px}
 .contact-form{display:grid;gap:8px;margin-top:12px}.contact-form input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:#fff}.contact-note{font-size:11px;color:var(--muted);line-height:1.4}
 .request-success{margin-top:12px;padding:15px;border:1px solid #b9e7d2;border-radius:15px;background:var(--green2);color:#0e7650;font-size:14px;line-height:1.45}.request-success strong{display:block;color:var(--ink);font-size:15px;margin-bottom:3px}.form-error{margin-top:2px;padding:10px 12px;border:1px solid #f0c6c8;border-radius:13px;background:var(--red2);color:#8f252a;font-size:12px;line-height:1.4}
+.submitted-status{display:none;margin:10px 0;padding:11px 13px;border:1px solid #b9e7d2;border-radius:14px;background:var(--green2);color:#0e7650;font-size:12px;font-weight:800}.submitted-status.visible{display:block}
 
 /* Prototype 13: clearer focus, touch targets, and responsive reading width. */
 button,input{min-height:44px}
@@ -249,6 +250,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <div class="restart-row">
   <button class="restart-link" onclick="restartPlanning()">↺ Neue Planung starten</button>
 </div>
+<div id="submittedStatus" class="submitted-status" role="status" aria-live="polite"></div>
 
 <div id="tab-overview"><div class="card"><div class="kicker">Standortbestimmung</div><h2 id="resultTitle"></h2><div class="metrics"><div class="metric blue"><small>Freies Kapital</small><strong id="rFree"></strong></div><div class="metric"><small>Gebunden</small><strong id="rBound"></strong></div><div class="metric gold"><small>Sichere Renten</small><strong id="rRent"></strong></div><div class="metric blue"><small>Kapitalertrag</small><strong id="rYield"></strong></div></div><div class="calc"><div class="row"><span>Sichere Renten</span><strong id="rr1" class="gold"></strong></div><div class="row"><span>+ Kapitalertrag</span><strong id="rr2" class="blue"></strong></div><div class="row total"><span>= Laufend verfügbar</span><strong id="rr3"></strong></div><div class="row"><span>Gewünschter Lebensstandard</span><strong id="rr4"></strong></div><div class="row total"><span id="rrLabel"></span><strong id="rr5"></strong></div></div></div></div>
 
@@ -403,27 +405,32 @@ function adviceContext(){
 function renderClosingAdvisor(){
   if(!document.getElementById('closingMessage')) return;
   const c=adviceContext();
+  let submittedTopic='';
+  if(planningLocked){
+    try{submittedTopic=JSON.parse(localStorage.getItem('retirementMvp5-submission')||'{}').topic||''}catch(_){ }
+    if(['pk','capital','gap','overall'].includes(submittedTopic))selectedAdviceTopic=submittedTopic;
+  }
   let msg='', insight='';
   if(c.gap){
     msg=`Im aktuellen Szenario entsteht ab Alter ${c.gap.age} eine ungedeckte Lücke.`;
     insight=`🧩 <strong>Konkreter Beratungsanlass:</strong> Ab Alter ${c.gap.age} reicht die Planung im Modell nicht mehr vollständig.`;
-    selectedAdviceTopic='gap';
+    if(!submittedTopic)selectedAdviceTopic='gap';
   } else if(c.withdrawal>0){
     msg=`Deine Planung ist bis Alter ${st.planningAge} gedeckt, benötigt aber laufende Kapitalentnahmen.`;
     insight=`💡 <strong>Ansatzpunkt:</strong> Im ersten Planungsjahr werden rund ${CHFJ(c.withdrawal)} aus dem freien Kapital benötigt.`;
-    selectedAdviceTopic=st.mode==='post'?'capital':'overall';
+    if(!submittedTopic)selectedAdviceTopic=st.mode==='post'?'capital':'overall';
   } else if(c.free>=500000){
     msg=`Deine Planung wirkt im aktuellen Szenario solide und du verfügst über relevantes freies Kapital.`;
     insight=`📈 <strong>Potenzial:</strong> Rund ${CHF(c.free)} sind frei verfügbar. Eine Beratung könnte direkt bei Struktur, Risiko und Entnahmestrategie starten.`;
-    selectedAdviceTopic='capital';
+    if(!submittedTopic)selectedAdviceTopic='capital';
   } else {
     msg=`Deine Planung wirkt im aktuellen Szenario solide.`;
     insight=`✅ <strong>Kein akuter Handlungsdruck:</strong> Du kannst selbst weiterarbeiten oder deine Planung gezielt prüfen lassen.`;
-    selectedAdviceTopic='overall';
+    if(!submittedTopic)selectedAdviceTopic='overall';
   }
   closingMessage.textContent=msg;
   closingInsight.innerHTML=insight;
-  document.querySelectorAll('.advice-topic').forEach(b=>b.classList.toggle('active',b.dataset.topic===selectedAdviceTopic));
+  document.querySelectorAll('.advice-topic').forEach(b=>{b.classList.toggle('active',b.dataset.topic===selectedAdviceTopic);b.disabled=planningLocked});
   renderHandoff();
 }
 function keepForMyself(){
@@ -431,12 +438,15 @@ function keepForMyself(){
   alert('Deine Planung bleibt lokal auf diesem Gerät gespeichert.');
 }
 function openAdviceFlow(){
+  if(planningLocked)return;
   adviceFlow.classList.remove('hidden');
   renderHandoff();
   adviceFlow.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function selectAdviceTopic(topic){
+  if(planningLocked)return;
   selectedAdviceTopic=topic;
+  localStorage.setItem('retirementMvp5-selected-topic',topic);
   document.querySelectorAll('.advice-topic').forEach(b=>b.classList.toggle('active',b.dataset.topic===topic));
   renderHandoff();
 }
@@ -469,7 +479,11 @@ function submitAdvice(){
   }
   planningLocked=true;
   localStorage.setItem('retirementMvp5-submitted','1');
+  const submittedAt=new Date().toISOString();
+  localStorage.setItem('retirementMvp5-submission',JSON.stringify({at:submittedAt,name,email,topic:selectedAdviceTopic}));
   renderEdit();
+  syncAssumptionLock();
+  renderClosingAdvisor();
   const c=adviceContext();
   const subject='Ruhestandsplanung';
   const body=[
@@ -497,20 +511,43 @@ function submitAdvice(){
     name
   ].join('\n');
   const mailText=`An: patrick.inauen@gmail.com\nBetreff: ${subject}\n\n${body}`;
-  const submittedAt=new Date().toLocaleString('de-CH',{dateStyle:'long',timeStyle:'short'});
+  const submittedLabel=new Date(submittedAt).toLocaleString('de-CH',{dateStyle:'long',timeStyle:'short'});
   navigator.clipboard.writeText(mailText).then(()=>{
     contactForm.classList.add('hidden');
-    requestSuccess.innerHTML=`<strong>Vielen Dank für Deine Anfrage vom ${submittedAt}.</strong>Wir kommen sehr gerne auf Dich zu.`;
+    requestSuccess.innerHTML=`<strong>Deine Anfrage wurde am ${submittedLabel} übermittelt.</strong>Wir kommen sehr gerne auf Dich zu.`;
     requestSuccess.classList.remove('hidden');
   }).catch(()=>{
     contactForm.classList.add('hidden');
-    requestSuccess.innerHTML=`<strong>Vielen Dank für Deine Anfrage vom ${submittedAt}.</strong>Wir kommen sehr gerne auf Dich zu.`;
+    requestSuccess.innerHTML=`<strong>Deine Anfrage wurde am ${submittedLabel} übermittelt.</strong>Wir kommen sehr gerne auf Dich zu.`;
     requestSuccess.classList.remove('hidden');
   });
 }
+function restoreSubmissionState(){
+  if(!planningLocked)return;
+  let submission={};
+  try{submission=JSON.parse(localStorage.getItem('retirementMvp5-submission')||'{}')}catch(_){ }
+  const storedTopic=submission.topic||localStorage.getItem('retirementMvp5-selected-topic')||'';
+  if(['pk','capital','gap','overall'].includes(storedTopic))selectedAdviceTopic=storedTopic;
+  adviceFlow.classList.remove('hidden');
+  document.querySelectorAll('.advice-topic').forEach(b=>{b.classList.toggle('active',b.dataset.topic===selectedAdviceTopic);b.disabled=true});
+  renderHandoff();
+  const form=document.getElementById('contactForm');
+  const success=document.getElementById('requestSuccess');
+  if(form)form.classList.add('hidden');
+  if(success){
+    const submittedAt=submission.at||'';
+    const label=submittedAt?new Date(submittedAt).toLocaleString('de-CH',{dateStyle:'long',timeStyle:'short'}):'bereits übermittelt';
+    success.innerHTML=`<strong>Deine Anfrage wurde am ${label} übermittelt.</strong>Wir kommen sehr gerne auf Dich zu.`;
+    success.classList.remove('hidden');
+  }
+  document.querySelector('.advice-options')?.classList.add('hidden');
+  const status=document.getElementById('submittedStatus');
+  if(status){status.textContent='Anfrage übermittelt · Diese Planung ist schreibgeschützt.';status.classList.add('visible')}
+}
 function clearAdviceError(){adviceError.classList.add('hidden')}
 
-function renderResult(){const f=free0(),b=bound0(),r=rent0(),y=f*P(st.ass.capitalReturn),need=st.need,diff=r+y-need;resultTitle.textContent=st.mode==='post'?'Deine Situation heute':`Dein Startpunkt mit ${st.retirementAge}`;rFree.textContent=CHF(f);rBound.textContent=CHF(b);rRent.textContent=CHFJ(r);rYield.textContent=CHFJ(y);rr1.textContent=CHFJ(r);rr2.textContent=CHFJ(y);rr3.textContent=CHFJ(r+y);rr4.textContent=CHFJ(need);rrLabel.textContent=diff>=0?'Überschuss':'Kapitalentnahme nötig';rr5.textContent=CHFJ(Math.abs(diff));rr5.className=diff>=0?'ok':'bad';preAss.classList.toggle('hidden',st.mode==='post');assInfl.value=st.ass.inflation;assCap.value=st.ass.capitalReturn;assPk.value=st.ass.pkInterest;assUws.value=st.ass.uws;[assInfl,assCap,assPk,assUws].forEach(field=>{if(field)field.disabled=planningLocked});renderChart();renderEdit();renderClosingAdvisor()}
+function syncAssumptionLock(){[assInfl,assCap,assPk,assUws].forEach(field=>{if(field)field.disabled=planningLocked});const recalc=document.querySelector('#tab-ass .primary');if(recalc)recalc.disabled=planningLocked}
+function renderResult(){const f=free0(),b=bound0(),r=rent0(),y=f*P(st.ass.capitalReturn),need=st.need,diff=r+y-need;resultTitle.textContent=st.mode==='post'?'Deine Situation heute':`Dein Startpunkt mit ${st.retirementAge}`;rFree.textContent=CHF(f);rBound.textContent=CHF(b);rRent.textContent=CHFJ(r);rYield.textContent=CHFJ(y);rr1.textContent=CHFJ(r);rr2.textContent=CHFJ(y);rr3.textContent=CHFJ(r+y);rr4.textContent=CHFJ(need);rrLabel.textContent=diff>=0?'Überschuss':'Kapitalentnahme nötig';rr5.textContent=CHFJ(Math.abs(diff));rr5.className=diff>=0?'ok':'bad';preAss.classList.toggle('hidden',st.mode==='post');assInfl.value=st.ass.inflation;assCap.value=st.ass.capitalReturn;assPk.value=st.ass.pkInterest;assUws.value=st.ass.uws;syncAssumptionLock();renderChart();renderEdit();renderClosingAdvisor();restoreSubmissionState()}
 function renderChart(){const c=chart,ctx=c.getContext('2d'),d=proj(),pad={l:34,r:10,t:14,b:28},W=c.width-pad.l-pad.r,H=c.height-pad.t-pad.b,max=Math.max(...d.map(x=>x.total),1)*1.1;ctx.clearRect(0,0,c.width,c.height);ctx.strokeStyle='#dce3ec';for(let j=0;j<4;j++){let yy=pad.t+H*j/3;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(pad.l+W,yy);ctx.stroke()}const X=j=>pad.l+(d.length===1?0:j/(d.length-1))*W,Y=v=>pad.t+H-v/max*H;ctx.beginPath();ctx.moveTo(X(0),Y(0));d.forEach((p,j)=>ctx.lineTo(X(j),Y(p.bound)));ctx.lineTo(X(d.length-1),Y(0));ctx.closePath();ctx.fillStyle='rgba(138,149,165,.32)';ctx.fill();ctx.beginPath();ctx.moveTo(X(0),Y(d[0].bound));d.forEach((p,j)=>ctx.lineTo(X(j),Y(p.total)));for(let j=d.length-1;j>=0;j--)ctx.lineTo(X(j),Y(d[j].bound));ctx.closePath();ctx.fillStyle='rgba(155,196,255,.48)';ctx.fill();ctx.beginPath();d.forEach((p,j)=>j?ctx.lineTo(X(j),Y(p.total)):ctx.moveTo(X(j),Y(p.total)));ctx.strokeStyle='#2563EB';ctx.lineWidth=3;ctx.stroke();const firstGap=d.findIndex(p=>p.gap>0);if(firstGap>=0){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#e5484d';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(firstGap),pad.t);ctx.lineTo(X(firstGap),pad.t+H);ctx.stroke();ctx.restore()}const gapPoint=document.getElementById('gapPoint');if(gapPoint){if(firstGap>=0){const gap=d[firstGap];gapPoint.className='gap-point';gapPoint.innerHTML=`<span aria-hidden="true">⚠️</span><div><strong>Ab Alter ${gap.age} ist die Lücke nicht mehr geschlossen.</strong>Im Modell ist das freie Kapital erstmals aufgebraucht; ab diesem Zeitpunkt fehlen rund ${CHFJ(Math.abs(gap.net))} pro Jahr.</div>`}else{gapPoint.className='gap-point ok';gapPoint.innerHTML='<span aria-hidden="true">✓</span><div><strong>Bis zum Planungsalter bleibt die Planung gedeckt.</strong>Im gewählten Szenario wird keine ungedeckte Lücke berechnet.</div>'}}const pts=[d[0],point(10),point(20),d.at(-1)],ids=[['a0','v0','s0'],['a10','v10','s10'],['a20','v20','s20'],['ae','ve','se']];pts.forEach((p,j)=>{document.getElementById(ids[j][0]).textContent='Alter '+p.age;document.getElementById(ids[j][1]).textContent=CHF(p.free);let s=p.gap>0?['Lücke','bad']:p.net<0?['Entnahme','warn']:['gedeckt','ok'];let e=document.getElementById(ids[j][2]);e.textContent=s[0];e.className=s[1]})}
 function tab(n,b){['overview','dev','ass','edit'].forEach(x=>document.getElementById('tab-'+x).classList.add('hidden'));document.getElementById('tab-'+n).classList.remove('hidden');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));if(b)b.classList.add('active')}
 function saveAss(){
@@ -594,6 +631,7 @@ function restartPlanning(){
   if(!confirm('Möchtest du eine neue Planung starten? Deine aktuellen Eingaben werden zurückgesetzt.')) return;
   localStorage.removeItem('retirementMvp5');
   localStorage.removeItem('retirementMvp5-submitted');
+  localStorage.removeItem('retirementMvp5-submission');
   st=structuredClone(D);
   flow=[];
   i=0;
@@ -601,15 +639,23 @@ function restartPlanning(){
   planningLocked=false;
   selectedAdviceTopic='overall';
   document.getElementById('adviceFlow')?.classList.add('hidden');
+  document.querySelector('.advice-options')?.classList.remove('hidden');
   document.getElementById('contactForm')?.classList.remove('hidden');
   document.getElementById('requestSuccess')?.classList.add('hidden');
   document.getElementById('adviceError')?.classList.add('hidden');
+  document.getElementById('submittedStatus')?.classList.remove('visible');
   ['contactName','contactEmail','contactPhone'].forEach(id=>{const field=document.getElementById(id);if(field) field.value=''});
   ui();
   show('start');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
-ui();
+if(planningLocked&&st.mode){
+  renderResult();
+  show('result');
+  tab('overview',document.querySelector('.tabs button'));
+}else{
+  ui();
+}
 </script>
 </body></html>
