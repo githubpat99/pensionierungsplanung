@@ -41,6 +41,8 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 #pkSlider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:30px;height:30px;border-radius:50%;background:#fff;border:7px solid var(--blue);box-shadow:0 2px 8px rgba(0,0,0,.16)}
 #pkSlider::-moz-range-thumb{width:17px;height:17px;border-radius:50%;background:#fff;border:7px solid var(--blue);box-shadow:0 2px 8px rgba(0,0,0,.16)}
 .delta-banner{margin-top:10px;padding:12px 13px;border:1px solid var(--line);border-radius:14px;background:#f8fafc;font-size:12px;line-height:1.4}
+.decision-banner{display:flex;gap:11px;align-items:flex-start;margin:12px 0;padding:14px 15px;border:1px solid #efd27d;border-radius:16px;background:var(--gold2);color:#6e5200;font-size:13px;line-height:1.45}.decision-banner strong{display:block;color:var(--ink);font-size:15px;margin-bottom:3px}.decision-icon{font-size:23px;line-height:1}
+.decision-kicker{font-size:12px;font-weight:850;letter-spacing:.07em;text-transform:uppercase;color:var(--blue);margin:22px 0 8px}.comparison-intro{font-size:13px;color:var(--muted);line-height:1.45;margin:-2px 0 10px}
 @media(max-width:380px){
   h1{font-size:31px} h2{font-size:23px}
   .card{padding:15px}
@@ -73,7 +75,7 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 .edit-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .edit-tag{font-size:10.5px;font-weight:780;padding:5px 8px;border-radius:999px;background:#f6f9fc;border:1px solid #e4ebf2;color:#55667d;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .edit-actions{margin:0}
-.linkbtn{border:1px solid #d8e2ee;background:#fff;color:var(--blue);font-weight:850;border-radius:999px;padding:8px 11px;white-space:nowrap;font-size:12px}
+.linkbtn{border:1px solid #d8e2ee;background:#fff;color:var(--blue);font-weight:850;border-radius:999px;padding:8px 11px;white-space:nowrap;font-size:12px}.linkbtn:disabled{opacity:.5;cursor:not-allowed}
 .linkbtn::after{content:""}
 
 
@@ -91,7 +93,7 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 .chat-step-card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:16px;margin-top:10px;box-shadow:0 6px 18px rgba(27,46,89,.05)}
 .chat-input-title{font-size:12px;font-weight:850;letter-spacing:.06em;text-transform:uppercase;color:var(--blue);margin-bottom:7px}
 .coach-row{display:flex;gap:10px;align-items:flex-start}
-.coach-mini{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff3cf;border:1px solid #efd27d;font-size:19px;flex:0 0 34px}
+.coach-mini{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;background:#fff3cf;border:1px solid #efd27d;font-size:0;flex:0 0 34px}.coach-mini::after{content:"🙂";font-size:19px}
 .coach-copy{flex:1}
 .consent-note{font-size:11px;line-height:1.4;color:var(--muted);margin-top:12px}
 .optional-box{border:1px dashed #cfd9e7;border-radius:18px;padding:14px;background:#fbfdff;margin-top:12px}
@@ -104,7 +106,7 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 
 .advice-card{background:linear-gradient(135deg,#f8fbff,#ffffff 55%,#fff9ea);border:1px solid #dfe7f2;border-radius:20px;padding:16px;margin-top:14px}
 .advice-head{display:flex;gap:10px;align-items:flex-start}
-.advice-coach{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#fff3cf;border:1px solid #efd27d;font-size:21px;flex:0 0 38px}
+.advice-coach{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#fff3cf;border:1px solid #efd27d;font-size:0;flex:0 0 38px}.advice-coach::after{content:"🙂";font-size:21px}
 .advice-copy{font-size:14px;line-height:1.45;color:#334155}.advice-copy strong{color:var(--ink)}
 .advice-insight{margin-top:12px;padding:12px 13px;border-radius:15px;background:#fff;border:1px solid #e4eaf2;font-size:13px;line-height:1.4}
 .advice-options{display:grid;gap:9px;margin-top:12px}
@@ -114,6 +116,7 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 .advice-topics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.advice-topic{border:1px solid var(--line);border-radius:14px;background:#fff;padding:11px 10px;font-size:12px;font-weight:800;text-align:left}.advice-topic.active{border-color:var(--blue);background:var(--blue2);color:var(--blue)}
 .handoff-box{margin-top:12px;padding:13px;border-radius:15px;background:#fbfcfe;border:1px solid var(--line)}.handoff-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:850;color:var(--muted);margin-bottom:7px}.handoff-list{display:grid;gap:6px;font-size:12px;color:#475569}.handoff-list div{display:flex;justify-content:space-between;gap:10px}
 .contact-form{display:grid;gap:8px;margin-top:12px}.contact-form input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:#fff}.contact-note{font-size:11px;color:var(--muted);line-height:1.4}
+.request-success{margin-top:12px;padding:15px;border:1px solid #b9e7d2;border-radius:15px;background:var(--green2);color:#0e7650;font-size:14px;line-height:1.45}.request-success strong{display:block;color:var(--ink);font-size:15px;margin-bottom:3px}.form-error{margin-top:2px;padding:10px 12px;border:1px solid #f0c6c8;border-radius:13px;background:var(--red2);color:#8f252a;font-size:12px;line-height:1.4}
 
 /* Prototype 13: clearer focus, touch targets, and responsive reading width. */
 button,input{min-height:44px}
@@ -152,7 +155,6 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <main>
 
 <section class="screen active" data-screen="start">
-<div class="kicker">Persönlicher Ruhestands-Check</div>
 <h1>Wie gut bist du aufgestellt?</h1>
 <div class="sub">Kein Formular-Marathon. Wir führen dich Schritt für Schritt durch genau die Themen, die zu deiner Situation passen.</div>
 
@@ -203,8 +205,8 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <div class="card"><div class="kicker">Bis Pensionierung</div><h2>Was kommt bis dahin noch dazu?</h2><div class="sub">Wir zeigen immer nur eine Annahme gleichzeitig. Du kannst sie später unter «Annahmen» verfeinern.</div>
 <div class="asset"><div class="asset-head" onclick="toggle(this)" aria-expanded="false"><div class="ico">🏦</div><div class="copy"><b>PK-Einzahlungen pro Jahr</b><span>Arbeitgeber und Arbeitnehmer separat erfassen</span></div><div class="amt" id="pkContribTotal">bearbeiten</div></div><div class="asset-body hidden"><div class="split"><label class="field"><span>Arbeitnehmer</span><input id="pkEmployee" class="money" oninput="syncLiveInput(this)"></label><label class="field"><span>Arbeitgeber</span><input id="pkEmployer" class="money" oninput="syncLiveInput(this)"></label></div><div class="note">Zusammen pro Jahr: <strong id="pkContribTotalNote"></strong></div></div></div>
 <div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">📈</div><div class="copy"><b>PK-Verzinsung</b><span>Aktueller Vergleichswert: Ø 4,33 % für 2025</span></div><div class="amt" id="pkIntMini"></div></div><div class="asset-body hidden"><input id="pkInterest" class="pct" oninput="syncLiveInput(this)"></div></div>
-<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">🌱</div><div class="copy"><b>Säule 3a</b><span>Einzahlung und Rendite</span></div><div class="amt">öffnen</div></div><div class="asset-body hidden"><input id="p3Contrib" class="money" placeholder="Einzahlung/Jahr" oninput="syncLiveInput(this)"><input id="p3Return" class="pct" style="margin-top:8px" placeholder="Rendite %" oninput="syncLiveInput(this)"></div></div>
-<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">📊</div><div class="copy"><b>Wertschriften</b><span>Rendite & zusätzliche Sparleistung</span></div><div class="amt">öffnen</div></div><div class="asset-body hidden"><input id="secReturn" class="pct" placeholder="Rendite %" oninput="syncLiveInput(this)"><input id="otherSave" class="money" style="margin-top:8px" placeholder="Sparleistung/Jahr" oninput="syncLiveInput(this)"></div></div>
+<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">🌱</div><div class="copy"><b>Säule 3a</b><span>Einzahlung und Rendite</span></div><div class="amt" id="p3Summary"></div></div><div class="asset-body hidden"><input id="p3Contrib" class="money" placeholder="Einzahlung/Jahr" oninput="syncLiveInput(this)"><input id="p3Return" class="pct" style="margin-top:8px" placeholder="Rendite %" oninput="syncLiveInput(this)"></div></div>
+<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">📊</div><div class="copy"><b>Wertschriften</b><span>Rendite & zusätzliche Sparleistung</span></div><div class="amt" id="secSummary"></div></div><div class="asset-body hidden"><input id="secReturn" class="pct" placeholder="Rendite %" oninput="syncLiveInput(this)"><input id="otherSave" class="money" style="margin-top:8px" placeholder="Sparleistung/Jahr" oninput="syncLiveInput(this)"></div></div>
 <div class="calc"><div class="row"><span>PK heute</span><strong id="pkToday"></strong></div><div class="row total"><span>PK bei Pensionierung</span><strong id="pkAtRet" class="gold"></strong></div></div>
 </div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="saveBuild();forward()">Weiter →</button></div></section>
 
@@ -213,10 +215,10 @@ input.money,input.pct{font-size:16px;min-height:50px}
   <div class="coach-row"><div class="coach-mini">🤓</div><div class="bubble assistant">Jetzt kommt eine der wichtigsten Entscheidungen.</div></div>
   <div class="coach-row"><div class="coach-mini">🤓</div><div class="bubble assistant">Wie viel deiner Pensionskasse möchtest du als Kapital und wie viel als Rente beziehen?</div></div>
 </div>
-<div class="card"><div class="kicker">Die zentrale Entscheidung</div><h2>Kapital oder lebenslange Rente?</h2><div class="sub">Bewege den Regler und sieh sofort, was deine Wahl bedeutet.</div>
+<div class="card"><div class="kicker">Die grösste Finanzentscheidung im Ruhestand</div><h2>Kapitalbezug oder lebenslange Rente?</h2><div class="decision-banner"><div class="decision-icon">⚖️</div><div><strong>Eine Entscheidung mit langfristigen Folgen</strong>Du legst hier fest, wie viel Sicherheit und wie viel Flexibilität du im Ruhestand hast. Rechne beide Varianten sorgfältig durch, bevor du dich entscheidest.</div></div><div class="sub">Verändere den Regler und vergleiche direkt, wie sich Kapitalbezug und lebenslange PK-Rente auf deine Situation auswirken.</div>
 <div class="pkbox"><div class="pkval"><strong id="pkTotal"></strong><span>PK-Guthaben am Pensionierungszeitpunkt</span></div><div class="split"><div class="side cap"><small>Kapital</small><strong id="pkCap"></strong><span id="pkCapPct"></span></div><div class="side rent"><small>Rente</small><strong id="pkRentBase"></strong><span id="pkRentPct"></span></div></div><div class="pk-choice-summary"><span id="pkChoiceCap" class="cap-pill"></span><span>↔</span><span id="pkChoiceRent" class="rent-pill"></span></div><div class="labels"><span>Mehr Kapital</span><span>Mehr Rente</span></div><input id="pkSlider" type="range" min="0" max="100" oninput="pkShare(this.value)"></div>
 <div class="section blue">Wie möchtest du das Kapital anlegen?</div><div class="risks"><button class="risk" data-risk="cautious" onclick="risk('cautious')"><div class="r-ico">🛡️</div><b>Vorsichtig</b><span>2,5 %</span></button><button class="risk" data-risk="balanced" onclick="risk('balanced')"><div class="r-ico">⚖️</div><b>Ausgewogen</b><span>4,5 %</span></button><button class="risk" data-risk="bold" onclick="risk('bold')"><div class="r-ico">🚀</div><b>Mutig</b><span>6,0 %</span></button></div>
-<div class="comparison"><div class="compare-card capital-card"><div class="top">Erwarteter Kapitalertrag</div><div id="capYield" class="main"></div><div id="capYieldSub" class="subv"></div></div><div class="compare-card rent-card"><div class="top">Lebenslange PK-Rente</div><div id="pkRent" class="main"></div><div class="subv">5,2 % Umwandlungssatz</div></div></div><div id="pkDelta" class="delta-banner"></div>
+<div class="decision-kicker">Dein direkter Vergleich</div><div class="comparison-intro">Was bringt dir die gewählte Aufteilung im ersten Jahr? Die Kapitalvariante bleibt verfügbar, die Rente bietet lebenslange Zahlungssicherheit.</div><div class="comparison"><div class="compare-card capital-card"><div class="top">Kapitalbezug: erwarteter Ertrag</div><div id="capYield" class="main"></div><div id="capYieldSub" class="subv"></div></div><div class="compare-card rent-card"><div class="top">Rentenbezug: lebenslange PK-Rente</div><div id="pkRent" class="main"></div><div class="subv">5,2 % Umwandlungssatz</div></div></div><div id="pkDelta" class="delta-banner"></div><div class="note gold">Nimm diese Berechnung als Vorbereitung: Notiere dir deine bevorzugte Aufteilung und die offenen Fragen für ein persönliches Beratungsgespräch.</div>
 </div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="forward()">Weiter →</button></div></section>
 
 <section class="screen" data-screen="post">
@@ -230,9 +232,9 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <section class="screen" data-screen="income">
 <div class="chat-shell">
   <div class="coach-row"><div class="coach-mini">🤓</div><div class="bubble assistant">Fast geschafft. Jetzt fehlen noch die sicheren jährlichen Einnahmen.</div></div>
-  <div class="coach-row"><div class="coach-mini">🤓</div><div class="bubble assistant">Welche Renten kommen zusätzlich zur PK dazu?</div></div>
+  <div class="coach-row"><div class="coach-mini">🤓</div><div class="bubble assistant">Welche sicheren Einnahmen kommen zusätzlich zur PK dazu?</div></div>
 </div>
-<div class="card"><div class="kicker">Deine sicheren Renten</div><h2>Was kommt jährlich garantiert rein?</h2><div id="incomeList"></div><div class="calc"><div class="row"><span>PK-Rente aus deiner Aufteilung</span><strong id="pkRentLine" class="gold"></strong></div><div class="row total"><span>Sichere Renten total</span><strong id="rentTotal" class="gold"></strong></div></div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="saveOpenInputs();forward()">Weiter →</button></div></section>
+<div class="card"><div class="kicker">Deine sicheren Einnahmen</div><h2>Was kommt jährlich garantiert rein?</h2><div class="sub">Mieteinnahmen bitte als Nettobetrag nach laufenden Kosten erfassen.</div><div id="incomeList"></div><div class="calc"><div class="row"><span>PK-Rente aus deiner Aufteilung</span><strong id="pkRentLine" class="gold"></strong></div><div class="row total"><span>Sichere Einnahmen total</span><strong id="rentTotal" class="gold"></strong></div></div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="saveOpenInputs();forward()">Weiter →</button></div></section>
 
 <section class="screen" data-screen="need">
 <div class="chat-shell">
@@ -278,13 +280,15 @@ input.money,input.pct{font-size:16px;min-height:50px}
       <div class="handoff-title">Diese Angaben wären bereits bekannt</div>
       <div id="handoffList" class="handoff-list"></div>
     </div>
-    <div class="contact-form">
-      <input id="contactName" placeholder="Name">
-      <input id="contactEmail" type="email" placeholder="E-Mail">
+    <div id="contactForm" class="contact-form">
+      <input id="contactName" placeholder="Name" oninput="clearAdviceError()">
+      <input id="contactEmail" type="email" placeholder="E-Mail" oninput="clearAdviceError()">
       <input id="contactPhone" placeholder="Telefon (optional)">
       <button class="primary" onclick="submitAdvice()">Beratung anfragen →</button>
       <div class="contact-note">Kontaktdaten werden erst hier abgefragt, weil du die Kontaktaufnahme bewusst gewählt hast.</div>
+      <div id="adviceError" class="form-error hidden" role="alert"></div>
     </div>
+    <div id="requestSuccess" class="request-success hidden" role="status" aria-live="polite"></div>
   </div>
 </div>
 
@@ -298,18 +302,25 @@ input.money,input.pct{font-size:16px;min-height:50px}
 const D={mode:null,currentAge:56,retirementAge:65,planningAge:92,need:90000,
 assets:{pk:550000,p3:120000,sec:180000,re:800000,mort:500000,cash:50000},
 build:{pkContrib:22000,pkEmployee:11000,pkEmployer:11000,p3Contrib:7000,otherSave:10000},
-income:{ahv:28200,other:0},post:{ahv:28200,pkRent:26000,other:0,free:650000,re:800000,mort:500000},
+income:{ahv:28200,other:0,rent:0},post:{ahv:28200,pkRent:26000,other:0,rent:0,free:650000,re:800000,mort:500000},
 pkShare:50,risk:'balanced',ass:{pkInterest:4.33,p3Return:4.5,secReturn:4.5,capitalReturn:4.5,inflation:.6,uws:5.2}};
-let st=JSON.parse(localStorage.getItem('retirementMvp5')||'null')||structuredClone(D),flow=[],i=0,openAsset=null;
+let st=JSON.parse(localStorage.getItem('retirementMvp5')||'null')||structuredClone(D),flow=[],i=0,openAsset=null,planningLocked=localStorage.getItem('retirementMvp5-submitted')==='1',returnToResult=false;
 if(!Number.isFinite(st.build?.pkEmployee)) st.build.pkEmployee=Math.round((st.build?.pkContrib||0)/2);
 if(!Number.isFinite(st.build?.pkEmployer)) st.build.pkEmployer=Math.max(0,(st.build?.pkContrib||0)-st.build.pkEmployee);
+if(!Number.isFinite(st.income?.rent)) st.income.rent=0;
+if(!Number.isFinite(st.post?.rent)) st.post.rent=0;
 st.build.pkContrib=(st.build.pkEmployee||0)+(st.build.pkEmployer||0);
 const CHF=n=>"CHF "+Math.round(n).toLocaleString("de-CH"),CHFJ=n=>CHF(n)+"/J.",P=n=>Number(n)/100,rates={cautious:2.5,balanced:4.5,bold:6};
 const assetsMeta=[['pk','🏦','Pensionskasse','Aktuelles Altersguthaben'],['p3','🌱','Säule 3a','Aktueller Stand'],['sec','📊','Wertschriften / Fonds','Aktueller Wert'],['re','🏠','Immobilien','Marktwert'],['mort','🏷️','Hypotheken','Wird abgezogen'],['cash','💳','Bank / übriges Vermögen','Liquide Mittel']];
-const postMeta=[['ahv','🟡','AHV','pro Jahr','postIncome'],['pkRent','🏦','PK-Rente','pro Jahr','postIncome'],['other','➕','Weitere Renten','pro Jahr','postIncome'],['free','💰','Freies Kapital','heutiger Bestand','postAsset'],['re','🏠','Immobilien','heutiger Wert','postAsset'],['mort','🏷️','Hypotheken','wird abgezogen','postAsset']];
+const postMeta=[['ahv','🟡','AHV','pro Jahr','postIncome'],['pkRent','🏦','PK-Rente','pro Jahr','postIncome'],['rent','🏠','Mieteinnahmen (netto)','pro Jahr','postIncome'],['other','➕','Weitere Renten','pro Jahr','postIncome'],['free','💰','Freies Kapital','heutiger Bestand','postAsset'],['re','🏠','Immobilien','heutiger Wert','postAsset'],['mort','🏷️','Hypotheken','wird abgezogen','postAsset']];
 function persist(){localStorage.setItem('retirementMvp5',JSON.stringify(st))}
 function chooseMode(m){
-  st.mode=m;persist();
+  st.mode=m;
+  if(m==='post'){
+    st.currentAge=Math.max(st.currentAge,st.retirementAge);
+    st.retirementAge=Math.min(st.retirementAge,st.currentAge);
+  }
+  persist();
   const labels={pre:'Meine Pensionierung liegt noch vor mir',at:'Ich stehe kurz vor oder bei der Pensionierung',post:'Ich bin bereits pensioniert'};
   const start=document.querySelector('[data-screen="start"] .chat-shell');
   if(start){
@@ -319,16 +330,18 @@ function chooseMode(m){
 }
 function makeFlow(){return st.mode==='pre'||st.mode==='at'?['ageNow','ageRet','assets','build','pk','income','need','horizon']:['ageNow','ageRet','post','need','horizon']}
 function show(n){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.querySelector(`[data-screen="${n}"]`).classList.add('active');prog.classList.toggle('hidden',['start','result'].includes(n));window.scrollTo({top:0,behavior:'smooth'})}
-function showStep(){flow=makeFlow();i=Math.max(0,Math.min(i,flow.length-1));show(flow[i]);ptext.textContent=`Schritt ${i+1} von ${flow.length}`;pchapter.textContent=({ageNow:'Zeitpunkt',ageRet:'Zeitpunkt',assets:'Heute',build:'Aufbau',pk:'PK-Entscheid',income:'Renten',post:'Heute',need:'Lebensstandard',horizon:'Horizont'})[flow[i]];pbar.style.width=((i+1)/flow.length*100)+'%';ui()}
-function forward(){i++;showStep()}function back(){if(i===0){show('start');return}i--;showStep()}
-function chg(k,d){st[k]+=d;if(k==='currentAge')st[k]=Math.max(18,Math.min(100,st[k]));if(k==='retirementAge')st[k]=Math.max(50,Math.min(80,st[k]));if(k==='planningAge')st[k]=Math.max(Math.max(st.currentAge,st.retirementAge)+1,Math.min(110,st[k]));if(k==='need')st[k]=Math.max(20000,st[k]);persist();ui()}
+function showStep(){flow=makeFlow();i=Math.max(0,Math.min(i,flow.length-1));show(flow[i]);ptext.textContent=`Schritt ${i+1} von ${flow.length}`;pchapter.textContent=({ageNow:'Zeitpunkt',ageRet:'Zeitpunkt',assets:'Heute',build:'Aufbau',pk:'PK-Entscheid',income:'Einkommen',post:'Heute',need:'Lebensstandard',horizon:'Horizont'})[flow[i]];pbar.style.width=((i+1)/flow.length*100)+'%';const activeScreen=document.querySelector('.screen.active');const recalcButton=activeScreen?.querySelector('.actions .primary');if(recalcButton)recalcButton.textContent=returnToResult?'Neu berechnen →':'Weiter →';ui()}
+function forward(){if(returnToResult){const screen=document.querySelector('.screen.active')?.dataset.screen;if(screen==='assets'||screen==='post'||screen==='income')saveOpenInputs();if(screen==='build')saveBuild();returnToResult=false;renderResult();show('result');tab('overview',document.querySelector('.tabs button'));return}i++;showStep()}
+function back(){if(returnToResult){returnToResult=false;show('result');tab('edit',document.querySelectorAll('.tabs button')[3]);return}if(i===0){show('start');return}i--;showStep()}
+function chg(k,d){if(planningLocked)return;st[k]+=d;if(k==='currentAge')st[k]=Math.max(18,Math.min(100,st[k]));if(k==='retirementAge')st[k]=Math.max(50,Math.min(80,st[k]));if(st.mode==='post'&&k==='retirementAge')st[k]=Math.min(st.currentAge,st[k]);if(st.mode==='post'&&k==='currentAge')st.retirementAge=Math.min(st.retirementAge,st.currentAge);if(k==='planningAge')st[k]=Math.max(Math.max(st.currentAge,st.retirementAge)+1,Math.min(110,st[k]));if(k==='need')st[k]=Math.max(20000,st[k]);persist();ui()}
 function toggle(el){const a=el.parentElement,b=a.querySelector('.asset-body');document.querySelectorAll('.asset-body').forEach(x=>{if(x!==b){x.classList.add('hidden');x.parentElement.querySelector('.asset-head')?.setAttribute('aria-expanded','false')}});const isHidden=b.classList.toggle('hidden');el.setAttribute('aria-expanded',String(!isHidden))}
 function renderAssetList(){assetList.innerHTML=assetsMeta.map(([k,ico,t,h])=>`<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">${ico}</div><div class="copy"><b>${t}</b><span>${h}</span></div><div class="amt">${st.assets[k]?CHF(st.assets[k]):'hinzufügen'}</div></div><div class="asset-body hidden"><input class="money" data-a="${k}" value="${st.assets[k]||0}" oninput="syncLiveInput(this)"></div></div>`).join('')}
 function renderPost(){postList.innerHTML=postMeta.map(([k,ico,t,h,type])=>`<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">${ico}</div><div class="copy"><b>${t}</b><span>${h}</span></div><div class="amt">${type==='postIncome'?CHFJ(st.post[k]):CHF(st.post[k])}</div></div><div class="asset-body hidden"><input class="money" data-p="${k}" value="${st.post[k]||0}" oninput="syncLiveInput(this)"></div></div>`).join('')}
-function renderIncome(){incomeList.innerHTML=[['ahv','🟡','AHV'],['other','➕','Weitere Renten']].map(([k,ico,t])=>`<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">${ico}</div><div class="copy"><b>${t}</b><span>pro Jahr</span></div><div class="amt">${CHFJ(st.income[k])}</div></div><div class="asset-body hidden"><input class="money" data-i="${k}" value="${st.income[k]||0}" oninput="syncLiveInput(this)"></div></div>`).join('')}
+function renderIncome(){incomeList.innerHTML=[['ahv','🟡','AHV'],['rent','🏠','Mieteinnahmen (netto)'],['other','➕','Weitere Renten']].map(([k,ico,t])=>`<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">${ico}</div><div class="copy"><b>${t}</b><span>pro Jahr</span></div><div class="amt">${CHFJ(st.income[k])}</div></div><div class="asset-body hidden"><input class="money" data-i="${k}" value="${st.income[k]||0}" oninput="syncLiveInput(this)"></div></div>`).join('')}
 function readNumber(value){const normalized=String(value??'').replace(/[’'\s]/g,'').replace(',','.');const n=Number(normalized);return Number.isFinite(n)?n:0}
 let liveInputState=null;
 function syncLiveInput(el){
+  if(planningLocked)return;
   const value=readNumber(el.value);
   if(el.dataset.a) st.assets[el.dataset.a]=value;
   if(el.dataset.p) st.post[el.dataset.p]=value;
@@ -352,11 +365,11 @@ function projected(){if(st.mode==='post')return null;const y=Math.max(0,st.retir
 function split(){const p=projected();if(!p)return{cap:0,base:0,rent:0};const cap=p.pk*st.pkShare/100,base=p.pk-cap;return{cap,base,rent:base*P(st.ass.uws)}}
 function free0(){if(st.mode==='post')return st.post.free;const p=projected(),s=split();return p.p3+p.sec+p.cash+s.cap}
 function bound0(){if(st.mode==='post')return Math.max(0,st.post.re-st.post.mort);const p=projected();return Math.max(0,p.re-p.mort)}
-function rent0(){return st.mode==='post'?st.post.ahv+st.post.pkRent+st.post.other:st.income.ahv+st.income.other+split().rent}
+function rent0(){return st.mode==='post'?st.post.ahv+st.post.pkRent+st.post.rent+st.post.other:st.income.ahv+st.income.rent+st.income.other+split().rent}
 function startAge(){return st.mode==='post'?st.currentAge:st.retirementAge}
 function proj(){let f=free0(),b=bound0(),out=[];for(let age=startAge();age<=st.planningAge;age++){const t=age-startAge(),need=st.need*Math.pow(1+P(st.ass.inflation),t),rent=rent0(),ret=f*P(st.ass.capitalReturn),net=rent+ret-need;out.push({age,free:f,bound:b,total:f+b,need,rent,ret,net,gap:f<=0&&net<0?Math.abs(net):0});f=Math.max(0,f+net)}return out}
 function point(n){const d=proj(),target=Math.min(d[0].age+n,d.at(-1).age);return d.reduce((a,b)=>Math.abs(b.age-target)<Math.abs(a.age-target)?b:a,d[0])}
-function pkShare(v){st.pkShare=+v;persist();ui()}function risk(r){st.risk=r;st.ass.capitalReturn=rates[r];persist();ui()}
+function pkShare(v){if(planningLocked)return;st.pkShare=+v;persist();ui()}function risk(r){if(planningLocked)return;st.risk=r;st.ass.capitalReturn=rates[r];persist();ui()}
 function ui(){
 const preserveInput=liveInputState;
 ageNowVal.textContent=st.currentAge;ageRetVal.textContent=st.retirementAge;planVal.textContent=st.planningAge;needVal.textContent=CHF(st.need);
@@ -364,7 +377,7 @@ ageRetTitle.textContent=st.mode==='post'?'Mit welchem Alter bist du pensioniert 
 ageRetSub.textContent=st.mode==='post'?'Damit ordnen wir deine heutige Situation zeitlich ein.':st.mode==='at'?'Wir starten direkt am Übergang in den Ruhestand.':'Von hier aus rechnen wir deine Aufbauphase.';
 const d=st.retirementAge-st.currentAge;relationNote.textContent=st.mode==='post'?`Du bist seit ${Math.max(0,st.currentAge-st.retirementAge)} Jahren pensioniert.`:d>0?`Noch ${d} Jahre bis zu deiner Pensionierung.`:'Du stehst unmittelbar bei der Pensionierung.';
 renderAssetList();renderPost();renderIncome();
-pkEmployee.value=st.build.pkEmployee;pkEmployer.value=st.build.pkEmployer;pkContribTotal.textContent=CHFJ(st.build.pkContrib);pkContribTotalNote.textContent=CHFJ(st.build.pkContrib);pkInterest.value=st.ass.pkInterest;p3Contrib.value=st.build.p3Contrib;p3Return.value=st.ass.p3Return;secReturn.value=st.ass.secReturn;otherSave.value=st.build.otherSave;pkIntMini.textContent=st.ass.pkInterest.toFixed(2)+' %';
+pkEmployee.value=st.build.pkEmployee;pkEmployer.value=st.build.pkEmployer;pkContribTotal.textContent=CHFJ(st.build.pkContrib);pkContribTotalNote.textContent=CHFJ(st.build.pkContrib);pkInterest.value=st.ass.pkInterest;p3Contrib.value=st.build.p3Contrib;p3Return.value=st.ass.p3Return;secReturn.value=st.ass.secReturn;otherSave.value=st.build.otherSave;pkIntMini.textContent=st.ass.pkInterest.toFixed(2)+' %';p3Summary.textContent=`${CHFJ(st.build.p3Contrib)} · ${st.ass.p3Return.toFixed(1)} %`;secSummary.textContent=`${CHFJ(st.build.otherSave)} · ${st.ass.secReturn.toFixed(1)} %`;
 if(st.mode!=='post'){const p=projected(),s=split();pkToday.textContent=CHF(st.assets.pk);pkAtRet.textContent=CHF(p.pk);pkTotal.textContent=CHF(p.pk);pkSlider.value=st.pkShare;
 pkSlider.style.background=`linear-gradient(90deg,var(--blue) 0 ${st.pkShare}%, var(--gold) ${st.pkShare}% 100%)`;
 pkCap.textContent=CHF(s.cap);pkCapPct.textContent=st.pkShare+' %';
@@ -455,14 +468,60 @@ function renderHandoff(){
 }
 function submitAdvice(){
   const name=(contactName.value||'').trim(), email=(contactEmail.value||'').trim();
-  if(!name || !email){alert('Bitte Name und E-Mail ausfüllen.');return}
-  alert('Prototype: Beratungsanfrage vorbereitet. Planungsdaten und Beratungsanlass würden mitgesendet.');
+  if(!name || !email){
+    adviceError.textContent=!name?'Bitte zuerst Deinen Namen eintragen.':'Bitte zuerst Deine E-Mail-Adresse eintragen.';
+    adviceError.classList.remove('hidden');
+    (!name?contactName:contactEmail).focus();
+    return;
+  }
+  planningLocked=true;
+  localStorage.setItem('retirementMvp5-submitted','1');
+  renderEdit();
+  const c=adviceContext();
+  const subject='Ruhestandsplanung';
+  const body=[
+    'Guten Tag',
+    '',
+    'ich möchte meine Ruhestandsplanung besprechen.',
+    '',
+    'Kontaktdaten',
+    `Name: ${name}`,
+    `E-Mail: ${email}`,
+    `Telefon: ${(contactPhone.value||'Nicht angegeben').trim()}`,
+    '',
+    'Planungsübersicht',
+    `Status: ${st.mode==='post'?'Bereits pensioniert':st.mode==='at'?'Kurz vor oder bei der Pensionierung':'Vor der Pensionierung'}`,
+    `Alter heute: ${st.currentAge}`,
+    `Pensionierung: ${st.retirementAge}`,
+    `Planung bis: ${st.planningAge}`,
+    `Freies Kapital: ${CHF(c.free)}`,
+    `Sichere Einnahmen: ${CHFJ(c.rent)}`,
+    `Lebensstandard: ${CHFJ(st.need)}`,
+    `Beratungsthema: ${({pk:'PK-Entscheid',capital:'Kapitalanlage',gap:'Versorgungslücke',overall:'Gesamte Planung'})[selectedAdviceTopic]}`,
+    c.gap ? `Lücke ab Alter: ${c.gap.age}` : 'Keine ungedeckte Lücke bis zum Planungsalter im aktuellen Szenario',
+    '',
+    'Freundliche Grüsse',
+    name
+  ].join('\n');
+  const mailText=`An: patrick.inauen@gmail.com\nBetreff: ${subject}\n\n${body}`;
+  const submittedAt=new Date().toLocaleString('de-CH',{dateStyle:'long',timeStyle:'short'});
+  navigator.clipboard.writeText(mailText).then(()=>{
+    contactForm.classList.add('hidden');
+    requestSuccess.innerHTML=`<strong>Vielen Dank für Deine Anfrage vom ${submittedAt}.</strong>Wir kommen sehr gerne auf Dich zu.`;
+    requestSuccess.classList.remove('hidden');
+  }).catch(()=>{
+    contactForm.classList.add('hidden');
+    requestSuccess.innerHTML=`<strong>Vielen Dank für Deine Anfrage vom ${submittedAt}.</strong>Wir kommen sehr gerne auf Dich zu.`;
+    requestSuccess.classList.remove('hidden');
+  });
 }
+function clearAdviceError(){adviceError.classList.add('hidden')}
 
-function renderResult(){const f=free0(),b=bound0(),r=rent0(),y=f*P(st.ass.capitalReturn),need=st.need,diff=r+y-need;resultTitle.textContent=st.mode==='post'?'Deine Situation heute':`Dein Startpunkt mit ${st.retirementAge}`;rFree.textContent=CHF(f);rBound.textContent=CHF(b);rRent.textContent=CHFJ(r);rYield.textContent=CHFJ(y);rr1.textContent=CHFJ(r);rr2.textContent=CHFJ(y);rr3.textContent=CHFJ(r+y);rr4.textContent=CHFJ(need);rrLabel.textContent=diff>=0?'Überschuss':'Kapitalentnahme nötig';rr5.textContent=CHFJ(Math.abs(diff));rr5.className=diff>=0?'ok':'bad';preAss.classList.toggle('hidden',st.mode==='post');assInfl.value=st.ass.inflation;assCap.value=st.ass.capitalReturn;assPk.value=st.ass.pkInterest;assUws.value=st.ass.uws;renderChart();renderEdit()}
+function renderResult(){const f=free0(),b=bound0(),r=rent0(),y=f*P(st.ass.capitalReturn),need=st.need,diff=r+y-need;resultTitle.textContent=st.mode==='post'?'Deine Situation heute':`Dein Startpunkt mit ${st.retirementAge}`;rFree.textContent=CHF(f);rBound.textContent=CHF(b);rRent.textContent=CHFJ(r);rYield.textContent=CHFJ(y);rr1.textContent=CHFJ(r);rr2.textContent=CHFJ(y);rr3.textContent=CHFJ(r+y);rr4.textContent=CHFJ(need);rrLabel.textContent=diff>=0?'Überschuss':'Kapitalentnahme nötig';rr5.textContent=CHFJ(Math.abs(diff));rr5.className=diff>=0?'ok':'bad';preAss.classList.toggle('hidden',st.mode==='post');assInfl.value=st.ass.inflation;assCap.value=st.ass.capitalReturn;assPk.value=st.ass.pkInterest;assUws.value=st.ass.uws;[assInfl,assCap,assPk,assUws].forEach(field=>{if(field)field.disabled=planningLocked});renderChart();renderEdit();renderClosingAdvisor()}
 function renderChart(){const c=chart,ctx=c.getContext('2d'),d=proj(),pad={l:34,r:10,t:14,b:28},W=c.width-pad.l-pad.r,H=c.height-pad.t-pad.b,max=Math.max(...d.map(x=>x.total),1)*1.1;ctx.clearRect(0,0,c.width,c.height);ctx.strokeStyle='#dce3ec';for(let j=0;j<4;j++){let yy=pad.t+H*j/3;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(pad.l+W,yy);ctx.stroke()}const X=j=>pad.l+(d.length===1?0:j/(d.length-1))*W,Y=v=>pad.t+H-v/max*H;ctx.beginPath();ctx.moveTo(X(0),Y(0));d.forEach((p,j)=>ctx.lineTo(X(j),Y(p.bound)));ctx.lineTo(X(d.length-1),Y(0));ctx.closePath();ctx.fillStyle='rgba(138,149,165,.32)';ctx.fill();ctx.beginPath();ctx.moveTo(X(0),Y(d[0].bound));d.forEach((p,j)=>ctx.lineTo(X(j),Y(p.total)));for(let j=d.length-1;j>=0;j--)ctx.lineTo(X(j),Y(d[j].bound));ctx.closePath();ctx.fillStyle='rgba(155,196,255,.48)';ctx.fill();ctx.beginPath();d.forEach((p,j)=>j?ctx.lineTo(X(j),Y(p.total)):ctx.moveTo(X(j),Y(p.total)));ctx.strokeStyle='#2563EB';ctx.lineWidth=3;ctx.stroke();const firstGap=d.findIndex(p=>p.gap>0);if(firstGap>=0){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#e5484d';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(firstGap),pad.t);ctx.lineTo(X(firstGap),pad.t+H);ctx.stroke();ctx.restore()}const gapPoint=document.getElementById('gapPoint');if(gapPoint){if(firstGap>=0){const gap=d[firstGap];gapPoint.className='gap-point';gapPoint.innerHTML=`<span aria-hidden="true">⚠️</span><div><strong>Ab Alter ${gap.age} ist die Lücke nicht mehr geschlossen.</strong>Im Modell ist das freie Kapital erstmals aufgebraucht; ab diesem Zeitpunkt fehlen rund ${CHFJ(Math.abs(gap.net))} pro Jahr.</div>`}else{gapPoint.className='gap-point ok';gapPoint.innerHTML='<span aria-hidden="true">✓</span><div><strong>Bis zum Planungsalter bleibt die Planung gedeckt.</strong>Im gewählten Szenario wird keine ungedeckte Lücke berechnet.</div>'}}const pts=[d[0],point(10),point(20),d.at(-1)],ids=[['a0','v0','s0'],['a10','v10','s10'],['a20','v20','s20'],['ae','ve','se']];pts.forEach((p,j)=>{document.getElementById(ids[j][0]).textContent='Alter '+p.age;document.getElementById(ids[j][1]).textContent=CHF(p.free);let s=p.gap>0?['Lücke','bad']:p.net<0?['Entnahme','warn']:['gedeckt','ok'];let e=document.getElementById(ids[j][2]);e.textContent=s[0];e.className=s[1]})}
 function tab(n,b){['overview','dev','ass','edit'].forEach(x=>document.getElementById('tab-'+x).classList.add('hidden'));document.getElementById('tab-'+n).classList.remove('hidden');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));if(b)b.classList.add('active')}
 function saveAss(){
+  if(planningLocked)return;
   st.ass.inflation=+assInfl.value||0;
   st.ass.capitalReturn=+assCap.value||0;
   if(st.mode!=='post'){
@@ -486,7 +545,7 @@ function renderEdit(){
   if(st.mode==='post'){
     items = [
       {icon:'🧭', color:'blue', title:'Status & Alter', value:`Heute <strong>${st.currentAge}</strong> · pensioniert mit <strong>${st.retirementAge}</strong>`, tags:[modeLabel, yearsInfo], screen:'ageNow'},
-      {icon:'💸', color:'gold', title:'Renten heute', value:`AHV <strong>${CHFJ(st.post.ahv)}</strong> · PK <strong>${CHFJ(st.post.pkRent)}</strong> · weitere <strong>${CHFJ(st.post.other)}</strong>`, tags:[`Total ${CHFJ(st.post.ahv+st.post.pkRent+st.post.other)}`], screen:'post'},
+      {icon:'💸', color:'gold', title:'Renten heute', value:`AHV <strong>${CHFJ(st.post.ahv)}</strong> · PK <strong>${CHFJ(st.post.pkRent)}</strong> · Miete <strong>${CHFJ(st.post.rent)}</strong>`, tags:[`Weitere ${CHFJ(st.post.other)}`, `Total ${CHFJ(st.post.ahv+st.post.pkRent+st.post.rent+st.post.other)}`], screen:'post'},
       {icon:'🏠', color:'green', title:'Vermögen heute', value:`Frei <strong>${CHF(st.post.free)}</strong> · Immobilie <strong>${CHF(st.post.re)}</strong> · Hypothek <strong>${CHF(st.post.mort)}</strong>`, tags:[`Netto ${CHF(Math.max(0,st.post.re-st.post.mort))}`, `${({cautious:'Vorsichtig',balanced:'Ausgewogen',bold:'Mutig'})[st.risk]} · ${st.ass.capitalReturn.toFixed(1)} %`], screen:'post'},
       {icon:'❤️', color:'red', title:'Lebensstandard', value:`Bedarf <strong>${CHFJ(st.need)}</strong>`, tags:[`Inflation ${st.ass.inflation.toFixed(1)} %`, `Ziel ${st.planningAge}`], screen:'need'}
     ];
@@ -501,7 +560,7 @@ function renderEdit(){
     }
     items.push(
       {icon:'⚖️', color:'blue', title:'PK-Aufteilung', value:`<strong>${st.pkShare} % Kapital</strong> · <strong>${100-st.pkShare} % Rente</strong>`, tags:[`Kapital ${CHF(s.cap)}`, `Rente ${CHFJ(s.rent)}`, `${({cautious:'Vorsichtig',balanced:'Ausgewogen',bold:'Mutig'})[st.risk]} · ${st.ass.capitalReturn.toFixed(1)} %`], screen:'pk'},
-      {icon:'💸', color:'gold', title:'Renten', value:`AHV <strong>${CHFJ(st.income.ahv)}</strong> · weitere <strong>${CHFJ(st.income.other)}</strong>`, tags:[`PK-Rente ${CHFJ(s.rent)}`, `Total ${CHFJ(rent0())}`], screen:'income'},
+      {icon:'💸', color:'gold', title:'Einkommen', value:`AHV <strong>${CHFJ(st.income.ahv)}</strong> · Miete <strong>${CHFJ(st.income.rent)}</strong>`, tags:[`Weitere ${CHFJ(st.income.other)}`, `PK-Rente ${CHFJ(s.rent)}`, `Total ${CHFJ(rent0())}`], screen:'income'},
       {icon:'❤️', color:'red', title:'Lebensstandard', value:`Bedarf <strong>${CHFJ(st.need)}</strong>`, tags:[`Inflation ${st.ass.inflation.toFixed(1)} %`, `Ziel ${st.planningAge}`], screen:'need'}
     );
   }
@@ -527,7 +586,7 @@ function renderEdit(){
                 <div class="edit-tags">${item.tags.map(t=>`<span class="edit-tag">${t}</span>`).join('')}</div>
               </div>
               <div class="edit-actions">
-                <button class="linkbtn" onclick="jump('${item.screen}')">Ändern</button>
+                <button class="linkbtn" ${planningLocked?'disabled':''} onclick="jump('${item.screen}')">${planningLocked?'Übermittelt':'Ändern'}</button>
               </div>
             </div>
           </div>
@@ -536,14 +595,23 @@ function renderEdit(){
     </div>
   `;
 }
-function jump(s){flow=makeFlow();i=flow.indexOf(s);if(i<0)i=0;showStep()}
+function jump(s){if(planningLocked)return;returnToResult=true;flow=makeFlow();i=flow.indexOf(s);if(i<0)i=0;showStep()}
 
 function restartPlanning(){
   if(!confirm('Möchtest du eine neue Planung starten? Deine aktuellen Eingaben werden zurückgesetzt.')) return;
   localStorage.removeItem('retirementMvp5');
+  localStorage.removeItem('retirementMvp5-submitted');
   st=structuredClone(D);
   flow=[];
   i=0;
+  returnToResult=false;
+  planningLocked=false;
+  selectedAdviceTopic='overall';
+  document.getElementById('adviceFlow')?.classList.add('hidden');
+  document.getElementById('contactForm')?.classList.remove('hidden');
+  document.getElementById('requestSuccess')?.classList.add('hidden');
+  document.getElementById('adviceError')?.classList.add('hidden');
+  ['contactName','contactEmail','contactPhone'].forEach(id=>{const field=document.getElementById(id);if(field) field.value=''});
   ui();
   show('start');
   window.scrollTo({top:0,behavior:'smooth'});
