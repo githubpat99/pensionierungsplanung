@@ -110,12 +110,11 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 .advice-coach{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;background:#fff3cf;border:1px solid #efd27d;font-size:0;flex:0 0 38px}.advice-coach::after{content:"🙂";font-size:21px}
 .advice-copy{font-size:14px;line-height:1.45;color:#334155}.advice-copy strong{color:var(--ink)}
 .advice-insight{margin-top:12px;padding:12px 13px;border-radius:15px;background:#fff;border:1px solid #e4eaf2;font-size:13px;line-height:1.4}
-.advice-options{display:grid;gap:9px;margin-top:12px}
 .advice-option{width:100%;text-align:left;border:1px solid var(--line);border-radius:16px;background:#fff;padding:13px 14px;display:grid;grid-template-columns:36px minmax(0,1fr) auto;gap:10px;align-items:center}
 .advice-option .ico{width:36px;height:36px;border-radius:12px;background:var(--blue2);display:grid;place-items:center;font-size:18px}
 .advice-option b{display:block;font-size:13px}.advice-option span{display:block;font-size:11px;color:var(--muted);margin-top:2px;line-height:1.35}.advice-option .arrow{color:var(--blue);font-weight:900}
 .advice-topics{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.advice-topic{border:1px solid var(--line);border-radius:14px;background:#fff;padding:11px 10px;font-size:12px;font-weight:800;text-align:left}.advice-topic.active{border-color:var(--blue);background:var(--blue2);color:var(--blue)}.advice-topic:disabled{opacity:.52;cursor:not-allowed}.advice-topic.active:disabled{opacity:1}
-.handoff-box{margin-top:12px;padding:13px;border-radius:15px;background:#fbfcfe;border:1px solid var(--line)}.handoff-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:850;color:var(--muted);margin-bottom:7px}.handoff-list{display:grid;gap:6px;font-size:12px;color:#475569}.handoff-list div{display:flex;justify-content:space-between;gap:10px}
+.handoff-box{margin-top:12px;padding:13px;border-radius:15px;background:#fbfcfe;border:1px solid var(--line)}.handoff-title{font-size:11px;text-transform:uppercase;letter-spacing:.06em;font-weight:850;color:var(--muted);margin-bottom:7px}.handoff-list{display:grid;gap:6px;font-size:12px;color:#475569}.handoff-list div{display:flex;justify-content:space-between;gap:10px}.handoff-list .handoff-section{display:block;margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-size:11px;font-weight:850;color:var(--blue);text-transform:uppercase;letter-spacing:.04em}
 .contact-form{display:grid;gap:8px;margin-top:12px}.contact-form input{width:100%;padding:12px 13px;border:1px solid var(--line);border-radius:13px;background:#fff}.contact-note{font-size:11px;color:var(--muted);line-height:1.4}
 .request-success{margin-top:12px;padding:15px;border:1px solid #b9e7d2;border-radius:15px;background:var(--green2);color:#0e7650;font-size:14px;line-height:1.45}.request-success strong{display:block;color:var(--ink);font-size:15px;margin-bottom:3px}.form-error{margin-top:2px;padding:10px 12px;border:1px solid #f0c6c8;border-radius:13px;background:var(--red2);color:#8f252a;font-size:12px;line-height:1.4}
 .submitted-status{display:none;margin:10px 0;padding:11px 13px;border:1px solid #b9e7d2;border-radius:14px;background:var(--green2);color:#0e7650;font-size:12px;font-weight:800}.submitted-status.visible{display:block}
@@ -260,11 +259,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
     <div class="advice-copy"><strong>Deine Standortbestimmung ist fertig.</strong><br><span id="closingMessage"></span></div>
   </div>
   <div id="closingInsight" class="advice-insight"></div>
-  <div class="advice-options">
-    <button class="advice-option" onclick="keepForMyself()"><div class="ico">🔒</div><div><b>Für mich behalten</b><span>Lokal auf diesem Gerät. Keine Kontaktdaten nötig.</span></div><div class="arrow">→</div></button>
-    <button class="advice-option" onclick="openAdviceFlow()"><div class="ico">💬</div><div><b>Diesen Punkt mit jemandem besprechen</b><span>Die Beratung startet mit deinen bereits erfassten Angaben.</span></div><div class="arrow">→</div></button>
-  </div>
-  <div id="adviceFlow" class="hidden">
+  <div id="adviceFlow">
     <div class="section blue">Worum soll es gehen?</div>
     <div class="advice-topics">
       <button class="advice-topic" data-topic="pk" onclick="selectAdviceTopic('pk')">⚖️ PK-Entscheid</button>
@@ -277,7 +272,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
       <div id="handoffList" class="handoff-list"></div>
     </div>
     <div id="contactForm" class="contact-form">
-      <input id="contactName" placeholder="Name" oninput="clearAdviceError()">
+      <input id="contactName" placeholder="Name (optional)" oninput="clearAdviceError()">
       <input id="contactEmail" type="email" placeholder="E-Mail" oninput="clearAdviceError()">
       <input id="contactPhone" placeholder="Telefon (optional)">
       <button class="primary" onclick="submitAdvice()">Beratung anfragen →</button>
@@ -398,9 +393,9 @@ function finish(){saveOpenInputs();renderResult();show('result');tab('overview',
 
 let selectedAdviceTopic='overall';
 function adviceContext(){
-  const d=proj(), gap=d.find(x=>x.gap>0), free=free0(), rent=rent0(), yield0=free*P(st.ass.capitalReturn);
+  const d=proj(), gap=d.find(x=>x.gap>0), free=free0(), bound=bound0(), rent=rent0(), yield0=free*P(st.ass.capitalReturn);
   const withdrawal=Math.max(0,st.need-(rent+yield0));
-  return {d,gap,free,rent,yield0,withdrawal};
+  return {d,gap,free,bound,rent,yield0,withdrawal};
 }
 function renderClosingAdvisor(){
   if(!document.getElementById('closingMessage')) return;
@@ -430,18 +425,9 @@ function renderClosingAdvisor(){
   }
   closingMessage.textContent=msg;
   closingInsight.innerHTML=insight;
+  adviceFlow.classList.remove('hidden');
   document.querySelectorAll('.advice-topic').forEach(b=>{b.classList.toggle('active',b.dataset.topic===selectedAdviceTopic);b.disabled=planningLocked});
   renderHandoff();
-}
-function keepForMyself(){
-  localStorage.setItem('retirementMvp5',JSON.stringify(st));
-  alert('Deine Planung bleibt lokal auf diesem Gerät gespeichert.');
-}
-function openAdviceFlow(){
-  if(planningLocked)return;
-  adviceFlow.classList.remove('hidden');
-  renderHandoff();
-  adviceFlow.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function selectAdviceTopic(topic){
   if(planningLocked)return;
@@ -467,14 +453,68 @@ function renderHandoff(){
   if(c.gap) rows.push(['Lücke ab',`Alter ${c.gap.age}`]);
   else if(c.withdrawal>0) rows.push(['Kapitalentnahme',CHFJ(c.withdrawal)]);
   rows.push(['Beratungsthema',({pk:'PK-Entscheid',capital:'Kapitalanlage',gap:'Versorgungslücke',overall:'Gesamte Planung'})[selectedAdviceTopic]]);
-  handoffList.innerHTML=rows.map(r=>`<div><span>${r[0]}</span><strong>${r[1]}</strong></div>`).join('');
+  const detailRows=detailedSubmissionLines(c).map(line=>{
+    if(!line) return '';
+    const separator=line.indexOf(':');
+    if(separator<0) return `<div class="handoff-section">${line}</div>`;
+    return `<div><span>${line.slice(0,separator)}</span><strong>${line.slice(separator+1).trim()}</strong></div>`;
+  }).join('');
+  handoffList.innerHTML=rows.map(r=>`<div><span>${r[0]}</span><strong>${r[1]}</strong></div>`).join('')+detailRows;
+}
+function detailedSubmissionLines(c){
+  const lines=[];
+  if(st.mode==='post'){
+    lines.push(
+      'Rentenleistungen pro Jahr',
+      `AHV: ${CHFJ(st.post.ahv)}`,
+      `PK-Rente: ${CHFJ(st.post.pkRent)}`,
+      `Zusatzleistungen / weitere Renten: ${CHFJ(st.post.other)}`,
+      `Mieteinnahmen netto: ${CHFJ(st.post.rent)}`,
+      `Freies Kapital: ${CHF(st.post.free)}`,
+      `Gebundenes Kapital / Immobilienwert: ${CHF(st.post.re)}`,
+      `Hypotheken: ${CHF(st.post.mort)}`,
+      `Gebundenes Kapital netto: ${CHF(Math.max(0,st.post.re-st.post.mort))}`
+    );
+  }else{
+    const p=projected(),s=split();
+    lines.push(
+      'Rentenleistungen pro Jahr bei Pensionierung',
+      `AHV: ${CHFJ(st.income.ahv)}`,
+      `PK-Rente aus Rentenanteil: ${CHFJ(s.rent)}`,
+      `Zusatzleistungen / weitere Renten: ${CHFJ(st.income.other)}`,
+      `Mieteinnahmen netto: ${CHFJ(st.income.rent)}`,
+      '',
+      'PK im Detail',
+      `PK-Guthaben heute: ${CHF(st.assets.pk)}`,
+      `PK-Guthaben bei Pensionierung: ${CHF(p.pk)}`,
+      `PK-Anteil Kapital: ${st.pkShare}% = ${CHF(s.cap)}`,
+      `PK-Anteil Rente: ${100-st.pkShare}% = ${CHF(s.base)}`,
+      `PK-Rente / Umwandlungssatz: ${CHFJ(s.rent)} bei ${st.ass.uws.toFixed(2)}%`,
+      `PK-Beitrag Arbeitnehmer: ${CHFJ(st.build.pkEmployee)}`,
+      `PK-Beitrag Arbeitgeber: ${CHFJ(st.build.pkEmployer)}`,
+      `PK-Verzinsung: ${st.ass.pkInterest.toFixed(2)}%`,
+      '',
+      'Freies Kapital im Detail',
+      `Säule 3a: ${CHF(p.p3)}`,
+      `Wertschriften / Fonds: ${CHF(p.sec)}`,
+      `Bank / übriges Vermögen: ${CHF(p.cash)}`,
+      `PK-Kapitalbezug: ${CHF(s.cap)}`,
+      `Freies Kapital total: ${CHF(c.free)}`,
+      '',
+      'Gebundenes Kapital im Detail',
+      `Immobilienwert: ${CHF(p.re)}`,
+      `Hypotheken: ${CHF(p.mort)}`,
+      `Gebundenes Kapital netto: ${CHF(c.bound)}`
+    );
+  }
+  return lines;
 }
 function submitAdvice(){
   const name=(contactName.value||'').trim(), email=(contactEmail.value||'').trim();
-  if(!name || !email){
-    adviceError.textContent=!name?'Bitte zuerst Deinen Namen eintragen.':'Bitte zuerst Deine E-Mail-Adresse eintragen.';
+  if(!email){
+    adviceError.textContent='Bitte zuerst Deine E-Mail-Adresse eintragen.';
     adviceError.classList.remove('hidden');
-    (!name?contactName:contactEmail).focus();
+    contactEmail.focus();
     return;
   }
   planningLocked=true;
@@ -485,6 +525,7 @@ function submitAdvice(){
   syncAssumptionLock();
   renderClosingAdvisor();
   const c=adviceContext();
+  const detailLines=detailedSubmissionLines(c);
   const subject='Ruhestandsplanung';
   const body=[
     'Guten Tag',
@@ -492,7 +533,7 @@ function submitAdvice(){
     'ich möchte meine Ruhestandsplanung besprechen.',
     '',
     'Kontaktdaten',
-    `Name: ${name}`,
+    `Name: ${name||'Nicht angegeben'}`,
     `E-Mail: ${email}`,
     `Telefon: ${(contactPhone.value||'Nicht angegeben').trim()}`,
     '',
@@ -502,10 +543,18 @@ function submitAdvice(){
     `Pensionierung: ${st.retirementAge}`,
     `Planung bis: ${st.planningAge}`,
     `Freies Kapital: ${CHF(c.free)}`,
+    `Gebundenes Kapital: ${CHF(c.bound)}`,
     `Sichere Einnahmen: ${CHFJ(c.rent)}`,
     `Lebensstandard: ${CHFJ(st.need)}`,
     `Beratungsthema: ${({pk:'PK-Entscheid',capital:'Kapitalanlage',gap:'Versorgungslücke',overall:'Gesamte Planung'})[selectedAdviceTopic]}`,
     c.gap ? `Lücke ab Alter: ${c.gap.age}` : 'Keine ungedeckte Lücke bis zum Planungsalter im aktuellen Szenario',
+    '',
+    ...detailLines,
+    '',
+    'Modellannahmen',
+    `Kapitalrendite: ${st.ass.capitalReturn.toFixed(2)}%`,
+    `Inflation: ${st.ass.inflation.toFixed(2)}%`,
+    `Planungshorizont: Alter ${st.planningAge}`,
     '',
     'Freundliche Grüsse',
     name
@@ -540,7 +589,6 @@ function restoreSubmissionState(){
     success.innerHTML=`<strong>Deine Anfrage wurde am ${label} übermittelt.</strong>Wir kommen sehr gerne auf Dich zu.`;
     success.classList.remove('hidden');
   }
-  document.querySelector('.advice-options')?.classList.add('hidden');
   const status=document.getElementById('submittedStatus');
   if(status){status.textContent='Anfrage übermittelt · Diese Planung ist schreibgeschützt.';status.classList.add('visible')}
 }
@@ -638,8 +686,6 @@ function restartPlanning(){
   returnToResult=false;
   planningLocked=false;
   selectedAdviceTopic='overall';
-  document.getElementById('adviceFlow')?.classList.add('hidden');
-  document.querySelector('.advice-options')?.classList.remove('hidden');
   document.getElementById('contactForm')?.classList.remove('hidden');
   document.getElementById('requestSuccess')?.classList.add('hidden');
   document.getElementById('adviceError')?.classList.add('hidden');
