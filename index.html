@@ -280,8 +280,8 @@ input.money,input.pct{font-size:16px;min-height:50px}
       <input id="contactName" placeholder="Name (optional)" oninput="clearAdviceError()">
       <input id="contactEmail" type="email" placeholder="E-Mail" oninput="clearAdviceError()">
       <input id="contactPhone" placeholder="Telefon (optional)">
-      <button class="primary" onclick="submitAdvice()">Beratung anfragen →</button>
-      <div class="contact-note">Kontaktdaten werden erst hier abgefragt, weil du die Kontaktaufnahme bewusst gewählt hast.</div>
+      <button class="primary" onclick="submitAdvice()">Testeingabe speichern →</button>
+      <div class="contact-note">Testversion: Die Eingabe wird nur lokal im Browser gespeichert. Es erfolgt keine Kontaktaufnahme.</div>
       <div id="adviceError" class="form-error hidden" role="alert"></div>
     </div>
     <div id="requestSuccess" class="request-success hidden" role="status" aria-live="polite"></div>
@@ -564,11 +564,11 @@ function submitAdvice(){
   const submittedLabel=new Date(submittedAt).toLocaleString('de-CH',{dateStyle:'long',timeStyle:'short'});
   navigator.clipboard.writeText(mailText).then(()=>{
     contactForm.classList.add('hidden');
-    requestSuccess.innerHTML=`<strong>Deine Anfrage wurde am ${submittedLabel} übermittelt.</strong>Wir kommen sehr gerne auf Dich zu.`;
+    requestSuccess.innerHTML=`<strong>Testeingabe am ${submittedLabel} lokal gespeichert.</strong>Es erfolgt keine Kontaktaufnahme.`;
     requestSuccess.classList.remove('hidden');
   }).catch(()=>{
     contactForm.classList.add('hidden');
-    requestSuccess.innerHTML=`<strong>Deine Anfrage wurde am ${submittedLabel} übermittelt.</strong>Wir kommen sehr gerne auf Dich zu.`;
+    requestSuccess.innerHTML=`<strong>Testeingabe am ${submittedLabel} lokal gespeichert.</strong>Es erfolgt keine Kontaktaufnahme.`;
     requestSuccess.classList.remove('hidden');
   });
 }
@@ -586,12 +586,12 @@ function restoreSubmissionState(){
   if(form)form.classList.add('hidden');
   if(success){
     const submittedAt=submission.at||'';
-    const label=submittedAt?new Date(submittedAt).toLocaleString('de-CH',{dateStyle:'long',timeStyle:'short'}):'bereits übermittelt';
-    success.innerHTML=`<strong>Deine Anfrage wurde am ${label} übermittelt.</strong>Wir kommen sehr gerne auf Dich zu.`;
+    const label=submittedAt?new Date(submittedAt).toLocaleString('de-CH',{dateStyle:'long',timeStyle:'short'}):'bereits gespeichert';
+    success.innerHTML=`<strong>Testeingabe am ${label} lokal gespeichert.</strong>Es erfolgt keine Kontaktaufnahme.`;
     success.classList.remove('hidden');
   }
   const status=document.getElementById('submittedStatus');
-  if(status){status.textContent='Anfrage übermittelt · Diese Planung ist schreibgeschützt.';status.classList.add('visible')}
+  if(status){status.textContent='Testeingabe gespeichert · Diese Planung ist schreibgeschuetzt.';status.classList.add('visible')}
 }
 function clearAdviceError(){adviceError.classList.add('hidden')}
 
@@ -665,7 +665,7 @@ function renderEdit(){
                 <div class="edit-tags">${item.tags.map(t=>`<span class="edit-tag">${t}</span>`).join('')}</div>
               </div>
               <div class="edit-actions">
-                <button class="linkbtn" ${planningLocked?'disabled':''} onclick="jump('${item.screen}')">${planningLocked?'Übermittelt':'Ändern'}</button>
+                <button class="linkbtn" ${planningLocked?'disabled':''} onclick="jump('${item.screen}')">${planningLocked?'Gespeichert':'Aendern'}</button>
               </div>
             </div>
           </div>
