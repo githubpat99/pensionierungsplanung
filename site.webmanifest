@@ -2,7 +2,7 @@
   "name": "Dein Ruhestands-Check",
   "short_name": "Ruhestands-Check",
   "lang": "de-CH",
-  "start_url": "./prototype3.html",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
