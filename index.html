@@ -39,7 +39,7 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 .side .calc .row.total{padding-top:9px}
 .data-row{display:grid;grid-template-columns:minmax(0,1fr) 112px;gap:12px;align-items:center;margin:11px 0}.data-row .label{font-size:15px;line-height:1.25}.data-row .hint{display:block;margin-top:3px;color:var(--muted);font-size:11px;line-height:1.35}.data-row input{width:100%;min-height:46px}
 .metrics{display:grid;grid-template-columns:1fr 1fr;gap:10px}.metric{padding:14px;border:1px solid var(--line);border-radius:16px;background:#f9fbfd}.metric.blue{background:var(--blue2)}.metric.gold{background:var(--gold2)}.metric small{color:var(--muted)}.metric strong{display:block;font-size:18px;margin-top:4px}
-.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:12px 0}.tabs button{border:1px solid var(--line);background:white;border-radius:999px;padding:10px 4px;font-size:11px;font-weight:800}.tabs button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin:12px 0}.tabs button{border:1px solid var(--line);background:white;border-radius:999px;padding:10px 4px;font-size:11px;font-weight:800}.tabs button.active{background:var(--blue);color:#fff;border-color:var(--blue)}
 .chart-wrap{width:100%;overflow:hidden;border-radius:16px;background:linear-gradient(#fff,#f8fbff);padding:6px 0}.chart-wrap canvas{display:block;width:100%;height:235px;max-width:100%}.legend{display:flex;gap:11px;flex-wrap:wrap;font-size:11px;color:var(--muted);margin-top:9px}.legend i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 .gap-point{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:12px 13px;border:1px solid #f0c6c8;border-radius:15px;background:var(--red2);color:#8f252a;font-size:13px;line-height:1.4}.gap-point strong{display:block;color:var(--ink);font-size:14px;margin-bottom:2px}.gap-point.ok{border-color:#b9e7d2;background:var(--green2);color:#0e7650}.gap-point.ok strong{color:var(--ink)}
 .horizon{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}.hcard{min-width:0;border:1px solid var(--line);border-radius:15px;padding:12px 8px;text-align:center;background:#fff}.hcard small{color:var(--muted);font-size:12px}.hcard b{display:block;font-size:15px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.hcard span{display:block;margin-top:3px;font-size:12px;font-weight:800}.ok{color:var(--green)}.warn{color:var(--gold)}.bad{color:var(--red)}
@@ -101,7 +101,7 @@ h1{font-size:34px;line-height:1.04;margin:8px 0 10px;letter-spacing:-.035em}h2{f
 .bubble.assistant{background:#fff;border-top-left-radius:6px;box-shadow:0 5px 16px rgba(27,46,89,.05)}
 .bubble.user{background:var(--blue);color:#fff;margin-left:auto;border-color:var(--blue);border-top-right-radius:6px}
 .chat-prompt{margin:8px 0 2px;font-size:13px;font-weight:850;color:var(--ink)}
-.answer-grid{display:grid;gap:9px}
+.answer-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
 .answer-card{width:100%;text-align:left;border:1px solid var(--line);border-radius:18px;background:#fff;padding:14px 15px;display:grid;grid-template-columns:40px minmax(0,1fr);gap:11px;align-items:center}
 .answer-card:hover,.answer-card:focus{border-color:var(--blue);background:var(--blue2)}
 .answer-card .ans-ico{width:40px;height:40px;border-radius:13px;background:var(--blue2);display:grid;place-items:center;font-size:20px}
@@ -159,7 +159,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
   .chat-shell{max-width:620px}
   .actions{position:static;padding:0;background:none}
   .card{padding:22px}
-  .answer-grid{grid-template-columns:repeat(3,1fr);align-items:stretch}
+  .answer-grid{grid-template-columns:repeat(2,minmax(0,1fr));align-items:stretch}
   .answer-card{display:flex;flex-direction:column;align-items:flex-start}
 }
 @media(max-width:380px){
@@ -198,7 +198,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <div class="chat-shell">
   <div class="coach-row"><div class="coach-mini"></div><div class="bubble assistant">Wie alt bist du heute und wann planst du in den Ruhestand zu gehen?</div></div>
 </div>
-<div class="card"><div class="section blue">Alter heute</div><div class="bigrow"><button class="round" aria-label="Alter verringern" onclick="chg('currentAge',-1)">−</button><div class="big"><strong id="ageNowVal"></strong><small>Jahre</small></div><button class="round" aria-label="Alter erhöhen" onclick="chg('currentAge',1)">+</button></div><div class="section blue">Start Ruhestand</div><div class="bigrow"><button class="round" aria-label="Ruhestandsstart verringern" onclick="chg('retirementAge',-1)">−</button><div class="big"><strong id="ageRetVal"></strong><small>Jahre</small></div><button class="round" aria-label="Ruhestandsstart erhöhen" onclick="chg('retirementAge',1)">+</button></div><div id="relationNote" class="note green"></div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="forward()">Weiter →</button></div></section>
+<div class="card"><div class="section blue">Alter heute</div><div class="bigrow"><button class="round" aria-label="Alter verringern" onclick="chg('currentAge',-1)">−</button><div class="big"><strong id="ageNowVal"></strong><small>Jahre</small></div><button class="round" aria-label="Alter erhöhen" onclick="chg('currentAge',1)">+</button></div><div id="retirementTiming"><div class="section blue">Start Ruhestand</div><div class="bigrow"><button class="round" aria-label="Ruhestandsstart verringern" onclick="chg('retirementAge',-1)">−</button><div class="big"><strong id="ageRetVal"></strong><small>Jahre</small></div><button class="round" aria-label="Ruhestandsstart erhöhen" onclick="chg('retirementAge',1)">+</button></div><div id="relationNote" class="note green"></div></div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="forward()">Weiter →</button></div></section>
 
 <section class="screen" data-screen="assets">
 <div class="chat-shell">
@@ -213,7 +213,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
 </div>
 <div class="card">
 <div class="asset"><div class="asset-head" onclick="toggle(this)" aria-expanded="false"><div class="ico">🏦</div><div class="copy"><b>PK-Einzahlungen pro Jahr</b><span>Arbeitgeber und Arbeitnehmer</span></div><div class="amt" id="pkContribTotal">bearbeiten</div></div><div class="asset-body hidden"><div class="split"><label class="field"><span>Arbeitnehmer</span><input id="pkEmployee" class="money" inputmode="numeric" oninput="syncLiveInput(this)"></label><label class="field"><span>Arbeitgeber</span><input id="pkEmployer" class="money" inputmode="numeric" oninput="syncLiveInput(this)"></label></div><div class="note">Zusammen pro Jahr: <strong id="pkContribTotalNote"></strong></div></div></div>
-<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">📈</div><div class="copy"><b>PK-Verzinsung</b><span>Ø 4,33 % in 2025</span></div><div class="amt" id="pkIntMini"></div></div><div class="asset-body hidden"><input id="pkInterest" class="pct" inputmode="decimal" oninput="syncLiveInput(this)"></div></div>
+<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">📈</div><div class="copy"><b>Erwartete PK-Verzinsung</b><span>Zinsgutschrift auf dein Altersguthaben</span></div><div class="amt" id="pkIntMini"></div></div><div class="asset-body hidden"><input id="pkInterest" class="pct" inputmode="decimal" oninput="syncLiveInput(this)"><div class="note">Gemeint ist die Verzinsung deines persönlichen PK-Guthabens bis zur Pensionierung. Die Anlagerendite der Pensionskasse ist nicht dasselbe und wird deshalb nicht separat eingegeben.</div></div></div>
 <div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">🌱</div><div class="copy"><b>Säule 3a</b><span>Einzahlung und Rendite</span></div><div class="amt" id="p3Summary"></div></div><div class="asset-body hidden"><input id="p3Contrib" class="money" inputmode="numeric" placeholder="Einzahlung/Jahr" oninput="syncLiveInput(this)"><input id="p3Return" class="pct" inputmode="decimal" style="margin-top:8px" placeholder="Rendite %" oninput="syncLiveInput(this)"></div></div>
 <div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">📊</div><div class="copy"><b>Wertschriften</b><span>Rendite & zusätzliche Sparleistung</span></div><div class="amt" id="secSummary"></div></div><div class="asset-body hidden"><input id="secReturn" class="pct" inputmode="decimal" placeholder="Rendite %" oninput="syncLiveInput(this)"><input id="otherSave" class="money" inputmode="numeric" style="margin-top:8px" placeholder="Sparleistung/Jahr" oninput="syncLiveInput(this)"></div></div>
 <div class="calc"><div class="row"><span>PK heute</span><strong id="pkToday"></strong></div><div class="row total"><span>PK bei Pensionierung</span><strong id="pkAtRet" class="gold"></strong></div></div>
@@ -262,13 +262,14 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <div class="card"><div class="kicker">Dein Horizont</div><div class="bigrow"><button class="round" onclick="chg('planningAge',-1)">−</button><div class="big"><strong id="planVal"></strong><small>Jahre</small></div><button class="round" onclick="chg('planningAge',1)">+</button></div><div class="note">Wir rechnen mit anerkannten Annahmen (z. B. SECO/Inflation, PK-Zins, Umwandlungssatz). Diese Werte kannst du im Anschluss bei Bedarf anpassen.</div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="finish()">Standortbestimmung anzeigen →</button></div></section>
 
 <section class="screen" data-screen="result">
-<div class="tabs"><button class="active" onclick="tab('overview',this)">Übersicht</button><button onclick="tab('dev',this)">Entwicklung</button><button onclick="tab('ass',this)">Annahmen</button><button onclick="tab('edit',this)">Angaben</button></div>
+<div class="tabs"><button class="active" data-tab="overview" onclick="tab('overview',this)">Übersicht</button><button data-tab="pots" onclick="tab('pots',this)">3 Töpfe</button><button data-tab="dev" onclick="tab('dev',this)">Entwicklung</button><button data-tab="ass" onclick="tab('ass',this)">Annahmen</button><button data-tab="edit" onclick="tab('edit',this)">Angaben</button></div>
+<div id="submittedStatus" class="submitted-status" role="status" aria-live="polite"></div>
+
+<div id="tab-overview">
 <div class="restart-row">
   <button class="restart-link" onclick="restartPlanning()">↺ Neue Planung starten</button>
 </div>
-<div id="submittedStatus" class="submitted-status" role="status" aria-live="polite"></div>
-
-<div id="tab-overview"><div class="card"><div class="kicker">Standortbestimmung</div><h2 id="resultTitle"></h2>
+<div class="card"><div class="kicker">Standortbestimmung</div><h2 id="resultTitle"></h2>
 <div class="split">
 <div class="side cap"><small>Kapital</small><div class="calc"><div class="row"><span>Gesamt</span><strong id="rCapTotal"></strong></div><div class="row"><span>Gebunden</span><strong id="rBound"></strong></div><div class="row total"><span>Verfügbar</span><strong id="rFree" class="blue"></strong></div></div></div>
 <div class="side rent"><small>Einkommen</small><div class="calc"><div class="row"><span>Gesamt</span><strong id="rIncomeTotal"></strong></div><div class="row"><span>aus Renten</span><strong id="rRent" class="gold"></strong></div><div class="row"><span>aus Kapital</span><strong id="rYield" class="blue"></strong></div><div class="row"><span>Weitere</span><strong id="rOther"></strong></div></div></div>
@@ -284,8 +285,23 @@ input.money,input.pct{font-size:16px;min-height:50px}
 </div></div>
 
 
-<div id="tab-dev" class="hidden"><div class="card"><div class="kicker">Entwicklung</div><h2>Wie trägt deine Planung?</h2><div class="chart-wrap"><canvas id="chart" width="420" height="245"></canvas></div><div class="legend"><span><i style="background:var(--blue)"></i>Gesamt</span><span><i style="background:#9bc4ff"></i>Frei</span><span><i style="background:var(--grey)"></i>Gebunden</span><span><i style="background:var(--red)"></i>Lücke</span></div><div id="gapPoint" class="gap-point" aria-live="polite"></div><div class="horizon"><div class="hcard"><small id="a0"></small><b id="v0"></b><span id="s0"></span></div><div class="hcard"><small id="a10"></small><b id="v10"></b><span id="s10"></span></div><div class="hcard"><small id="a20"></small><b id="v20"></b><span id="s20"></span></div><div class="hcard"><small id="ae"></small><b id="ve"></b><span id="se"></span></div></div></div></div>
-<div id="tab-ass" class="hidden"><div class="card"><div class="kicker">Simulation verfeinern</div><h2>Annahmen</h2><div class="data-row"><div><div class="label">Inflation</div><div class="hint">SECO-Prognose 2026/27: 0,6 %</div></div><input id="assInfl" class="pct" inputmode="decimal"></div><div class="data-row"><div><div class="label">Kapitalrendite</div><div class="hint">abhängig vom Risikoprofil</div></div><input id="assCap" class="pct" inputmode="decimal"></div><div id="preAss"><div class="data-row"><div><div class="label">PK-Verzinsung</div><div class="hint">Ø 2025: 4,33 %, BVG-Mindestzins 2026: 1,25 %</div></div><input id="assPk" class="pct" inputmode="decimal"></div><div class="data-row"><div><div class="label">Umwandlungssatz</div></div><input id="assUws" class="pct" inputmode="decimal"></div></div><button class="primary" style="margin-top:14px" onclick="saveAss()">Neu berechnen →</button></div></div>
+<div id="tab-dev" class="hidden">
+  <div class="card dev-intro-card">
+    <div class="kicker">Prognose</div>
+    <h2>Wie entwickelt sich dein Aktientopf?</h2>
+    <p class="chart-context">Basis: MSCI World · letzte 10 Jahre · in heutiger Kaufkraft.</p>
+    <div id="devPotSummary" class="dev-pot-summary"></div>
+    <div class="dev-focus-note"><span aria-hidden="true">ⓘ</span><div>Gleiche Renditen 2016–2025, unterschiedlich angeordnet. Topf 1 und 2 finanzieren die nächsten Entnahmen.</div></div>
+  </div>
+  <div class="card dev-chart-card">
+    <div class="dev-chart-title"><h2>Pessimistische und optimistische Variante</h2><details class="dev-history-info"><summary aria-label="Historische Berechnung erklären">ⓘ</summary><p>MSCI World brutto in CHF, nach Schweizer Inflation und vor Anlagekosten. Pessimistisch: schwache Jahre zuerst. Optimistisch: starke Jahre zuerst. Beide Varianten verwenden dieselben zehn Jahresrenditen und sind keine Prognose. Quellen: MSCI und BFS.</p></details></div>
+    <div class="chart-wrap"><canvas id="chart" width="520" height="300" role="img" aria-label="Entwicklung des Aktientopfs mit pessimistischer und optimistischer Reihenfolge der realen Renditen von 2016 bis 2025"></canvas></div>
+    <div class="legend"><span><i style="background:var(--red)"></i>Pessimistisch</span><span><i style="background:var(--blue)"></i>Optimistisch</span></div>
+    <div class="horizon"><div class="hcard"><small id="a0"></small><b id="v0"></b><span id="s0"></span></div><div class="hcard"><small id="a10"></small><b id="v10"></b><span id="s10"></span></div><div class="hcard"><small id="a20"></small><b id="v20"></b><span id="s20"></span></div><div class="hcard"><small id="ae"></small><b id="ve"></b><span id="se"></span></div></div>
+    <div id="gapPoint" class="gap-point" aria-live="polite"></div>
+  </div>
+</div>
+<div id="tab-ass" class="hidden"><div class="card model-assumptions-card"><details class="model-assumptions"><summary><span><small>Technische Modellannahmen</small><strong>Inflation, Rendite und Umwandlung</strong></span><span class="risk-chevron" aria-hidden="true">⌄</span></summary><div class="model-assumptions-body"><p class="note">Diese Werte sind für die Rechnung nötig, aber keine direkt steuerbaren Planungshebel.</p><div class="data-row"><div><div class="label">Langfristige Inflation</div><div class="hint">SECO-Prognose 2026/27: 0,6 %; für die Langfristplanung als Szenario behandeln.</div></div><input id="assInfl" class="pct" inputmode="decimal"></div><div id="preAss"><div class="data-row"><div><div class="label">Rendite des PK-Kapitalbezugs</div><div class="hint">Nur für den Vergleich Kapitalbezug versus PK-Rente.</div></div><input id="assCap" class="pct" inputmode="decimal"></div><div class="data-row"><div><div class="label">Umwandlungssatz</div><div class="hint">Gemäss persönlichem Vorsorgeausweis oder Reglement.</div></div><input id="assUws" class="pct" inputmode="decimal"></div></div><button class="primary" style="margin-top:14px" onclick="saveAss()">Annahmen übernehmen →</button></div></details></div></div>
 <div id="tab-edit" class="hidden"><div class="card"><div class="kicker">Direkt bearbeiten</div><h2>Meine Angaben</h2><div id="editList"></div></div></div>
 </section>
 
@@ -356,7 +372,7 @@ function makeFlow(){return st.mode==='pre'?['ageNow','assets','build','pk','inco
 function show(n){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.querySelector(`[data-screen="${n}"]`).classList.add('active');prog.classList.toggle('hidden',['start','result','advice'].includes(n));window.scrollTo({top:0,behavior:'smooth'})}
 function showStep(){flow=makeFlow();i=Math.max(0,Math.min(i,flow.length-1));show(flow[i]);ptext.textContent=`Schritt ${i+1} von ${flow.length}`;pchapter.textContent=({ageNow:'Zeitpunkt',assets:'Heute',build:'Aufbau',pk:'PK-Entscheid',income:'Einkommen',postIncome:'Heute',postAssets:'Vermögen',need:'Lebensstandard',horizon:'Horizont'})[flow[i]];pbar.style.width=((i+1)/flow.length*100)+'%';const activeScreen=document.querySelector('.screen.active');const recalcButton=activeScreen?.querySelector('.actions .primary');if(recalcButton)recalcButton.textContent=returnToResult?'Neu berechnen →':'Weiter →';ui()}
 function forward(){if(returnToResult){const screen=document.querySelector('.screen.active')?.dataset.screen;if(screen==='assets'||screen==='postIncome'||screen==='postAssets'||screen==='income')saveOpenInputs();if(screen==='build')saveBuild();returnToResult=false;renderResult();show('result');tab('overview',document.querySelector('.tabs button'));return}i++;showStep()}
-function back(){if(returnToResult){returnToResult=false;show('result');tab('edit',document.querySelectorAll('.tabs button')[3]);return}if(i===0){show('start');return}i--;showStep()}
+function back(){if(returnToResult){returnToResult=false;show('result');tab('edit',document.querySelector('.tabs button[data-tab="edit"]'));return}if(i===0){show('start');return}i--;showStep()}
 function chg(k,d){if(planningLocked)return;st[k]+=d;if(k==='currentAge')st[k]=Math.max(18,Math.min(100,st[k]));if(k==='retirementAge')st[k]=Math.max(50,Math.min(80,st[k]));if(st.mode==='post'&&k==='retirementAge')st[k]=Math.min(st.currentAge,st[k]);if(st.mode==='post'&&k==='currentAge')st.retirementAge=Math.min(st.retirementAge,st.currentAge);if(st.mode!=='post'&&k==='currentAge')st.retirementAge=Math.max(st.retirementAge,st.currentAge);if(k==='planningAge')st[k]=Math.max(Math.max(st.currentAge,st.retirementAge)+1,Math.min(110,st[k]));if(k==='need')st[k]=Math.max(20000,st[k]);persist();ui()}
 function toggle(el){const a=el.parentElement,b=a.querySelector('.asset-body');document.querySelectorAll('.asset-body').forEach(x=>{if(x!==b){x.classList.add('hidden');x.parentElement.querySelector('.asset-head')?.setAttribute('aria-expanded','false')}});const isHidden=b.classList.toggle('hidden');el.setAttribute('aria-expanded',String(!isHidden))}
 function renderAssetList(){assetList.innerHTML=assetsMeta.map(([k,ico,t,h])=>`<div class="asset"><div class="asset-head" onclick="toggle(this)"><div class="ico">${ico}</div><div class="copy"><b>${t}</b><span>${h}</span></div><div class="amt">${st.assets[k]?CHF(st.assets[k]):'hinzufügen'}</div></div><div class="asset-body hidden"><input class="money" inputmode="numeric" data-a="${k}" value="${st.assets[k]||0}" oninput="syncLiveInput(this)"></div></div>`).join('')}
@@ -398,6 +414,8 @@ function point(n){const d=proj(),target=Math.min(d[0].age+n,d.at(-1).age);return
 function pkShare(v){if(planningLocked)return;st.pkShare=+v;persist();ui()}function risk(r){if(planningLocked)return;st.risk=r;st.ass.capitalReturn=rates[r];persist();ui()}
 function ui(){
 const preserveInput=liveInputState;
+document.getElementById('retirementTiming').classList.toggle('hidden',st.mode==='post');
+document.querySelector('[data-screen="ageNow"] .bubble').textContent=st.mode==='post'?'Wie alt bist du heute?':'Wie alt bist du heute und wann planst du in den Ruhestand zu gehen?';
 ageNowVal.textContent=st.currentAge;ageRetVal.textContent=st.retirementAge;planVal.textContent=st.planningAge;needVal.textContent=CHF(st.need);
 const d=st.retirementAge-st.currentAge;relationNote.textContent=st.mode==='post'?`Du bist seit ${Math.max(0,st.currentAge-st.retirementAge)} Jahren pensioniert.`:d>0?`Noch ${d} Jahre bis zu deiner Pensionierung.`:'Du stehst unmittelbar bei der Pensionierung.';
 renderAssetList();renderPostIncome();renderPostAssets();renderIncome();
@@ -407,7 +425,7 @@ pkSlider.style.background=`linear-gradient(90deg,var(--blue) 0 ${st.pkShare}%, v
 pkCap.textContent=CHF(s.cap);pkCapPct.textContent=st.pkShare+' %';
 pkRentBase.textContent=CHF(s.base);pkRentPct.textContent=(100-st.pkShare)+' %';
 pkChoiceCap.textContent=`${st.pkShare}% Kapital`;
-pkChoiceRent.textContent=`${100-st.pkShare}% Rente`;const cy=s.cap*P(st.ass.capitalReturn),delta=s.rent-cy;capYield.textContent=CHFJ(cy);capYieldSub.textContent=st.ass.capitalReturn.toFixed(1)+' % Rendite';pkRent.textContent=CHFJ(s.rent);pkDelta.textContent=delta>=0?`Die Rentenseite liefert im ersten Jahr ${CHFJ(delta)} mehr laufende Zahlung. Dafür bleibt der Kapitalanteil frei verfügbar.`:`Die modellierte Kapitalrendite liegt ${CHFJ(Math.abs(delta))} über der PK-Rente. Dafür trägst du das Anlagerisiko.`;pkRentLine.textContent=CHFJ(s.rent);rentTotal.textContent=CHFJ(rent0())}
+pkChoiceRent.textContent=`${100-st.pkShare}% Rente`;const cy=s.cap*P(st.ass.capitalReturn),delta=s.rent-cy;capYield.textContent=CHFJ(cy);capYieldSub.textContent=st.ass.capitalReturn.toFixed(1)+' % Rendite';pkRent.textContent=CHFJ(s.rent);pkDelta.textContent=delta>=0?`Die Rentenseite liefert im ersten Jahr ${CHFJ(delta)} mehr laufende Zahlung. Dafür bleibt der Kapitalanteil frei verfügbar.`:`Die modellierte Rendite des bezogenen PK-Kapitals liegt ${CHFJ(Math.abs(delta))} über der PK-Rente. Dafür trägst du das Anlagerisiko.`;pkRentLine.textContent=CHFJ(s.rent);rentTotal.textContent=CHFJ(rent0())}
 document.querySelectorAll('[data-risk],[data-postrisk]').forEach(b=>{const k=b.dataset.risk||b.dataset.postrisk;b.classList.toggle('active',k===st.risk)})
 if(preserveInput){
   let input=preserveInput.id?document.getElementById(preserveInput.id):null;
@@ -477,8 +495,8 @@ function renderHandoff(){
   let rows=[
     ['Status', st.mode==='post'?`pensioniert, heute ${st.currentAge}`:`heute ${st.currentAge}, Pensionierung ${st.retirementAge}`],
     ['Freies Kapital', CHF(c.free)],
-    ['Sichere Renten', CHFJ(c.rent)],
-    ['Lebensstandard', CHFJ(st.need)]
+    [`Einnahmen ab ${startAge()}`, CHFJ(c.rent)],
+    [`Lebensstandard ab ${startAge()}`, CHFJ(st.need)]
   ];
   if(st.mode!=='post'){
     const s=split();
@@ -500,7 +518,7 @@ function detailedSubmissionLines(c){
   const lines=[];
   if(st.mode==='post'){
     lines.push(
-      'Rentenleistungen pro Jahr',
+      'Einnahmen pro Jahr',
       `AHV: ${CHFJ(st.post.ahv)}`,
       `PK-Rente: ${CHFJ(st.post.pkRent)}`,
       `Weitere Renten: ${CHFJ(st.post.other)}`,
@@ -513,7 +531,7 @@ function detailedSubmissionLines(c){
   }else{
     const p=projected(),s=split();
     lines.push(
-      'Rentenleistungen pro Jahr bei Pensionierung',
+      'Einnahmen pro Jahr bei Pensionierung',
       `AHV: ${CHFJ(st.income.ahv)}`,
       `PK-Rente aus Rentenanteil: ${CHFJ(s.rent)}`,
       `Zusatzleistungen / weitere Renten: ${CHFJ(st.income.other)}`,
@@ -587,7 +605,7 @@ function submitAdvice(){
     ...detailLines,
     '',
     'Modellannahmen',
-    `Kapitalrendite: ${st.ass.capitalReturn.toFixed(2)}%`,
+    `Rendite PK-Kapitalbezug: ${st.ass.capitalReturn.toFixed(2)}%`,
     `Inflation: ${st.ass.inflation.toFixed(2)}%`,
     `Planungshorizont: Alter ${st.planningAge}`,
     '',
@@ -629,18 +647,17 @@ function restoreSubmissionState(){
 }
 function clearAdviceError(){adviceError.classList.add('hidden')}
 
-function syncAssumptionLock(){[assInfl,assCap,assPk,assUws].forEach(field=>{if(field)field.disabled=planningLocked});const recalc=document.querySelector('#tab-ass .primary');if(recalc)recalc.disabled=planningLocked}
+function syncAssumptionLock(){[assInfl,assCap,assUws].forEach(field=>{if(field)field.disabled=planningLocked});const recalc=document.querySelector('#tab-ass .primary');if(recalc)recalc.disabled=planningLocked}
 function keepLocal(){persist();const btn=document.querySelector('.completion-actions .secondary');if(btn){btn.textContent='Gespeichert ✓';setTimeout(()=>{btn.textContent='Für mich behalten'},2000)}}
 function startAdvice(){show('advice')}
-function renderResult(){const f=free0(),b=bound0(),r=rent0(),y=f*P(st.ass.capitalReturn),need=st.need,diff=r+y-need,ib=incomeBreakdown();resultTitle.textContent=st.mode==='post'?'Deine Situation heute':`Dein Startpunkt mit ${st.retirementAge}`;rCapTotal.textContent=CHF(f+b);rBound.textContent=CHF(b);rFree.textContent=CHF(f);rIncomeTotal.textContent=CHFJ(r+y);rRent.textContent=CHFJ(ib.rent);rYield.textContent=CHFJ(y);rOther.textContent=CHFJ(ib.other);rr4.textContent=CHFJ(need);rrLabel.textContent=diff>=0?'Überschuss':'Kapitalentnahme nötig';rr5.textContent=CHFJ(Math.abs(diff));rr5.className=diff>=0?'ok':'bad';preAss.classList.toggle('hidden',st.mode==='post');assInfl.value=st.ass.inflation;assCap.value=st.ass.capitalReturn;assPk.value=st.ass.pkInterest;assUws.value=st.ass.uws;syncAssumptionLock();renderChart();renderEdit();renderClosingAdvisor();restoreSubmissionState()}
-function renderChart(){const c=chart,ctx=c.getContext('2d'),d=proj(),pad={l:34,r:10,t:14,b:28},W=c.width-pad.l-pad.r,H=c.height-pad.t-pad.b,max=Math.max(...d.map(x=>x.total),1)*1.1;ctx.clearRect(0,0,c.width,c.height);ctx.strokeStyle='#dce3ec';for(let j=0;j<4;j++){let yy=pad.t+H*j/3;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(pad.l+W,yy);ctx.stroke()}const X=j=>pad.l+(d.length===1?0:j/(d.length-1))*W,Y=v=>pad.t+H-v/max*H;ctx.beginPath();ctx.moveTo(X(0),Y(0));d.forEach((p,j)=>ctx.lineTo(X(j),Y(p.bound)));ctx.lineTo(X(d.length-1),Y(0));ctx.closePath();ctx.fillStyle='rgba(138,149,165,.32)';ctx.fill();ctx.beginPath();ctx.moveTo(X(0),Y(d[0].bound));d.forEach((p,j)=>ctx.lineTo(X(j),Y(p.total)));for(let j=d.length-1;j>=0;j--)ctx.lineTo(X(j),Y(d[j].bound));ctx.closePath();ctx.fillStyle='rgba(155,196,255,.48)';ctx.fill();ctx.beginPath();d.forEach((p,j)=>j?ctx.lineTo(X(j),Y(p.total)):ctx.moveTo(X(j),Y(p.total)));ctx.strokeStyle='#2563EB';ctx.lineWidth=3;ctx.stroke();const firstGap=d.findIndex(p=>p.gap>0);if(firstGap>=0){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#e5484d';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(firstGap),pad.t);ctx.lineTo(X(firstGap),pad.t+H);ctx.stroke();ctx.restore()}const gapPoint=document.getElementById('gapPoint');if(gapPoint){if(firstGap>=0){const gap=d[firstGap];gapPoint.className='gap-point';gapPoint.innerHTML=`<span aria-hidden="true">⚠️</span><div><strong>Ab Alter ${gap.age} ist die Lücke nicht mehr geschlossen.</strong>Im Modell ist das freie Kapital erstmals aufgebraucht; ab diesem Zeitpunkt fehlen rund ${CHFJ(Math.abs(gap.net))} pro Jahr.</div>`}else{gapPoint.className='gap-point ok';gapPoint.innerHTML='<span aria-hidden="true">✓</span><div><strong>Bis zum Planungsalter bleibt die Planung gedeckt.</strong>Im gewählten Szenario wird keine ungedeckte Lücke berechnet.</div>'}}const pts=[d[0],point(10),point(20),d.at(-1)],ids=[['a0','v0','s0'],['a10','v10','s10'],['a20','v20','s20'],['ae','ve','se']];pts.forEach((p,j)=>{document.getElementById(ids[j][0]).textContent='Alter '+p.age;document.getElementById(ids[j][1]).textContent=CHF(p.free);let s=p.gap>0?['Lücke','bad']:p.net<0?['Entnahme','warn']:['gedeckt','ok'];let e=document.getElementById(ids[j][2]);e.textContent=s[0];e.className=s[1]})}
-function tab(n,b){['overview','dev','ass','edit'].forEach(x=>document.getElementById('tab-'+x).classList.add('hidden'));document.getElementById('tab-'+n).classList.remove('hidden');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));if(b)b.classList.add('active')}
+function renderResult(){const f=free0(),b=bound0(),r=rent0(),y=f*P(st.ass.capitalReturn),need=st.need,diff=r+y-need,ib=incomeBreakdown();resultTitle.textContent=st.mode==='post'?'Deine Situation heute':`Dein Startpunkt mit ${st.retirementAge}`;rCapTotal.textContent=CHF(f+b);rBound.textContent=CHF(b);rFree.textContent=CHF(f);rIncomeTotal.textContent=CHFJ(r+y);rRent.textContent=CHFJ(ib.rent);rYield.textContent=CHFJ(y);rOther.textContent=CHFJ(ib.other);rr4.textContent=CHFJ(need);rrLabel.textContent=diff>=0?'Überschuss':'Kapitalentnahme nötig';rr5.textContent=CHFJ(Math.abs(diff));rr5.className=diff>=0?'ok':'bad';preAss.classList.toggle('hidden',st.mode==='post');assInfl.value=st.ass.inflation;if(assCap)assCap.value=st.ass.capitalReturn;if(assUws)assUws.value=st.ass.uws;syncAssumptionLock();renderChart();renderEdit();renderClosingAdvisor();restoreSubmissionState()}
+function renderChart(){const c=chart,ctx=c.getContext('2d'),d=proj(),pad={l:58,r:16,t:25,b:35},W=c.width-pad.l-pad.r,H=c.height-pad.t-pad.b,max=Math.max(...d.map(x=>x.total),1)*1.1;ctx.clearRect(0,0,c.width,c.height);ctx.strokeStyle='#dce3ec';for(let j=0;j<4;j++){let yy=pad.t+H*j/3;ctx.beginPath();ctx.moveTo(pad.l,yy);ctx.lineTo(pad.l+W,yy);ctx.stroke();ctx.fillStyle='#475569';ctx.font='11px system-ui';ctx.textAlign='right';ctx.textBaseline='middle';ctx.fillText(new Intl.NumberFormat('de-CH',{maximumFractionDigits:1}).format(max*(1-j/3)/1000000),pad.l-8,yy)}ctx.textAlign='left';ctx.textBaseline='top';ctx.fillText('CHF Mio.',pad.l,4);ctx.textAlign='right';ctx.fillText('Alter',pad.l+W,c.height-13);[0,Math.round((d.length-1)/2),d.length-1].filter((v,i,a)=>a.indexOf(v)===i).forEach(j=>{ctx.textAlign='center';ctx.fillText(d[j].age,pad.l+j/Math.max(1,d.length-1)*W,pad.t+H+8)});const X=j=>pad.l+(d.length===1?0:j/(d.length-1))*W,Y=v=>pad.t+H-v/max*H;ctx.beginPath();ctx.moveTo(X(0),Y(0));d.forEach((p,j)=>ctx.lineTo(X(j),Y(p.bound)));ctx.lineTo(X(d.length-1),Y(0));ctx.closePath();ctx.fillStyle='rgba(138,149,165,.32)';ctx.fill();ctx.beginPath();ctx.moveTo(X(0),Y(d[0].bound));d.forEach((p,j)=>ctx.lineTo(X(j),Y(p.total)));for(let j=d.length-1;j>=0;j--)ctx.lineTo(X(j),Y(d[j].bound));ctx.closePath();ctx.fillStyle='rgba(155,196,255,.48)';ctx.fill();ctx.beginPath();d.forEach((p,j)=>j?ctx.lineTo(X(j),Y(p.total)):ctx.moveTo(X(j),Y(p.total)));ctx.strokeStyle='#2563EB';ctx.lineWidth=3;ctx.stroke();const firstGap=d.findIndex(p=>p.gap>0);if(firstGap>=0){ctx.save();ctx.setLineDash([5,4]);ctx.strokeStyle='#e5484d';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(X(firstGap),pad.t);ctx.lineTo(X(firstGap),pad.t+H);ctx.stroke();ctx.restore()}const gapPoint=document.getElementById('gapPoint');if(gapPoint){if(firstGap>=0){const gap=d[firstGap];gapPoint.className='gap-point';gapPoint.innerHTML=`<span aria-hidden="true">⚠️</span><div><strong>Ab Alter ${gap.age} ist die Lücke nicht mehr geschlossen.</strong>Im Modell ist das freie Kapital erstmals aufgebraucht; ab diesem Zeitpunkt fehlen rund ${CHFJ(Math.abs(gap.net))} pro Jahr.</div>`}else{gapPoint.className='gap-point ok';gapPoint.innerHTML='<span aria-hidden="true">✓</span><div><strong>Bis zum Planungsalter bleibt die Planung gedeckt.</strong>Im gewählten Szenario wird keine ungedeckte Lücke berechnet.</div>'}}const pts=[d[0],point(10),point(20),d.at(-1)],ids=[['a0','v0','s0'],['a10','v10','s10'],['a20','v20','s20'],['ae','ve','se']];pts.forEach((p,j)=>{document.getElementById(ids[j][0]).textContent='Alter '+p.age;document.getElementById(ids[j][1]).textContent=CHF(p.free);let s=p.gap>0?['Lücke','bad']:p.net<0?['Entnahme','warn']:['gedeckt','ok'];let e=document.getElementById(ids[j][2]);e.textContent=s[0];e.className=s[1]})}
+function tab(n,b){['overview','dev','ass','edit','pots'].forEach(x=>document.getElementById('tab-'+x).classList.add('hidden'));document.getElementById('tab-'+n).classList.remove('hidden');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));(b||document.querySelector(`.tabs button[data-tab="${n}"]`))?.classList.add('active')}
 function saveAss(){
   if(planningLocked)return;
   st.ass.inflation=+assInfl.value||0;
-  st.ass.capitalReturn=+assCap.value||0;
   if(st.mode!=='post'){
-    st.ass.pkInterest=+assPk.value||0;
+    st.ass.capitalReturn=+assCap.value||0;
     st.ass.uws=+assUws.value||0;
   }
   persist();
@@ -659,7 +676,7 @@ function renderEdit(){
 
   if(st.mode==='post'){
     items = [
-      {icon:'🧭', color:'blue', title:'Status & Alter', value:`Heute <strong>${st.currentAge}</strong> · pensioniert mit <strong>${st.retirementAge}</strong>`, tags:[modeLabel, yearsInfo], screen:'ageNow'},
+      {icon:'🧭', color:'blue', title:'Status & Alter', value:`Heute <strong>${st.currentAge}</strong> Jahre`, tags:[modeLabel], screen:'ageNow'},
       {icon:'💸', color:'gold', title:'Renten heute', value:`AHV <strong>${CHFJ(st.post.ahv)}</strong> · PK <strong>${CHFJ(st.post.pkRent)}</strong> · Weitere Renten <strong>${CHFJ(st.post.other)}</strong>`, tags:[`Weitere Einnahmen ${CHFJ(st.post.otherIncome)}`, `Total ${CHFJ(st.post.ahv+st.post.pkRent+st.post.other+st.post.otherIncome)}`], screen:'postIncome'},
       {icon:'🏠', color:'green', title:'Vermögen heute', value:`Frei <strong>${CHF(st.post.free)}</strong> · Immobilie <strong>${CHF(st.post.re)}</strong> · Hypothek <strong>${CHF(st.post.mort)}</strong>`, tags:[`Netto ${CHF(Math.max(0,st.post.re-st.post.mort))}`, `${({cautious:'Vorsichtig',balanced:'Ausgewogen',bold:'Mutig'})[st.risk]} · ${st.ass.capitalReturn.toFixed(1)} %`], screen:'postAssets'},
       {icon:'❤️', color:'red', title:'Lebensstandard', value:`Bedarf <strong>${CHFJ(st.need)}</strong>`, tags:[`Inflation ${st.ass.inflation.toFixed(1)} %`, `Ziel ${st.planningAge}`], screen:'need'}
@@ -671,7 +688,7 @@ function renderEdit(){
       {icon:'💼', color:'green', title:'Vermögen heute', value:`PK <strong>${CHF(st.assets.pk)}</strong> · 3a <strong>${CHF(st.assets.p3)}</strong> · Wertschriften <strong>${CHF(st.assets.sec)}</strong>`, tags:[`Immobilie ${CHF(st.assets.re)}`, `Hypothek ${CHF(st.assets.mort)}`, `Bank ${CHF(st.assets.cash)}`], screen:'assets'}
     ];
     if(st.mode!=='post'){
-      items.push({icon:'📈', color:'gold', title:'Aufbauphase', value:`PK-Beiträge <strong>${CHFJ(st.build.pkContrib)}</strong>`, tags:[`Arbeitnehmer ${CHFJ(st.build.pkEmployee)}`, `Arbeitgeber ${CHFJ(st.build.pkEmployer)}`, `PK-Zins ${st.ass.pkInterest.toFixed(2)} %`, `3a ${CHFJ(st.build.p3Contrib)}`, `PK mit ${st.retirementAge}: ${CHF(p.pk)}`], screen:'build'});
+      items.push({icon:'📈', color:'gold', title:'Aufbauphase', value:`PK-Beiträge <strong>${CHFJ(st.build.pkContrib)}</strong>`, tags:[`Arbeitnehmer ${CHFJ(st.build.pkEmployee)}`, `Arbeitgeber ${CHFJ(st.build.pkEmployer)}`, `PK-Verzinsung ${st.ass.pkInterest.toFixed(2)} %`, `3a ${CHFJ(st.build.p3Contrib)}`, `PK mit ${st.retirementAge}: ${CHF(p.pk)}`], screen:'build'});
     }
     items.push(
       {icon:'⚖️', color:'blue', title:'PK-Aufteilung', value:`<strong>${st.pkShare} % Kapital</strong> · <strong>${100-st.pkShare} % Rente</strong>`, tags:[`Kapital ${CHF(s.cap)}`, `Rente ${CHFJ(s.rent)}`, `${({cautious:'Vorsichtig',balanced:'Ausgewogen',bold:'Mutig'})[st.risk]} · ${st.ass.capitalReturn.toFixed(1)} %`], screen:'pk'},
@@ -741,4 +758,10 @@ if(planningLocked&&st.mode){
   ui();
 }
 </script>
+<link rel="stylesheet" href="retirement-planning.css?v=20260909-5">
+<script src="historical-returns.js?v=20260909-1"></script>
+<script src="retirement-engine.js?v=20260909-2"></script>
+<script src="financing-view.js?v=20260909-1"></script>
+<script src="retirement-planning.js?v=20260909-9"></script>
+<script src="personal-save.js"></script>
 </body></html>

@@ -1,0 +1,34 @@
+const assert=require('node:assert/strict');
+const {simulate}=require('./retirement-engine.js');
+const base={today:65,start:65,end:95,capital:1200000,bound:970000,inflation:0,phases:[{from:0,need:120000},{from:73,need:103000},{from:83,need:90000}],sources:[{amount:33000},{amount:17000,until:73},{amount:12000,rental:true}],returns:[0,1,4],repair:30000};
+const d=simulate(base);
+assert.equal(d.length,31);assert.equal(d.at(-1).age,95);
+assert.deepEqual(d[0].buckets,[58000,116000,1026000]);
+assert.equal(d.find(r=>r.age===73).withdrawal,58000);
+assert.equal(d.find(r=>r.age===83).withdrawal,45000);
+assert.equal(d.find(r=>r.age===82).reserve,90000);
+assert.equal(d[0].ret,42200);
+for(const r of d.filter(r=>!r.terminal)){
+ assert.ok(Math.abs(r.end-(r.free+r.rent-r.need-r.special+r.ret+r.gap))<1e-6);
+ assert.equal(r.endBuckets.reduce((a,b)=>a+b,0),r.end);
+ if(r.age>65)assert.ok(Math.abs(r.transfers.reduce((a,b)=>a+b,0))<1e-6);
+}
+const poor=simulate({...base,capital:10000,returns:[0,0,0]});
+assert.equal(poor[0].gap,48000);assert.equal(poor[0].end,0);
+assert.equal(simulate({...base,capital:0})[0].gap,58000);
+assert.equal(simulate({...base,capital:0,sources:[{amount:130000}],returns:[0,0,0]})[0].end,10000);
+assert.equal(simulate(base,'property')[0].withdrawal,100000);
+assert.ok(simulate(base,'crash').at(-1).free<d.at(-1).free);
+assert.equal(simulate(base,'longlife').at(-1).age,100);
+assert.equal(simulate({...base,bound:-100000})[0].bound,-100000);
+const inflated=simulate({...base,inflation:2,sources:[{amount:100,indexed:false}]});
+assert.ok(Math.abs(inflated[1].rent-100/1.02)<1e-9);
+assert.equal(simulate({...base,inflation:2,sources:[{amount:100,indexed:true}]})[1].rent,100);
+const quotedAtStart=simulate({...base,today:61,inflation:2,sources:[{amount:100,from:65,quoteAge:65,indexed:false}]});
+assert.equal(quotedAtStart[0].rent,100,'income matches the entered amount when payments start');
+assert.ok(Math.abs(quotedAtStart[1].rent-100/1.02)<1e-9,'non-indexed income then loses purchasing power');
+assert.equal(simulate({...base,returns:[10,0,0]})[0].ret,0,'spent cash earns no full-year return');
+const custom=simulate({...base,equityReturns:[-20,30]});
+assert.equal(custom[0].endBuckets[2],custom[0].buckets[2]*.8);
+assert.ok(custom[0].ret<0&&custom[1].ret>0,'custom equity path includes loss and recovery');
+console.log('Passed: phases, future reserves, transfers, accounting, partial depletion, surplus, property stress, crash, custom equity path, horizon, debt, inflation and payment timing.');
