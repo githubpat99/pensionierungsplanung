@@ -102,3 +102,24 @@
 .model-assumptions[open] .risk-chevron{transform:rotate(180deg)}
 .model-assumptions-body{padding:0 22px 22px}
 @media(max-width:600px){.model-assumptions>summary{padding:16px}.model-assumptions>summary strong{font-size:16px}.model-assumptions-body{padding:0 16px 16px}}
+.tax-canton{display:grid;gap:8px;margin:16px 0;font-weight:600}
+.tax-canton select{width:100%;max-width:420px;padding:12px;border:1px solid #cbd5e1;border-radius:10px;background:white;color:#162033;font:inherit}
+.tax-summary{margin:16px 0;font-size:14px}
+.tax-summary .row{display:flex;justify-content:space-between;gap:16px;padding:10px 0;border-bottom:1px solid #e2e8f0;align-items:baseline}
+.tax-summary .row strong{text-align:right}
+.tax-info{font-size:13px;font-weight:400;margin:6px 0;color:#475569}
+.tax-info summary{cursor:pointer;color:#315b87;list-style:none}
+.tax-info[open]{flex-basis:100%}
+.tax-info>div{padding:12px;background:#f1f5f9;border-radius:8px;max-width:580px;line-height:1.6}
+.tax-info p{margin:8px 0}
+.tax-swiss{display:inline-block;background:#da291c;color:white;padding:0 4px;border-radius:0 0 6px 6px}
+@media(max-width:600px){.finance-income .tax-summary{display:block!important}.tax-summary .row{flex-wrap:wrap}.tax-summary .row>span{flex:1;min-width:140px}}
+.pk-status{margin:18px 0;padding:18px 20px;border:1px solid #dce3e9;border-radius:14px;background:#f6f8fa;line-height:1.5}
+.pk-status>strong{display:block;font-size:19px;color:#24364a}
+.pk-status p{margin:8px 0}
+.pk-status small{display:block;color:#536477;font-size:13px}
+.pk-status.feasible{background:#eff8f2;border-color:#c9e5d1}
+.pk-status.feasible>strong{color:#286144}
+.pk-status.shortfall{background:#fbf7ed;border-color:#e9ddbd}
+.pk-question{font-size:21px;margin:22px 0 14px}
+@media(max-width:600px){.pk-status{padding:14px}.pk-status>strong{font-size:17px}.pk-question{font-size:19px}}

@@ -224,8 +224,8 @@ input.money,input.pct{font-size:16px;min-height:50px}
   <div class="coach-row"><div class="coach-mini"></div><div class="bubble assistant">Wie viel deiner Pensionskasse möchtest du als Kapital und wie viel als Rente beziehen?</div></div>
 </div>
 <div class="card"><div class="kicker">PK-Entscheid</div><div class="decision-banner"><div class="decision-icon">⚖️</div><div><strong>Eine Entscheidung mit langfristigen Folgen.</strong></div></div>
-<div class="pkbox"><div class="pkval"><strong id="pkTotal"></strong><span>PK-Guthaben am Pensionierungszeitpunkt</span></div><div class="split"><div class="side cap"><small>Kapital</small><strong id="pkCap"></strong><span id="pkCapPct"></span></div><div class="side rent"><small>Rente</small><strong id="pkRentBase"></strong><span id="pkRentPct"></span></div></div><div class="pk-choice-summary"><span id="pkChoiceCap" class="cap-pill"></span><span>↔</span><span id="pkChoiceRent" class="rent-pill"></span></div><div class="labels"><span>Mehr Kapital</span><span>Mehr Rente</span></div><input id="pkSlider" type="range" min="0" max="100" oninput="pkShare(this.value)"></div>
-<div class="section blue">Wie möchtest du das Kapital anlegen?</div><div class="risks"><button class="risk" data-risk="cautious" onclick="risk('cautious')"><div class="r-ico">🛡️</div><b>Vorsichtig</b><span>2,5 %</span></button><button class="risk" data-risk="balanced" onclick="risk('balanced')"><div class="r-ico">⚖️</div><b>Ausgewogen</b><span>4,5 %</span></button><button class="risk" data-risk="bold" onclick="risk('bold')"><div class="r-ico">🚀</div><b>Mutig</b><span>6,0 %</span></button></div>
+<div id="planFeasibility" class="pk-status" role="status" aria-live="polite"></div><h2 class="pk-question">Wie möchtest du deine Pensionskasse beziehen?</h2><div class="pkbox"><div class="pkval"><strong id="pkTotal"></strong><span>PK-Guthaben am Pensionierungszeitpunkt</span></div><div class="split"><div class="side cap"><small>Kapital</small><strong id="pkCap"></strong><span id="pkCapPct"></span></div><div class="side rent"><small>Rente</small><strong id="pkRentBase"></strong><span id="pkRentPct"></span></div></div><div class="pk-choice-summary"><span id="pkChoiceCap" class="cap-pill"></span><span>↔</span><span id="pkChoiceRent" class="rent-pill"></span></div><div class="labels"><span>Mehr Kapital</span><span>Mehr Rente</span></div><input id="pkSlider" type="range" min="0" max="100" oninput="pkShare(this.value)"></div>
+<div id="pkVariantStatus" class="pk-status" role="status" aria-live="polite"></div><div id="pkTaxSummary"></div><div id="pkIncomeTaxSummary"></div><div class="section blue">Wie möchtest du das Kapital anlegen?</div><div class="risks"><button class="risk" data-risk="cautious" onclick="risk('cautious')"><div class="r-ico">🛡️</div><b>Vorsichtig</b><span>2,5 %</span></button><button class="risk" data-risk="balanced" onclick="risk('balanced')"><div class="r-ico">⚖️</div><b>Ausgewogen</b><span>4,5 %</span></button><button class="risk" data-risk="bold" onclick="risk('bold')"><div class="r-ico">🚀</div><b>Mutig</b><span>6,0 %</span></button></div>
 <div class="decision-kicker">Dein direkter Vergleich</div><div class="comparison"><div class="compare-card capital-card"><div class="top">Kapitalbezug: erwarteter Ertrag</div><div id="capYield" class="main"></div><div id="capYieldSub" class="subv"></div></div><div class="compare-card rent-card"><div class="top">Rentenbezug: lebenslange PK-Rente</div><div id="pkRent" class="main"></div><div class="subv">5,2 % Umwandlungssatz</div></div></div><div id="pkDelta" class="delta-banner"></div>
 </div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="forward()">Weiter →</button></div></section>
 
@@ -259,7 +259,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <div class="chat-shell">
   <div class="coach-row"><div class="coach-mini"></div><div class="bubble assistant">Bis zu welchem Alter soll deine Planung tragen?</div></div>
 </div>
-<div class="card"><div class="kicker">Dein Horizont</div><div class="bigrow"><button class="round" onclick="chg('planningAge',-1)">−</button><div class="big"><strong id="planVal"></strong><small>Jahre</small></div><button class="round" onclick="chg('planningAge',1)">+</button></div><div class="note">Wir rechnen mit anerkannten Annahmen (z. B. SECO/Inflation, PK-Zins, Umwandlungssatz). Diese Werte kannst du im Anschluss bei Bedarf anpassen.</div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="finish()">Standortbestimmung anzeigen →</button></div></section>
+<div class="card"><div class="kicker">Dein Horizont</div><div class="bigrow"><button class="round" onclick="chg('planningAge',-1)">−</button><div class="big"><strong id="planVal"></strong><small>Jahre</small></div><button class="round" onclick="chg('planningAge',1)">+</button></div><div class="note">Wir rechnen mit anerkannten Annahmen (z. B. SECO/Inflation, PK-Zins, Umwandlungssatz). Diese Werte kannst du im Anschluss bei Bedarf anpassen.</div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="forward()">Standortbestimmung anzeigen →</button></div></section>
 
 <section class="screen" data-screen="result">
 <div class="tabs"><button class="active" data-tab="overview" onclick="tab('overview',this)">Übersicht</button><button data-tab="pots" onclick="tab('pots',this)">3 Töpfe</button><button data-tab="dev" onclick="tab('dev',this)">Entwicklung</button><button data-tab="ass" onclick="tab('ass',this)">Annahmen</button><button data-tab="edit" onclick="tab('edit',this)">Angaben</button></div>
@@ -290,7 +290,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
     <div class="kicker">Prognose</div>
     <h2>Wie entwickelt sich dein Aktientopf?</h2>
     <p class="chart-context">Basis: MSCI World · letzte 10 Jahre · in heutiger Kaufkraft.</p>
-    <div id="devPotSummary" class="dev-pot-summary"></div>
+    <div id="devInvestableCapital" class="dev-investable"></div><div id="devPotSummary" class="dev-pot-summary"></div>
     <div class="dev-focus-note"><span aria-hidden="true">ⓘ</span><div>Gleiche Renditen 2016–2025, unterschiedlich angeordnet. Topf 1 und 2 finanzieren die nächsten Entnahmen.</div></div>
   </div>
   <div class="card dev-chart-card">
@@ -336,8 +336,10 @@ input.money,input.pct{font-size:16px;min-height:50px}
 </section>
 </main></div>
 
+<script src="tax-config.js"></script>
+<script src="tax-model.js"></script>
 <script>
-const D={mode:null,currentAge:56,retirementAge:65,planningAge:92,need:90000,
+const D={mode:null,canton:null,currentAge:56,retirementAge:65,planningAge:92,need:90000,
 assets:{pk:550000,p3:120000,sec:180000,re:800000,mort:500000,cash:50000},
 build:{pkContrib:22000,pkEmployee:11000,pkEmployer:11000,p3Contrib:7000,otherSave:10000},
 income:{ahv:28200,other:0,rent:0},post:{ahv:28200,pkRent:26000,other:0,otherIncome:0,free:650000,re:800000,mort:500000},
@@ -368,10 +370,10 @@ function chooseMode(m){
   }
   setTimeout(()=>{flow=makeFlow();i=0;showStep()},220)
 }
-function makeFlow(){return st.mode==='pre'?['ageNow','assets','build','pk','income','need','horizon']:['ageNow','postIncome','postAssets','need','horizon']}
+function makeFlow(){return st.mode==='pre'?['ageNow','assets','build','income','need','horizon','pk']:['ageNow','postIncome','postAssets','need','horizon']}
 function show(n){document.querySelectorAll('.screen').forEach(x=>x.classList.remove('active'));document.querySelector(`[data-screen="${n}"]`).classList.add('active');prog.classList.toggle('hidden',['start','result','advice'].includes(n));window.scrollTo({top:0,behavior:'smooth'})}
-function showStep(){flow=makeFlow();i=Math.max(0,Math.min(i,flow.length-1));show(flow[i]);ptext.textContent=`Schritt ${i+1} von ${flow.length}`;pchapter.textContent=({ageNow:'Zeitpunkt',assets:'Heute',build:'Aufbau',pk:'PK-Entscheid',income:'Einkommen',postIncome:'Heute',postAssets:'Vermögen',need:'Lebensstandard',horizon:'Horizont'})[flow[i]];pbar.style.width=((i+1)/flow.length*100)+'%';const activeScreen=document.querySelector('.screen.active');const recalcButton=activeScreen?.querySelector('.actions .primary');if(recalcButton)recalcButton.textContent=returnToResult?'Neu berechnen →':'Weiter →';ui()}
-function forward(){if(returnToResult){const screen=document.querySelector('.screen.active')?.dataset.screen;if(screen==='assets'||screen==='postIncome'||screen==='postAssets'||screen==='income')saveOpenInputs();if(screen==='build')saveBuild();returnToResult=false;renderResult();show('result');tab('overview',document.querySelector('.tabs button'));return}i++;showStep()}
+function showStep(){flow=makeFlow();i=Math.max(0,Math.min(i,flow.length-1));show(flow[i]);ptext.textContent=`Schritt ${i+1} von ${flow.length}`;pchapter.textContent=({ageNow:'Zeitpunkt',assets:'Heute',build:'Aufbau',pk:'PK-Entscheid',income:'Einkommen',postIncome:'Heute',postAssets:'Vermögen',need:'Lebensstandard',horizon:'Horizont'})[flow[i]];pbar.style.width=((i+1)/flow.length*100)+'%';const activeScreen=document.querySelector('.screen.active');const recalcButton=activeScreen?.querySelector('.actions .primary');if(recalcButton)recalcButton.textContent=returnToResult?'Neu berechnen →':i===flow.length-1?'Standortbestimmung anzeigen →':'Weiter →';ui()}
+function forward(){if(returnToResult){const screen=document.querySelector('.screen.active')?.dataset.screen;if(screen==='assets'||screen==='postIncome'||screen==='postAssets'||screen==='income')saveOpenInputs();if(screen==='build')saveBuild();returnToResult=false;renderResult();show('result');tab('overview',document.querySelector('.tabs button'));return}if(i>=makeFlow().length-1){finish();return}i++;showStep()}
 function back(){if(returnToResult){returnToResult=false;show('result');tab('edit',document.querySelector('.tabs button[data-tab="edit"]'));return}if(i===0){show('start');return}i--;showStep()}
 function chg(k,d){if(planningLocked)return;st[k]+=d;if(k==='currentAge')st[k]=Math.max(18,Math.min(100,st[k]));if(k==='retirementAge')st[k]=Math.max(50,Math.min(80,st[k]));if(st.mode==='post'&&k==='retirementAge')st[k]=Math.min(st.currentAge,st[k]);if(st.mode==='post'&&k==='currentAge')st.retirementAge=Math.min(st.retirementAge,st.currentAge);if(st.mode!=='post'&&k==='currentAge')st.retirementAge=Math.max(st.retirementAge,st.currentAge);if(k==='planningAge')st[k]=Math.max(Math.max(st.currentAge,st.retirementAge)+1,Math.min(110,st[k]));if(k==='need')st[k]=Math.max(20000,st[k]);persist();ui()}
 function toggle(el){const a=el.parentElement,b=a.querySelector('.asset-body');document.querySelectorAll('.asset-body').forEach(x=>{if(x!==b){x.classList.add('hidden');x.parentElement.querySelector('.asset-head')?.setAttribute('aria-expanded','false')}});const isHidden=b.classList.toggle('hidden');el.setAttribute('aria-expanded',String(!isHidden))}
@@ -403,8 +405,13 @@ function saveOpenInputs(){document.querySelectorAll('[data-a]').forEach(x=>st.as
 function saveBuild(){st.build.pkEmployee=readNumber(pkEmployee.value);st.build.pkEmployer=readNumber(pkEmployer.value);st.build.pkContrib=st.build.pkEmployee+st.build.pkEmployer;st.ass.pkInterest=readNumber(pkInterest.value);st.build.p3Contrib=readNumber(p3Contrib.value);st.ass.p3Return=readNumber(p3Return.value);st.ass.secReturn=readNumber(secReturn.value);st.build.otherSave=readNumber(otherSave.value);persist();ui()}
 function compound(v,c,r,y){for(let n=0;n<y;n++)v=v*(1+r)+c;return v}
 function projected(){if(st.mode==='post')return null;const y=Math.max(0,st.retirementAge-st.currentAge);return{pk:compound(st.assets.pk,st.build.pkContrib,P(st.ass.pkInterest),y),p3:compound(st.assets.p3,st.build.p3Contrib,P(st.ass.p3Return),y),sec:compound(st.assets.sec,st.build.otherSave,P(st.ass.secReturn),y),cash:st.assets.cash,re:st.assets.re,mort:st.assets.mort}}
-function split(){const p=projected();if(!p)return{cap:0,base:0,rent:0};const cap=p.pk*st.pkShare/100,base=p.pk-cap;return{cap,base,rent:base*P(st.ass.uws)}}
-function free0(){if(st.mode==='post')return st.post.free;const p=projected(),s=split();return p.p3+p.sec+p.cash+s.cap}
+function split(capitalShare=st.pkShare){const p=projected();if(!p)return{cap:0,base:0,rent:0};const cap=p.pk*capitalShare/100,base=p.pk-cap;const capitalTax=TaxModel.calculateCapitalWithdrawalTax(st.canton,cap);return{cap,base,capitalTax,netCap:cap-(capitalTax??0),rent:base*P(st.ass.uws)}}
+function capitalComponents(capitalShare=st.pkShare){
+  if(st.mode==='post')return {existingFreeCapital:st.post.free,grossPkCapitalWithdrawal:0,pkWithdrawalTax:0,netPkCapitalWithdrawal:0,totalInvestableCapital:st.post.free,boundCapital:bound0()};
+  const p=projected(),s=split(capitalShare),existingFreeCapital=p.p3+p.sec+p.cash;
+  return {existingFreeCapital,grossPkCapitalWithdrawal:s.cap,pkWithdrawalTax:s.capitalTax,netPkCapitalWithdrawal:s.netCap,totalInvestableCapital:existingFreeCapital+s.netCap,boundCapital:bound0()};
+}
+function free0(capitalShare=st.pkShare){return capitalComponents(capitalShare).totalInvestableCapital}
 function bound0(){if(st.mode==='post')return Math.max(0,st.post.re-st.post.mort);const p=projected();return Math.max(0,p.re-p.mort)}
 function rent0(){return st.mode==='post'?st.post.ahv+st.post.pkRent+st.post.other+st.post.otherIncome:st.income.ahv+st.income.rent+st.income.other+split().rent}
 function incomeBreakdown(){return st.mode==='post'?{rent:st.post.ahv+st.post.pkRent,other:st.post.other+st.post.otherIncome}:{rent:st.income.ahv+split().rent,other:st.income.rent+st.income.other}}
@@ -425,7 +432,7 @@ pkSlider.style.background=`linear-gradient(90deg,var(--blue) 0 ${st.pkShare}%, v
 pkCap.textContent=CHF(s.cap);pkCapPct.textContent=st.pkShare+' %';
 pkRentBase.textContent=CHF(s.base);pkRentPct.textContent=(100-st.pkShare)+' %';
 pkChoiceCap.textContent=`${st.pkShare}% Kapital`;
-pkChoiceRent.textContent=`${100-st.pkShare}% Rente`;const cy=s.cap*P(st.ass.capitalReturn),delta=s.rent-cy;capYield.textContent=CHFJ(cy);capYieldSub.textContent=st.ass.capitalReturn.toFixed(1)+' % Rendite';pkRent.textContent=CHFJ(s.rent);pkDelta.textContent=delta>=0?`Die Rentenseite liefert im ersten Jahr ${CHFJ(delta)} mehr laufende Zahlung. Dafür bleibt der Kapitalanteil frei verfügbar.`:`Die modellierte Rendite des bezogenen PK-Kapitals liegt ${CHFJ(Math.abs(delta))} über der PK-Rente. Dafür trägst du das Anlagerisiko.`;pkRentLine.textContent=CHFJ(s.rent);rentTotal.textContent=CHFJ(rent0())}
+pkChoiceRent.textContent=`${100-st.pkShare}% Rente`;const cy=s.netCap*P(st.ass.capitalReturn),delta=s.rent-cy;capYield.textContent=CHFJ(cy);capYieldSub.textContent=st.ass.capitalReturn.toFixed(1)+' % Rendite auf Netto-Kapital';pkRent.textContent=CHFJ(s.rent);pkDelta.textContent=delta>=0?`Die Rentenseite liefert im ersten Jahr ${CHFJ(delta)} mehr laufende Zahlung. Dafür bleibt der Kapitalanteil frei verfügbar.`:`Die modellierte Rendite des bezogenen PK-Kapitals liegt ${CHFJ(Math.abs(delta))} über der PK-Rente. Dafür trägst du das Anlagerisiko.`;pkRentLine.textContent=CHFJ(s.rent);rentTotal.textContent=CHFJ(rent0())}
 document.querySelectorAll('[data-risk],[data-postrisk]').forEach(b=>{const k=b.dataset.risk||b.dataset.postrisk;b.classList.toggle('active',k===st.risk)})
 if(preserveInput){
   let input=preserveInput.id?document.getElementById(preserveInput.id):null;
@@ -758,10 +765,15 @@ if(planningLocked&&st.mode){
   ui();
 }
 </script>
-<link rel="stylesheet" href="retirement-planning.css?v=20260909-5">
+<link rel="stylesheet" href="retirement-planning.css?v=20260910-tax">
 <script src="historical-returns.js?v=20260909-1"></script>
-<script src="retirement-engine.js?v=20260909-2"></script>
-<script src="financing-view.js?v=20260909-1"></script>
-<script src="retirement-planning.js?v=20260909-9"></script>
+<script src="retirement-engine.js?v=20260910-tax"></script>
+<script src="financing-view.js?v=20260910-tax"></script>
+<script src="tax-view.js"></script>
+<script src="retirement-planning.js?v=20260910-tax"></script>
+<script src="retirement-feasibility.js"></script>
+<script src="feasibility-view.js"></script>
 <script src="personal-save.js"></script>
+<link rel="stylesheet" href="compact-ui.css">
+<script src="compact-ui.js"></script>
 </body></html>

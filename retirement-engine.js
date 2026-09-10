@@ -1,22 +1,31 @@
 /* Annual planning in CHF of today's purchasing power. No browser dependencies. */
 (function(root){
+  const tax=typeof module!=='undefined'?require('./tax-model.js'):root.TaxModel;
   function simulate(p, scenario='base'){
     const horizon=p.end+(scenario==='longlife'?5:0), rows=[];
     const inflation=p.inflation/100;
     let capital=Math.max(0,p.capital), previous=[0,0,0];
     function cashflow(age){
       const phase=p.phases.filter(x=>age>=x.from).at(-1)||p.phases[0];
-      let income=0, rental=0;
+      let income=0, rental=0, taxable=0, taxableRental=0;
       for(const s of p.sources){
         if(age<(s.from??p.start)||age>=(s.until??Infinity))continue;
         const quoteAge=s.quoteAge??p.today;
         const value=s.amount*Math.pow(1+(s.indexed?inflation:0),age-quoteAge)/Math.pow(1+inflation,age-quoteAge);
         income+=value;if(s.rental)rental+=value;
+        if(s.taxable!==false){taxable+=value;if(s.rental)taxableRental+=value;}
       }
       const stressed=(scenario==='property'||scenario==='combined')&&age===p.start;
       if(stressed)income-=rental;
+      if(stressed)taxable-=taxableRental;
+      // Apply nominal thresholds, then express the tax in the same purchasing power as income.
+      const priceFactor=Math.pow(1+inflation,age-p.start);
+      const taxableAnnualIncome=Math.max(0,taxable)*priceFactor;
+      const incomeTax=tax.calculateEstimatedIncomeTax(p.canton,taxableAnnualIncome);
+      const estimatedIncomeTax=incomeTax===null?null:incomeTax/priceFactor;
+      const grossIncome=income;income-=estimatedIncomeTax??0;
       const special=stressed?p.repair:0;
-      return {need:phase.need,income,special,withdrawal:Math.max(0,phase.need+special-income)};
+      return {need:phase.need,income,grossIncome,estimatedIncomeTax,taxableAnnualIncome,special,withdrawal:Math.max(0,phase.need+special-income)};
     }
     for(let age=p.start;age<horizon;age++){
       const c=cashflow(age), reserve=cashflow(age+1).withdrawal+cashflow(age+2).withdrawal;
@@ -36,6 +45,7 @@
       const endBuckets=after.map((v,i)=>Math.max(0,v+gains[i]));
       const end=endBuckets.reduce((a,b)=>a+b,0);
       rows.push({age,free:capital,bound:p.bound,total:capital+p.bound,need:c.need,rent:c.income,
+        grossIncome:c.grossIncome,estimatedIncomeTax:c.estimatedIncomeTax,taxableAnnualIncome:c.taxableAnnualIncome,
         ret:gains.reduce((a,b)=>a+b,0),net:end-capital,gap,withdrawal:c.withdrawal,
         special:c.special,buckets,transfers,endBuckets,end,reserve});
       capital=end;previous=endBuckets;
