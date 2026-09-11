@@ -1,6 +1,6 @@
 # Verbindliche Produktregeln – Ruhestands-Check
 
-Stand: 11. September 2026. Grundlage: beauftragte Gesamtspezifikation in [OPTIMIZATION_SPEC_2026-09-11.md](OPTIMIZATION_SPEC_2026-09-11.md). Vor App-Änderungen diese Datei und `AGENTS.md` vollständig lesen. Ältere Entwürfe bleiben historisch erhalten. Widersprüche ausdrücklich benennen, niemals stillschweigend Regeln ersetzen.
+Stand: 11. September 2026. Ergänzender verbindlicher Regelkatalog zur zentralen [MASTER_SPEC.md](MASTER_SPEC.md). Vor App-Änderungen diese Datei und `AGENTS.md` vollständig sowie die betroffenen Master-Kapitel lesen. Die ursprüngliche [Gesamtspezifikation](OPTIMIZATION_SPEC_2026-09-11.md) bleibt historisch erhalten. Widersprüche ausdrücklich benennen, niemals stillschweigend Regeln ersetzen.
 
 ## 1. Kapitalstart und Preisbasis
 
@@ -12,6 +12,8 @@ Stand: 11. September 2026. Grundlage: beauftragte Gesamtspezifikation in [OPTIMI
 - Alle Prognosen verwenden dieselbe Engine und Kapitalbasis. Lediglich Renditeszenarien/ausgewiesene Zeitabschnitte unterscheiden sich.
 
 ## 2. Anlagekapital und Immobilien
+
+Die Kapitalbegriffe im UI sind verbindlich: **Verfügbares Kapital** bzw. **verfügbares Anlagekapital** umfasst nur die drei Finanzierungstöpfe, ohne gebundenes Immobilienkapital. **Verfügbares Restkapital** ist deren verbleibender Betrag am genannten Alter; Jahresdaten nennen **verfügbares Kapital am Jahresende**. **Gebundenes Immobilienkapital** ist Marktwert minus Hypotheken und bleibt separat. **Gesamtkapital inkl. Immobilien netto** darf ausschliesslich für die Summe aus verfügbarem und gebundenem Kapital verwendet werden. Unqualifizierte Labels wie „Gesamt“, „Endkapital“ oder „Freies Gesamtkapital“ vermeiden. PK-Bezugsbeträge ausdrücklich als PK-Kapital brutto/netto kennzeichnen.
 
 - `existingFreeCapital + netPkCapitalWithdrawal = totalInvestableCapital`.
 - Das gesamte frei verfügbare Kapital wird am Pensionierungszeitpunkt als Anlagekapital berücksichtigt. Bestehende Sammelbeträge nicht durch erneute PK-Addition doppelt zählen.
@@ -32,25 +34,28 @@ Stand: 11. September 2026. Grundlage: beauftragte Gesamtspezifikation in [OPTIMI
 - Steuertexte: laufende Einkommenssteuer, Kapitalbezugssteuer, kompakte Modellgrenzen. «Modellrechnung, keine individuelle Steuerberechnung.» Vermögenssteuer und allfällige 3a-Bezugssteuern fehlen; Zinsen/Dividenden werden nicht separat besteuert.
 - Fehlender Wohnkanton: neutrale vorläufige Einschätzung; keine grüne Finanzierbarkeitsaussage. Auf dem PK-Screen nur eine Erklärung, keine zweite offene Reichweitenbox.
 - Einkommensübersicht: Netto gesamt, aus AHV/Renten, aus weiteren Einnahmen, benötigte Kapitalentnahme. Zur additiven Nettoaufteilung wird dieselbe geschätzte Gesamtsteuer proportional auf die laufenden Einkommensgruppen verteilt; dies ist eine Darstellung, keine separate Steuerberechnung je Quelle.
+- In der Vertiefung «Einkommen & Steuern» die einzelnen laufenden Quellen direkt vor der Steuerzusammenfassung zeigen: AHV, PK-Rente, weitere Renten, zusätzliche Einnahmen bzw. markierte Nettomiete sowie aktive zeitlich begrenzte Einnahmen. Jahresbetrag und Monatswert anzeigen. Die Beträge beziehen sich auf das erste Planungsjahr und verstehen sich vor persönlicher Einkommenssteuer; sie stammen aus derselben Jahresengine wie die Bruttosumme. Noch nicht begonnene oder bereits beendete Einnahmen nicht als aktuell verfügbar zählen. Quellen ohne laufenden Betrag ausblenden.
 
 ## 4. Drei Töpfe und Renditeannahmen
 
-- Geldfluss: Topf 3 (Aktien) → Topf 2 (Anleihen) → Topf 1 (Geldmarkt) → Lebensbedarf.
+- Geldfluss: Topf 3 (Wachstum) → Topf 2 (Anleihen) → Topf 1 (Geldmarkt) → Lebensbedarf.
 - Topf 2 wird grundsätzlich aus Topf 3, Topf 1 aus Topf 2 aufgefüllt. Jährliche Prüfung und bedarfsgerechter Ausgleich.
 - Topf 1 reserviert die laufende Jahresentnahme; Topf 2 die beiden folgenden Entnahmejahre; Topf 3 erhält das übrige freie Kapital.
-- Die bestehende jährliche Zielauffüllung bleibt bestehen. Sie kann auch nach Verlusten Aktienverkäufe erfordern. Reserven dienen der Überbrückung; keine implementierte Verlust-Verkaufsvermeidung behaupten. Eine spätere Krisenregel braucht einen eigenen Auftrag und Regressionstests.
-- Risikoprofile bestimmen primär Renditeannahmen, niemals automatisch eine feste Aktienquote. Die Quote ergibt sich nach Reservierung in Topf 1/2.
-- Profile: «Renditeannahme vorsichtig · 2,5 %», «Renditeannahme ausgewogen · 4,5 %», «Renditeannahme chancenorientiert · 6,0 %». Bestehenden Wirkungsbereich klar nennen: PK-Ertragsvergleich; die Simulation verwendet separat die drei Topfrenditen.
+- Die bestehende jährliche Zielauffüllung bleibt bestehen. Sie kann auch nach Verlusten Verkäufe aus dem Wachstumstopf erfordern. Reserven dienen der Überbrückung; keine implementierte Verlust-Verkaufsvermeidung behaupten. Reihenfolge: Einnahmen/Steuern/Bedarf bestimmen → Zielbeträge der drei Töpfe auffüllen/ausgleichen → laufende Entnahme zu Jahresbeginn → verbleibende Beträge verzinsen → Endkapital speichern. Diese Regel geht dem vereinfachten Ablauf der Risikoprofil-Spezifikation vor.
+- Der Folgeauftrag «Risikoprofile und unterschiedliche Kapitalentwicklungen» ersetzt ausdrücklich den reinen Aktientopf und den unveränderten Einsatz historischer Renditen. Topf 3 ist ein langfristiger Wachstumstopf mit profilabhängiger Rendite und Schwankung; keine feste Aktienquote oder durchgehend vollständige MSCI-World-Anlage behaupten. Seine Kapitalquote ergibt sich nach Reservierung in Topf 1/2.
+- Eine explizite Profilwahl setzt reale Zielrendite und Schwankungsfaktor gemäss Abschnitt 10; die Zielrendite wird ebenfalls im PK-Ertragsvergleich verwendet. Geldmarkt- und Anleihenrendite bleiben unverändert.
+- Vorhandene individuell eingestellte Renditen bleiben beim Laden erhalten und werden als «individuell angepasst» gekennzeichnet. Kein Zurücksetzen des gewählten Profils. Neue Planungen verwenden das ausgewogene Standardprofil (0 / 1 / 4,5 % für Geldmarkt/Anleihen/Wachstum); frühere Standardwerte von 0 / 1 / 4 % werden als individuelle Annahme erhalten. Eine explizite Profilwahl stellt die zentralen Profilparameter wieder her.
 
 ## 5. Ergebnisse und Diagramme
 
 - Ergebnisse immer als Modellrechnung unter den gewählten Annahmen bezeichnen.
 - Die zentrale Ergebnis-/Erfolgsaussage bezieht sich auf die aktuell gewählte PK-Aufteilung, nicht auf irgendeine mögliche Aufteilung. Das ersetzt die bisherige Hervorhebung der allgemeinen Machbarkeit. Die Hintergrundprüfung mehrerer Aufteilungen darf bestehen bleiben.
-- Positiv: «Unter den gewählten Annahmen ist dein gewünschter Lebensstandard bis Alter [Zielalter] finanzierbar.» Dazu erwartetes Restkapital am Zielalter.
+- Positiv: «Unter den gewählten Annahmen ist dein gewünschter Lebensstandard bis Alter [Zielalter] finanzierbar.» Dazu «Verfügbares Restkapital» am Zielalter: alle drei Töpfe, ohne gebundenes Immobilienkapital. PK und Plan verwenden denselben Betrag und dieselbe CHF-Rundung, keine zusätzliche Rundung auf CHF 500.
 - Bei erster Finanzierungslücke: voraussichtliche Reichweite unter gewählten Annahmen; keine grüne Erfolgsmeldung. Kapital exakt null am Ziel ist zulässig, frühere ungedeckte Ausgaben bleiben eine Lücke.
 - Abschluss: «Deine erste Planung steht.»
-- Diagramm: «Ungünstige und günstige Renditereihenfolge»; Legenden «Ungünstige Reihenfolge» / «Günstige Reihenfolge».
-- Beide Kurven nutzen dieselben historischen Renditen 2016–2025 in unterschiedlicher Reihenfolge und dieselben Steuern/Entnahmen. Grafik zeigt die ersten zehn Ruhestandsjahre (bei kürzerem Horizont nur diesen); die Planung läuft bis zum Ziel weiter.
+- Diagramm: «Wie kann sich dein verfügbares Kapital entwickeln?»; Untertitel mit gewähltem Profil und realer Zielrendite; Legenden «Basisrechnung», «Ungünstige Reihenfolge» / «Günstige Reihenfolge».
+- Beide Kurven nutzen dieselben profilabhängig transformierten Jahresrenditen in unterschiedlicher Reihenfolge und dieselben Steuern/Entnahmen. Historische Renditen 2016–2025 sind nur das Schwankungsmuster. Grafik zeigt das verfügbare Kapital aller drei Töpfe vom Planungsstart bis zum gewählten Zielalter. Die Varianten verwenden die transformierte Renditereihe in den ersten zehn Jahren, anschliessend die Basisrendite; die zusätzliche Basislinie entspricht «Dein Plan». Der Folgeauftrag zur Vergleichbarkeit ersetzt ausdrücklich die bisherige Darstellung nur von Topf 3 über zehn Jahre.
+- Gleiche Y-Skalierung über alle drei Standardprofile bei ansonsten gleichen Eingaben. Die Skala umfasst zusätzlich die aktuelle individuelle Rendite, falls diese ausserhalb der Standardprofile liegt. Datenpunktkarten zeigen Start, ungefähr ein Drittel und zwei Drittel der Planung sowie Zielalter, ohne doppelte Zeitpunkte bei kurzen Horizonten. Profilvergleich und Grafik beziehen sich auf dasselbe Zielalter und dieselbe Kapitalbasis. Basisrechnung je Profil neben den beiden Varianten anzeigen; die gewählte Standardauswahl markieren. Individuelle Annahmen in der Grafik von den Standardprofilen unterscheiden.
 - Werte lesbar, keine Überlagerungen; Nullachse «0». Mobile weniger Labels, vollständige Werte in Karten. Keine zusätzlichen Opt./Pess.-Präfixe vor den Kartenbeträgen nötig.
 
 ## 6. Speicherung und Beispielwerte
@@ -63,7 +68,16 @@ Stand: 11. September 2026. Grundlage: beauftragte Gesamtspezifikation in [OPTIMI
 
 ## 7. Bedienung und Darstellung
 
-- Bestehende Gestaltung/Navigation erhalten; keine neuen Hauptscreens. Edit-Modus ohne Wizard-Fortschritt, stattdessen «Meine Angaben · …».
+- Aufbau: Start → Deine Angaben → Dein Plan. Der Navigationsauftrag ersetzt ausdrücklich die Zwischenebene «Meine Planung verstehen» durch direkte Detailzugänge vom Plan. Bestehende Designsprache erhalten, keine fünf gleichberechtigten Legacy-Tabs unmittelbar nach dem Ergebnis.
+- Monatliche Einnahmen und monatlicher Lebensbedarf sind die primäre Sprache des Basischecks und der Antwort. Jahreswerte bleiben intern und in fachlichen Detailansichten erhalten; Beiträge zur Vorsorge sind ausdrücklich pro Jahr bezeichnet.
+- Bereits Pensionierte erhalten keine Fragen zu künftiger PK-/3a-Ansparung oder PK-Bezug. Vor Pensionierung kommen Pensionierungsalter, PK-Guthaben und Beiträge, 3a mit Beiträgen und PK-Aufteilung hinzu. Den Wohnkanton für die Steuerschätzung weiterhin erfassen.
+- Persönliche Angaben und Planungsentscheidungen stehen im Basischeck. Modellannahmen werden unter «So rechnen wir» offengelegt und erst in der Vertiefung bearbeitet.
+- «Dein Plan» enthält drei Aussagen: laufende monatliche Nettoeinnahmen, monatliche Ergänzung aus Vermögen, Reichweite bzw. Restkapital am Zielalter. Unter «Dein Plan im Detail» direkt zu «Einkommen & Steuern», «Kapital & 3-Töpfe-Modell», «PK – Rente oder Kapital» (nur vor Pensionierung) und «Szenarien & Risiken». Dazu «Angaben ändern», Speichern und Beratung. Kein zweiter Szenarieneingang.
+- Ampel: rot bei ungedecktem Bedarf in der Basisrechnung; gold, wenn nur das bestehende Szenario «Fünf schwache Jahre» eine Lücke hat; grün, wenn beide bis zum Zielalter gedeckt sind. Ohne Wohnkanton bleibt die Einschätzung neutral/vorläufig. Gold ausdrücklich erklären; keine Erfolgswahrscheinlichkeit erfinden.
+- Töpfe, Kapitalanlage, PK-Vergleich, Steuern, Lebensphasen, Renditen, Inflation, historische Szenarien und Belastungsprobe bleiben freiwillig erreichbar. Eine einzige Übersicht «Angaben ändern» mit «Persönliche Situation», «Einkommen & Bedarf», «Vermögen» und «Vorsorge» (nur vor Pensionierung). Lebensphasen und Modellannahmen dort zusätzlich erreichbar; keine alten Wizard-Schritte.
+- Detailseiten und Angabenübersicht führen mit «← Dein Plan» zurück; Gruppeneditoren und Annahmen mit «← Angaben ändern». Nach «Änderungen übernehmen» speichern und zur Angabenübersicht zurückkehren. Jede Route hat einen expliziten Parent in `check-ui.js`; keine generische Deep-State-Umleitung.
+- Navigation erhält vorhandene Werte und zeigt beim nächsten Planaufruf aktuelle Berechnungen. Unfertige Editorwerte bleiben innerhalb der Sitzung beim Verlassen/Wiederöffnen erhalten. Keine konkurrierenden Legacy-Aktionen «Zurück», «Weiter», «Neu berechnen» oder «Weitere Themen». Neue Seite oben öffnen, Rückweg auch beim Scrollen erreichbar halten.
+- Nur «Neue Planung» darf nach ausdrücklicher Bestätigung den Arbeitsstand zurücksetzen. Der persönliche Snapshot bleibt erhalten. Die Marke ist nicht klickbar und startet keine neue Planung.
 - Patrick nur einmal im Header; Begleittext daran angebunden. Statusboxen ohne Portrait.
 - Wohnkanton kompakter Select «Dein Wohnsitzkanton»; zugänglicher Name, kein redundanter sichtbarer Labelblock.
 - Jedes Eingabefeld braucht einen eindeutigen sichtbaren Kontext/Label und einen zugänglichen Namen (`aria-label` bzw. Label). Tastaturbedienbarkeit sicherstellen.
@@ -75,4 +89,27 @@ Stand: 11. September 2026. Grundlage: beauftragte Gesamtspezifikation in [OPTIMI
 
 - Änderungen an Berechnungsregeln benötigen passende Regressionstests; Einnahmensummen, PK-Steuer nur auf PK, Kapitalzusammensetzung, Phasen und Inflationszeitpunkt prüfen.
 - Beide vollständigen Wege vor/nach Pensionierung auf Desktop/Mobile testen, inklusive Speichern → Reload → Laden, Migration und Fehlerfällen.
-- Bestehende Dokumentation erhalten. Diese Regeln und zugehörigen Code gemeinsam pflegen; vor zukünftigen Änderungen beide Pflichtdateien lesen.
+- Bestehende Dokumentation erhalten. `MASTER_SPEC.md`, diesen Regelkatalog und zugehörigen Code gemeinsam pflegen; die Master-Spezifikation in betroffenen bestehenden Kapiteln aktualisieren, keine Änderungswünsche oder obsolete Konzepte anhängen.
+
+## 9. Gemeinsames Modell und UI-Migration
+
+- `retirement-calculator.js` enthält pure Funktionen für Hochrechnung, PK-Aufteilung, Kapitalbasis, Simulation und Bewertung. `tax-model.js` und `retirement-engine.js` bleiben die zuständigen Steuer- und Jahresrechenkerne. Keine DOM-Abhängigkeiten im Berechnungsmodell.
+- Einheitlicher Plan: `person`, `retirement`, `assets`, `income`, `spending`, `pensionDecision`, `assumptions`, `scenarios`, `metadata`. Adapter verbinden dieses Modell mit den erhaltenen Detailansichten. Das Ergebnisobjekt enthält Einkommen, Steuer, Lücke, freies/gebundenes Kapital, Jahresverlauf und Einschätzung.
+- `check-ui.js` steuert explizite Navigationszustände. Der neue Basisablauf ersetzt den bisherigen Wizard; vorhandene Vertiefungskomponenten werden weiterverwendet und schrittweise modernisiert.
+- Persönliche Snapshots verwenden Schema 4: `{version: 4, savedAt, plan}`. Schemas 1/2 mit `state` sowie Schema 3 mit `plan` bleiben lesbar. Schema 4 speichert das kanonische `riskProfile` und den verwendeten Schwankungsfaktor im Plan. Alter Schlüssel `bold` wird zu `growth` migriert; die frühere Auswahl bleibt erhalten. Der automatische Arbeitsstand bleibt kompatibel. Unverändertes Speichern/Laden muss dieselben Jahresergebnisse liefern. Die neue historische Profilrechnung ersetzt bewusst die vorher unveränderten MSCI-Kurven auch bei alten Plänen.
+- Beim Ändern eines aggregierten Betrags im Basischeck bleiben die Anteile der bisherigen Einzelpositionen erhalten; bei einem bisherigen Gesamtwert von null wird der neue Betrag der ersten Position zugeordnet. Eine abweichende Aufteilung wird in der Vertiefung erfasst. Bestehende Lebensphasen und zeitlich begrenzte Einnahmen nicht stillschweigend löschen.
+- Die vom Nutzer angelegte `index_save.html` ist eine unveränderte Sicherung und kein zweiter produktiver Einstieg. Sie und persönliche Screenshots werden nicht ungefragt mit versioniert.
+- Fachliche Vergleichstests müssen vor/nach Pensionierung, verschiedene PK-Aufteilungen, Profilwirkung, Steuern, Töpfe und vollständiges Speichern/Laden abdecken. Mobile und Desktop einschliesslich Vertiefung ohne horizontales Seitenscrollen prüfen.
+
+## 10. Risikoprofile, Schwankungen und gemeinsame Ergebnisse
+
+- Verbindliche Parameter ausschliesslich in `risk-profiles.js`: Vorsichtig (`cautious`) 2,5 % reale Zielrendite / Faktor 0,45; Ausgewogen (`balanced`) 4,5 % / 0,70; Chancenorientiert (`growth`, alter Alias `bold`) 6,0 % / 1,00. Dies sind Modellannahmen, keine zugesicherten Renditen oder persönliche Anlageempfehlungen.
+- `buildProfileReturnSeries` nimmt Dezimalrenditen entgegen. Für jedes Jahr: `exp(log(1 + Zielrendite) + Faktor * (log(1 + historische Rendite) - Mittelwert aller historischen Logrenditen)) - 1`. Eingaben bleiben unverändert. Die geometrische Rendite der vollständigen Serie muss die Zielrendite innerhalb von 0,05 Prozentpunkten treffen.
+- Erst die vollständige historische Reihe transformieren, dann für ungünstig aufsteigend und für günstig absteigend sortieren. Beide Kurven enthalten exakt dieselben transformierten Jahresrenditen; nur deren Reihenfolge unterscheidet sich. Die Jahresengine erhält diese Reihen in Prozentpunkten.
+- Der Crash wird als negativer Logschock skaliert: `exp(Faktor * log(1 - 0,30)) - 1`; das erste schwache Jahr entsprechend mit −15 %. Danach bleiben die vier schwachen Jahre bei 0 % und die bestehende Anleihenschwäche bei −8 % im ersten Jahr / viermal 0 %. Immobilien- und Lebensdauerstress bleiben fachlich unverändert. Erläuterungen zeigen den tatsächlich verwendeten profilspezifischen Verlust.
+- Höheres Risiko bedeutet grössere Renditechancen und grössere Verlustrisiken. Chancenorientiert darf insbesondere nach schwachen Anfangsjahren schlechter abschneiden. Auch vorsichtige Anlagen können Verluste zeigen. Kein höheres Endkapital für jedes Szenario garantieren; Kapitalverbrauch und Entnahmen können Ergebnisbandbreiten begrenzen.
+- Profiländerungen beeinflussen Basisrechnung, historische Varianten, Belastungsprobe, Restkapital, erste Finanzierungslücke und die bestehende Ampelregel. Keine eigene Renditeberechnung im Chart oder in Ergebniskarten: alle Jahreswerte aus `retirement-calculator.js` und `retirement-engine.js`, Profilvergleich aus `compareProfiles`.
+- Gebundenes Kapital bleibt für jedes Profil identisch. Finanzierbarkeit nur aus laufenden Nettoeinnahmen und verfügbarem Kapital beurteilen, solange kein Verkauf modelliert ist.
+- Beim Profilwechsel ohne Reload Auswahl, Zielrendite, Schwankungsfaktor, Diagramm, Datenpunktkarten, Restkapital, Lückenalter und Status neu rendern. Das Profil wird beim Speichern/Laden beibehalten; individuelle Zielrenditen bleiben erkennbar.
+- Die Profilauswahl darf an mehreren passenden Stellen vorkommen, insbesondere beim PK-Entscheid und bei der Finanzierungslücke. Immer dieselbe kompakte, dreigeteilte Leiste mit Profilnamen, Renditewert und klar markierter Auswahl verwenden; auch auf Mobile nebeneinander. Ausführliche Erklärungen über einen Infohinweis öffnen. Die frühere Darstellung als grosse Profilkarten wird ersetzt. Beide Stellen bearbeiten dieselbe gespeicherte Auswahl.
+- Pflichtprüfungen: `risk-profiles.test.js` (Transformation, Ziel, Schwankung, Reihenfolge, positive/negative Ergebnisse, Steuern/Kapitalbasis, Stress, Speicherung/Migration) und `tests/risk-profiles.cy.js` (live Kurven, einheitliche Skala, gleiche Werte in allen Ansichten, alle Profile speichern/laden, Desktop/Mobile). Bestehende Regressionstests müssen weiterhin erfolgreich sein.

@@ -1,5 +1,5 @@
 describe('Feasibility before PK choice',()=>{
-  const setup="st=structuredClone(D);st.mode='pre';st.canton='ZG';st.currentAge=65;st.retirementAge=65;st.planningAge=95;st.need=80000;st.assets.pk=1000000;st.assets.p3=0;st.assets.sec=0;st.assets.cash=0;st.income.ahv=0;st.ass.uws=10;st.ass.inflation=0;st.pkShare=100;ensurePlan();st.plan.need2=80000;st.plan.need3=80000;st.plan.returns=[0,0,0];ui();show('pk');";
+  const setup="st=structuredClone(D);st.mode='pre';st.canton='ZG';st.currentAge=65;st.retirementAge=65;st.planningAge=95;st.need=80000;st.assets.pk=1000000;st.assets.p3=0;st.assets.sec=0;st.assets.cash=0;st.income.ahv=0;st.ass.uws=10;st.ass.inflation=0;st.pkShare=100;ensurePlan();st.plan.need2=80000;st.plan.need3=80000;st.plan.returns=[0,0,0];CheckUI.go('pension');";
   it('separates overall feasibility from the current split and keeps the selected state',()=>{
     cy.visit('/');cy.window().then(w=>w.eval(setup));
     cy.get('#planFeasibility').should('contain','Unter den gewählten Annahmen');
@@ -26,11 +26,11 @@ describe('Feasibility before PK choice',()=>{
     });
     cy.get('#planFeasibility').should('contain','Machbarkeit noch offen');
   });
-  it('moves from horizon to PK and from PK to results',()=>{
-    cy.visit('/');cy.window().then(w=>w.eval(setup+"flow=makeFlow();i=5;showStep();"));
-    cy.get('[data-screen="horizon"] .actions .primary').click();
+  it('opens PK from optional depth and returns to the simple answer',()=>{
+    cy.visit('/');cy.window().then(w=>w.eval(setup));
+    cy.get('#checkApp [data-go=plan]').click();cy.get('#checkApp [data-go=pension]').click();
     cy.get('[data-screen="pk"]').should('have.class','active');
-    cy.get('[data-screen="pk"] .actions .primary').click();
-    cy.get('[data-screen="result"]').should('have.class','active');
+    cy.get('#checkApp [data-go=plan]').click();
+    cy.get('.check-answer').should('be.visible');
   });
 });

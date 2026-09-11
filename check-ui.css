@@ -1,0 +1,121 @@
+/* New primary experience; retained detail views are progressively disclosed. */
+body.check-v2{background:#f7f8f5;color:#1b302d;font-family:Inter,system-ui,-apple-system,"Segoe UI",sans-serif}
+.check-shell{max-width:1120px;margin:auto;padding:0 40px}
+.check-header{display:flex;align-items:center;justify-content:space-between;padding:28px 0;border-bottom:1px solid #dce3dd;gap:18px}
+.check-brand{display:flex;align-items:center;gap:12px;border:0;background:none;color:#1b302d;font-size:17px;font-weight:750;padding:0;cursor:pointer}
+.check-mark{display:grid;place-items:center;background:#244b43;color:#fff;border-radius:12px;width:36px;height:36px;font-size:24px;font-family:Georgia,serif}
+.check-advisor{display:flex;align-items:center;gap:13px;font-size:13px;color:#34564d;text-align:right}
+.check-advisor small{font-size:12px;color:#65796f}.check-advisor img{width:46px;height:46px;border-radius:50%;object-fit:cover}
+.check-welcome{display:grid;grid-template-columns:1.1fr 1fr;align-items:center;gap:70px;min-height:660px;padding:62px 0 80px}
+.check-eyebrow{display:block;text-transform:uppercase;letter-spacing:.13em;font-size:12px;font-weight:750;color:#587267;margin-bottom:22px}
+.check-shell h1{font-size:54px;font-weight:550;line-height:1.08;letter-spacing:-.045em;margin:0 0 24px;color:#1a342c}
+.check-shell h2{font-size:24px;line-height:1.2;font-weight:650;letter-spacing:-.025em;color:#1a342c;margin:0 0 18px}
+.check-shell p{font-size:16px;line-height:1.65;color:#62746b;margin:12px 0}
+.check-intro>p{max-width:400px;font-size:18px;line-height:1.7}
+.check-promise{display:flex;flex-wrap:wrap;gap:12px 20px;margin-top:38px;font-size:12px;color:#63766d}
+.check-choice{padding:32px;border:1px solid #dbe3dc;background:#fff;border-radius:24px;box-shadow:0 20px 55px #1c3d2d09}
+.check-choice .check-eyebrow{margin-bottom:12px}
+.check-situation{display:flex;align-items:center;gap:14px;padding:20px 15px;margin-top:14px;width:100%;border:1px solid #dce5df;border-radius:14px;background:#fafcf9;color:#234b3e;text-align:left;cursor:pointer;transition:background .15s,border-color .15s}
+.check-situation:hover{background:#eef5eb;border-color:#91ad9e}.check-situation strong{display:block;font-size:16px;line-height:1.4}.check-situation small{display:block;font-size:13px;line-height:1.5;margin-top:5px;color:#718075}.check-situation>b{margin-left:auto}
+.check-choice-icon{width:37px;min-width:37px;height:37px;display:grid;place-items:center;background:#e9f0e7;border-radius:50%;font-size:22px}
+.check-text-button,.check-back{border:0;background:none;color:#315b4e;padding:14px 0;cursor:pointer;text-align:left;font-size:14px;font-weight:650}
+.check-choice .check-text-button{display:block}.check-choice .check-privacy{font-size:13px;margin-top:25px}
+.check-footer{font-size:12px;color:#809085;padding:30px 0;border-top:1px solid #e2e6e0;clear:both}
+.check-message{font-size:15px!important;line-height:1.5;color:#315b4e!important}.check-message:empty{display:none}.check-message.error{color:#a44134!important}
+.check-basic,.check-answer,.check-understand{max-width:850px;margin:36px auto 64px}
+.check-basic h1,.check-answer h1,.check-understand h1{font-size:43px}.check-section-heading{margin:20px 0 32px}
+.check-form-section{display:grid;grid-template-columns:.8fr 1.4fr;gap:30px;padding:30px 0;border-top:1px solid #dce3dc}
+.check-number{display:block;font-size:13px;color:#7d9688;margin-bottom:12px}.check-form-section h2{font-size:21px;margin-bottom:8px}.check-form-section>div>p{font-size:14px}
+.check-fields{display:grid;grid-template-columns:1fr;gap:20px;min-width:0}.check-field{display:block;font-size:15px;color:#334c42;font-weight:550;min-width:0}.check-field>span{display:block;margin-bottom:8px;line-height:1.45}
+.check-field>div{display:flex;align-items:center;border:1px solid #ccd8ce;border-radius:10px;background:#fff;overflow:hidden}.check-field>div>span{padding:0 14px 0 0;font-size:13px;color:#7b8c80;white-space:nowrap}
+.check-field input:not([type=range]),.check-field select{font:inherit;font-size:18px;font-weight:500;width:100%;min-width:0;border:0;background:#fff;color:#203e32;padding:13px 14px;outline-offset:-3px;box-shadow:none;border-radius:0}
+.check-field select{border:1px solid #ccd8ce;border-radius:10px;font-size:16px}.check-field input[type=range]{width:100%;accent-color:#2d6550;margin:18px 0;cursor:pointer;min-height:28px}
+.check-field small{display:block;font-size:13px;font-weight:400;color:#6d8074}.check-pension output{display:block;font-size:20px;margin:14px 0 0}
+.check-field-note{font-size:13px!important;margin:0!important}.check-example{padding:12px 16px;border-radius:10px;background:#f4ead3;color:#776337!important;font-size:14px!important}
+.check-method{margin:28px 0;border-top:1px solid #dce3dc;padding:18px 0}.check-method summary{display:flex;justify-content:space-between;cursor:pointer;list-style:none;font-size:14px;font-weight:650;color:#4d6a5c}.check-method p{font-size:14px}
+.check-button{display:inline-flex;align-items:center;justify-content:space-between;gap:22px;border:1px solid #285540;background:#285540;color:white;border-radius:11px;padding:17px 23px;cursor:pointer;font-size:16px;font-weight:650;text-decoration:none}
+.check-button:hover{background:#1a432f}.check-button.secondary{width:auto;background:white;color:#285540;border-color:#c4d2c7}.check-button.secondary:hover{background:#edf3ed}
+#checkFormError{color:#a44134;font-size:14px}#checkForm>.check-button{width:100%}
+.check-answer>.check-eyebrow{margin-top:45px}.check-lead{margin-bottom:28px!important}
+.check-result{background:white;border:1px solid #d4e0d5;border-radius:22px;padding:30px}.check-status{display:flex;gap:9px;align-items:center;font-size:14px;font-weight:700;color:#366d4b;padding-bottom:22px;border-bottom:1px solid #e4ebe3}.check-status i{display:block;width:9px;height:9px;border-radius:50%;background:currentColor}
+.check-result.amber .check-status{color:#936519}.check-result.red .check-status{color:#b14d3a}.check-result.pending .check-status{color:#6c7780}
+.check-answer-lines{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:26px;padding-top:25px}.check-answer-lines article>span{display:block;font-size:13px;line-height:1.5;color:#718477;margin-bottom:12px}.check-answer-lines strong{font-size:27px;font-weight:650;line-height:1.3;display:block;letter-spacing:-.03em;overflow-wrap:anywhere}.check-answer-lines strong small{font-size:13px;letter-spacing:0;font-weight:400;white-space:nowrap}.check-answer-lines p{font-size:14px;line-height:1.55}
+.check-model-note{font-size:13px!important;color:#809084!important;margin-top:25px!important}.check-stress-note{font-size:14px!important;padding:12px 15px;background:#faf1de;border-radius:9px}
+.check-next{margin:28px 0;display:grid;gap:0}.check-next button{display:flex;align-items:center;gap:16px;text-align:left;padding:20px 2px;border:0;border-bottom:1px solid #dbe3dc;background:none;cursor:pointer;color:#294c3c}.check-next button span{font-size:12px;color:#90a092}.check-next button strong{font-size:16px}.check-next button b{margin-left:auto;font-size:20px}
+.check-storage{display:flex;flex-wrap:wrap;gap:12px;margin-top:30px}.check-storage small{flex-basis:100%;font-size:13px;color:#788b7c}
+.check-topics{display:grid;gap:14px;margin-top:30px}.check-topics button{display:flex;gap:24px;align-items:center;padding:25px 28px;background:white;border:1px solid #dae4da;border-radius:14px;text-align:left;cursor:pointer}.check-topics button>span{font-size:14px;color:#839782}.check-topics h2{font-size:20px;margin:0 0 4px}.check-topics p{font-size:14px;margin:0}.check-topics b{margin-left:auto;color:#547b60}
+.check-deep-heading{display:flex;justify-content:space-between;align-items:center;padding-top:12px}
+.check-brand{cursor:default}
+.check-deep-heading{display:block;position:sticky;top:0;z-index:20;background:#f7f8f5;padding:4px 0 14px;border-bottom:1px solid #dce3dd;margin-bottom:24px}
+.check-shell .check-deep-heading h1{font-size:30px;line-height:1.2;margin:0;overflow-wrap:anywhere;outline:none}
+.check-edit{max-width:850px;margin:20px auto 64px}
+.check-edit-groups{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.check-edit-card{background:#fff;border:1px solid #dae4da;border-radius:16px;padding:22px;min-width:0}
+.check-edit-title{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.check-edit-title h2{font-size:21px;margin:0}.check-edit-title button{white-space:nowrap}
+.check-edit-card dl{margin:12px 0 0;font-size:14px;line-height:1.5}
+.check-edit-card dl>div{display:flex;justify-content:space-between;gap:16px;padding:9px 0;border-top:1px solid #e6ece5}
+.check-edit-card dt{color:#62746b}.check-edit-card dd{margin:0;text-align:right;overflow-wrap:anywhere}
+#groupEditor{max-width:620px;margin:30px auto}#groupEditor fieldset{padding:0;border:0;min-width:0}
+#groupEditor .check-button{width:100%;justify-content:center}
+.check-v2 .legacy-app .screen>.actions,.check-v2 .legacy-app .restart-link,.check-v2 .legacy-app .screen>h1,.check-v2 .legacy-app .screen>.sub{display:none!important}
+.check-v2 .legacy-app [hidden]{display:none!important}
+@media(max-width:600px){.check-edit-groups{grid-template-columns:1fr}.check-edit-card{padding:18px}.check-shell .check-deep-heading h1{font-size:23px}.check-deep-heading{margin-bottom:18px}.check-v2 .check-shell>.legacy-app{padding-left:0;padding-right:0}}
+.check-deep .check-footer{display:none}.legacy-app[hidden]{display:none!important}.check-v2 .legacy-app{max-width:950px;padding-top:0}
+.check-v2 .legacy-app>.top,.check-v2 .legacy-app>#headerGuide,.check-v2 .legacy-app>#exampleNotice,.check-v2 .legacy-app>#prog,.check-v2 .legacy-app .tabs{display:none!important}
+.check-v2 .legacy-app .chat-shell,.check-v2 .legacy-app .personal-save-box,.check-v2 .legacy-app .personal-save-start{display:none!important}
+.check-v2 .legacy-app [data-screen=result]>h1,.check-v2 .legacy-app [data-screen=result]>.sub{display:none}
+.check-v2 .legacy-app[data-topic=income] #tab-overview>*:not(#resultTaxes){display:none!important}
+.check-v2 .legacy-app[data-topic=income] #resultTaxes .investable-summary{display:none}
+.check-v2 .legacy-app[data-topic=income] #resultTaxes>.tax-summary:nth-of-type(3){display:none}
+.income-source-summary{display:none}
+.check-v2 .legacy-app[data-topic=income] .income-source-summary{display:block;margin:24px 0 8px}
+.income-source-summary h2{font-size:22px;line-height:1.3;margin:0 0 8px}
+.income-source-summary>p{font-size:14px;line-height:1.5;color:#62746b;margin:0 0 18px}
+.income-source{gap:16px;font-size:15px;align-items:center}
+.income-source>span{overflow-wrap:anywhere}
+.income-source>div{text-align:right;flex-shrink:0}
+.income-source strong,.income-source small{display:block}
+.income-source small{font-size:13px;font-weight:400;color:#62746b;margin-top:4px}
+.check-v2 .legacy-app[data-topic=pension] .decision-banner{display:none}
+.check-v2 .legacy-app .card{box-shadow:none;border-color:#dbe3da}.check-v2 .legacy-app .primary{background:#285540}
+.check-v2 .legacy-app .risk-explanation{color:#586a5d}
+.check-v2 .legacy-app input:focus,.check-shell :focus-visible{outline:3px solid #8bb79b;outline-offset:3px}
+.check-fields[hidden],.check-field [hidden]{display:none}
+@media(max-width:800px){.check-shell{padding:0 24px}.check-welcome{gap:32px}.check-shell h1{font-size:44px}.check-choice{padding:25px}.check-answer-lines{gap:18px}.check-answer-lines strong{font-size:23px}}
+@media(max-width:600px){
+ .check-shell{padding:0 20px}.check-header{padding:18px 0}.check-brand{font-size:15px;gap:8px}.check-mark{width:30px;height:30px;font-size:21px}.check-advisor>span{display:none}.check-advisor img{width:38px;height:38px}
+ .check-welcome{grid-template-columns:1fr;gap:30px;padding:35px 0 42px;min-height:0}.check-shell h1,.check-basic h1,.check-answer h1,.check-understand h1{font-size:37px}.check-eyebrow{font-size:11px;line-height:1.7;margin-bottom:16px}.check-intro>p{font-size:16px}.check-promise{margin-top:23px;font-size:11px;gap:8px 12px}
+ .check-choice{padding:24px 18px;border-radius:18px}.check-choice h2{font-size:23px}.check-situation{padding:16px 12px;gap:10px}.check-situation strong{font-size:15px}.check-situation small{font-size:13px}
+ .check-basic,.check-answer,.check-understand{margin-top:22px}.check-form-section{grid-template-columns:1fr;gap:15px;padding:24px 0}.check-form-section h2{font-size:22px}.check-number{margin-bottom:7px}.check-fields{gap:18px}.check-field input:not([type=range]){font-size:18px}
+ .check-result{padding:23px 21px;border-radius:18px}.check-answer-lines{grid-template-columns:1fr;gap:0;padding-top:0}.check-answer-lines article{padding:23px 0 8px;border-bottom:1px solid #e7ece5}.check-answer-lines article:last-child{border-bottom:0}.check-answer-lines strong{font-size:30px}.check-answer-lines article>span{font-size:14px;margin-bottom:8px}.check-answer-lines p{font-size:15px}
+ .check-storage .check-button{width:100%;justify-content:center}.check-next button{padding:18px 0}.check-next button strong{font-size:15px}.check-topics button{padding:20px 16px;gap:13px}.check-topics h2{font-size:19px}.check-topics p{font-size:14px}
+ .check-v2 .legacy-app{padding:0 12px 25px}.check-deep-heading{gap:16px}.check-deep-heading button{font-size:13px}.check-footer{font-size:12px}
+}
+.check-profiles{max-width:850px;margin:22px auto;padding:0;color:#294c3c;font:inherit}
+.profile-bar-heading{position:relative;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:9px}
+.profile-bar-heading>strong{font-size:14px;font-weight:650}
+.profile-options{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:3px;padding:3px;background:#eaf0e9;border:1px solid #d7e1d6;border-radius:12px}
+.profile-options button{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-width:0;min-height:62px;padding:9px 7px;background:transparent;border:0;border-radius:8px;color:#45604e;cursor:pointer;font:inherit}
+.profile-options button:hover{background:#dce8db}
+.profile-options button[aria-pressed=true]{background:#285540;color:#fff;box-shadow:0 1px 4px #183b3020}
+.profile-options button:disabled{cursor:default;opacity:.65}
+.profile-options button strong{font-size:14px;font-weight:650;line-height:1.3;overflow-wrap:anywhere}
+.profile-options button span{font-size:13px;line-height:1.3}
+.profile-options button:focus-visible,.profile-help summary:focus-visible{outline:3px solid #8bb79b;outline-offset:2px}
+.profile-help summary{list-style:none;cursor:pointer;font-size:17px;line-height:1.3;padding:2px 5px}
+.profile-help summary::-webkit-details-marker{display:none}
+.profile-help>div{position:absolute;z-index:10;left:0;right:0;top:30px;border:1px solid #d7e1d6;border-radius:12px;background:#fff;padding:12px 18px;box-shadow:0 8px 25px #183b3020}
+.profile-help p,.check-shell .profile-help p{font-size:14px;line-height:1.5;margin:10px 0;color:#536b5c}
+.profile-custom{display:block;margin-top:8px;font-size:13px;color:#62746b}
+.check-profiles>.profile-result{display:flex;flex-direction:column;gap:9px;margin-top:18px;padding:18px;background:#eef5ee;border-radius:10px;font-size:15px}
+.profile-result.amber{background:#fff4d9}.profile-result.red{background:#ffede8}.profile-result.pending{background:#eef0f2}
+@media(max-width:600px){.profile-options button{min-height:68px;padding:8px 4px}.profile-options button strong{font-size:13px}.profile-bar-heading>strong{font-size:13px}}
+#profileComparison{margin:24px 0;padding:20px;border:1px solid #dbe3da;border-radius:14px}
+#profileComparison p,#profileComparison small{font-size:14px;line-height:1.6}
+.profile-comparison{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0}
+.profile-comparison article{padding:15px;border:1px solid #dbe3da;border-radius:10px;min-width:0}
+.profile-comparison article>strong{font-size:15px;overflow-wrap:anywhere}
+.profile-comparison span{display:block;margin-top:15px;font-size:13px;color:#5d7167}
+.profile-comparison b{display:block;font-size:18px;overflow-wrap:anywhere;color:#233e31;margin-top:5px}
+@media(max-width:600px){.profile-comparison{grid-template-columns:1fr}#profileComparison{padding:16px}}

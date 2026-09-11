@@ -172,7 +172,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
 </style>
 </head>
 <body>
-<div class="app">
+<div class="app legacy-app">
 <div class="top"><div class="brand">Dein Ruhestands-Check</div><div class="coach"><img src="pin.jpeg" alt="Dein Finanzberater"></div></div>
 <div id="prog" class="progressbox hidden" role="status" aria-live="polite"><div class="progressmeta"><span id="ptext"></span><span id="pchapter"></span></div><div class="progress"><i id="pbar"></i></div></div>
 
@@ -225,7 +225,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
 </div>
 <div class="card"><div class="kicker">PK-Entscheid</div><div class="decision-banner"><div class="decision-icon">⚖️</div><div><strong>Eine Entscheidung mit langfristigen Folgen.</strong></div></div>
 <div id="planFeasibility" class="pk-status" role="status" aria-live="polite"></div><h2 class="pk-question">Wie möchtest du deine Pensionskasse beziehen?</h2><div class="pkbox"><div class="pkval"><strong id="pkTotal"></strong><span>PK-Guthaben am Pensionierungszeitpunkt</span></div><div class="split"><div class="side cap"><small>Kapital</small><strong id="pkCap"></strong><span id="pkCapPct"></span></div><div class="side rent"><small>Rente</small><strong id="pkRentBase"></strong><span id="pkRentPct"></span></div></div><div class="pk-choice-summary"><span id="pkChoiceCap" class="cap-pill"></span><span>↔</span><span id="pkChoiceRent" class="rent-pill"></span></div><div class="labels"><span>Mehr Kapital</span><span>Mehr Rente</span></div><input id="pkSlider" type="range" min="0" max="100" oninput="pkShare(this.value)"></div>
-<div id="pkVariantStatus" class="pk-status" role="status" aria-live="polite"></div><div id="pkTaxSummary"></div><div id="pkIncomeTaxSummary"></div><div class="section blue">Wie möchtest du das Kapital anlegen?</div><div class="risks"><button class="risk" data-risk="cautious" onclick="risk('cautious')"><div class="r-ico">🛡️</div><b>Vorsichtig</b><span>2,5 %</span></button><button class="risk" data-risk="balanced" onclick="risk('balanced')"><div class="r-ico">⚖️</div><b>Ausgewogen</b><span>4,5 %</span></button><button class="risk" data-risk="bold" onclick="risk('bold')"><div class="r-ico">🚀</div><b>Mutig</b><span>6,0 %</span></button></div>
+<div id="pkVariantStatus" class="pk-status" role="status" aria-live="polite"></div><div id="pkTaxSummary"></div><div id="pkIncomeTaxSummary"></div><div class="section blue">Wie möchtest du dein langfristiges Kapital anlegen?</div><div class="risks"><button class="risk" data-risk="cautious" onclick="risk('cautious')"><div class="r-ico">🛡️</div><b>Vorsichtig</b><span></span></button><button class="risk" data-risk="balanced" onclick="risk('balanced')"><div class="r-ico">⚖️</div><b>Ausgewogen</b><span></span></button><button class="risk" data-risk="bold" onclick="risk('bold')"><div class="r-ico">🚀</div><b>Mutig</b><span></span></button></div>
 <div class="decision-kicker">Dein direkter Vergleich</div><div class="comparison"><div class="compare-card capital-card"><div class="top">Kapitalbezug: erwarteter Ertrag</div><div id="capYield" class="main"></div><div id="capYieldSub" class="subv"></div></div><div class="compare-card rent-card"><div class="top">Rentenbezug: lebenslange PK-Rente</div><div id="pkRent" class="main"></div><div class="subv">5,2 % Umwandlungssatz</div></div></div><div id="pkDelta" class="delta-banner"></div>
 </div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="forward()">Weiter →</button></div></section>
 
@@ -241,7 +241,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
   <div class="coach-row"><div class="coach-mini"></div><div class="bubble assistant">Was hast du bereits aufgebaut? Tippe nur die Bereiche an, die für dich relevant sind.</div></div>
 </div>
 <div class="card"><div class="kicker">Deine Basis heute</div><h2>Dein Vermögen heute</h2>
-<div id="postAssetList"></div><div class="section blue">Wie ist dein freies Kapital angelegt?</div><div class="risks"><button class="risk" data-postrisk="cautious" onclick="risk('cautious')"><div class="r-ico">🛡️</div><b>Vorsichtig</b><span>2,5 %</span></button><button class="risk" data-postrisk="balanced" onclick="risk('balanced')"><div class="r-ico">⚖️</div><b>Ausgewogen</b><span>4,5 %</span></button><button class="risk" data-postrisk="bold" onclick="risk('bold')"><div class="r-ico">🚀</div><b>Mutig</b><span>6,0 %</span></button></div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="saveOpenInputs();forward()">Weiter →</button></div></section>
+<div id="postAssetList"></div><div class="section blue">Wie ist dein freies Kapital angelegt?</div><div class="risks"><button class="risk" data-postrisk="cautious" onclick="risk('cautious')"><div class="r-ico">🛡️</div><b>Vorsichtig</b><span></span></button><button class="risk" data-postrisk="balanced" onclick="risk('balanced')"><div class="r-ico">⚖️</div><b>Ausgewogen</b><span></span></button><button class="risk" data-postrisk="bold" onclick="risk('bold')"><div class="r-ico">🚀</div><b>Mutig</b><span></span></button></div></div><div class="actions"><button class="secondary" onclick="back()">Zurück</button><button class="primary" onclick="saveOpenInputs();forward()">Weiter →</button></div></section>
 
 <section class="screen" data-screen="income">
 <div class="chat-shell">
@@ -271,7 +271,7 @@ input.money,input.pct{font-size:16px;min-height:50px}
 </div>
 <div class="card"><div class="kicker">Standortbestimmung</div><h2 id="resultTitle"></h2>
 <div class="split">
-<div class="side cap"><small>Kapital</small><div class="calc"><div class="row"><span>Gesamt</span><strong id="rCapTotal"></strong></div><div class="row"><span>Gebunden</span><strong id="rBound"></strong></div><div class="row total"><span>Verfügbar</span><strong id="rFree" class="blue"></strong></div></div></div>
+<div class="side cap"><small>Kapital</small><div class="calc"><div class="row"><span>Gesamtkapital inkl. Immobilien netto</span><strong id="rCapTotal"></strong></div><div class="row"><span>Davon in Immobilien gebunden</span><strong id="rBound"></strong></div><div class="row total"><span>Verfügbares Kapital ohne Immobilien</span><strong id="rFree" class="blue"></strong></div></div></div>
 <div class="side rent"><small>Einkommen</small><div class="calc"><div class="row"><span>Gesamt</span><strong id="rIncomeTotal"></strong></div><div class="row"><span>aus Renten</span><strong id="rRent" class="gold"></strong></div><div class="row"><span>aus Kapital</span><strong id="rYield" class="blue"></strong></div><div class="row"><span>Weitere</span><strong id="rOther"></strong></div></div></div>
 </div>
 <div class="calc"><div class="row"><span>Lebensstandard</span><strong id="rr4"></strong></div><div class="row total"><span id="rrLabel"></span><strong id="rr5"></strong></div></div>
@@ -288,15 +288,15 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <div id="tab-dev" class="hidden">
   <div class="card dev-intro-card">
     <div class="kicker">Prognose</div>
-    <h2>Wie entwickelt sich dein Aktientopf?</h2>
-    <p class="chart-context">Basis: MSCI World · letzte 10 Jahre · in heutiger Kaufkraft.</p>
+    <h2>Dein verfügbares Kapital</h2>
+    <p class="chart-context">Geld für später · langfristig nach deinem Anlageprofil investiert.</p>
     <div id="devInvestableCapital" class="dev-investable"></div><div id="devPotSummary" class="dev-pot-summary"></div>
-    <div class="dev-focus-note"><span aria-hidden="true">ⓘ</span><div>Gleiche Renditen 2016–2025, unterschiedlich angeordnet. Topf 1 und 2 finanzieren die nächsten Entnahmen.</div></div>
+    <div class="dev-focus-note"><span aria-hidden="true">ⓘ</span><div>Alle drei Töpfe bis zu deinem Zielalter · ohne gebundenes Immobilienkapital.</div></div>
   </div>
   <div class="card dev-chart-card">
-    <div class="dev-chart-title"><h2>Ungünstige und günstige Renditereihenfolge</h2><details class="dev-history-info"><summary aria-label="Historische Berechnung erklären">ⓘ</summary><p>MSCI World brutto in CHF, nach Schweizer Inflation und vor Anlagekosten. Beide Varianten verwenden dieselben historischen Jahresrenditen von 2016 bis 2025. Nur deren Reihenfolge ist unterschiedlich. Dies ist keine Prognose. Quellen: MSCI und BFS.</p></details></div>
-    <div class="chart-wrap"><canvas id="chart" width="520" height="300" role="img" aria-label="Entwicklung des Aktientopfs mit pessimistischer und optimistischer Reihenfolge der realen Renditen von 2016 bis 2025"></canvas></div>
-    <div class="legend"><span><i style="background:var(--red)"></i>Ungünstige Reihenfolge</span><span><i style="background:var(--blue)"></i>Günstige Reihenfolge</span></div>
+    <div class="dev-chart-title"><h2>Wie kann sich dein verfügbares Kapital entwickeln?</h2><details class="dev-history-info"><summary aria-label="Historische Berechnung erklären">ⓘ</summary><p>Die Kurven zeigen unterschiedliche Reihenfolgen derselben profilabhängigen Jahresrenditen. Sie sind Modellrechnungen und keine Vorhersagen. Die reale MSCI-World-Reihe 2016–2025 dient nur als Schwankungsmuster; Zielrendite und Schwankungsfaktor stammen aus dem gewählten Profil. Die Varianten verändern die Reihenfolge der ersten zehn Jahresrenditen; danach gilt die Basisrendite. Die gestrichelte Basisrechnung entspricht «Dein Plan». Alle Kurven umfassen die drei Töpfe bis zum Zielalter und verwenden dieselbe Skala über alle Standardprofile.</p></details></div>
+    <div class="chart-wrap"><canvas id="chart" width="520" height="300" role="img" aria-label="Verfügbares Kapital bis zum Zielalter: Basisrechnung und zwei Renditereihenfolgen"></canvas></div>
+    <div class="legend"><span><i style="background:#38574a"></i>Basisrechnung</span><span><i style="background:var(--red)"></i>Ungünstige Reihenfolge</span><span><i style="background:var(--blue)"></i>Günstige Reihenfolge</span></div>
     <div class="horizon"><div class="hcard"><small id="a0"></small><b id="v0"></b><span id="s0"></span></div><div class="hcard"><small id="a10"></small><b id="v10"></b><span id="s10"></span></div><div class="hcard"><small id="a20"></small><b id="v20"></b><span id="s20"></span></div><div class="hcard"><small id="ae"></small><b id="ve"></b><span id="se"></span></div></div>
     <div id="gapPoint" class="gap-point" aria-live="polite"></div>
   </div>
@@ -339,12 +339,16 @@ input.money,input.pct{font-size:16px;min-height:50px}
 <script src="planning-storage.js"></script>
 <script src="tax-config.js"></script>
 <script src="tax-model.js"></script>
+<script src="historical-returns.js?v=20260909-1"></script>
+<script src="risk-profiles.js"></script>
+<script src="retirement-engine.js?v=20260910-tax"></script>
+<script src="retirement-calculator.js"></script>
 <script>
 const D={exampleValues:true,mode:null,canton:null,currentAge:56,retirementAge:65,planningAge:92,need:90000,
 assets:{pk:550000,p3:120000,sec:180000,re:800000,mort:500000,cash:50000},
 build:{pkContrib:22000,pkEmployee:11000,pkEmployer:11000,p3Contrib:7000,otherSave:10000},
 income:{ahv:28200,other:0,rent:0},post:{ahv:28200,pkRent:26000,other:0,otherIncome:0,free:650000,re:800000,mort:500000},
-pkShare:50,risk:'balanced',ass:{pkInterest:4.33,p3Return:4.5,secReturn:4.5,capitalReturn:4.5,inflation:.6,uws:5.2}};
+pkShare:50,risk:'balanced',ass:{pkInterest:4.33,p3Return:4.5,secReturn:4.5,capitalReturn:RiskProfiles.getRiskProfile('balanced').expectedRealReturn*100,inflation:.6,uws:5.2}};
 let st=initialPlanningState(D),flow=[],i=0,openAsset=null,planningLocked=readLocal('retirementMvp5-submitted')==='1',returnToResult=false;
 if(!Number.isFinite(st.build?.pkEmployee)) st.build.pkEmployee=Math.round((st.build?.pkContrib||0)/2);
 if(!Number.isFinite(st.build?.pkEmployer)) st.build.pkEmployer=Math.max(0,(st.build?.pkContrib||0)-st.build.pkEmployee);
@@ -352,7 +356,7 @@ if(!Number.isFinite(st.income?.rent)) st.income.rent=0;
 if(!Number.isFinite(st.post?.otherIncome)) st.post.otherIncome=0;
 if(Number.isFinite(st.post?.rent)){st.post.otherIncome=(st.post.otherIncome||0)+st.post.rent;delete st.post.rent}
 st.build.pkContrib=(st.build.pkEmployee||0)+(st.build.pkEmployer||0);
-const CHF=n=>"CHF "+Math.round(n).toLocaleString("de-CH"),CHFJ=n=>CHF(n)+"/J.",P=n=>Number(n)/100,rates={cautious:2.5,balanced:4.5,bold:6};
+const CHF=n=>"CHF "+Math.round(n).toLocaleString("de-CH"),CHFJ=n=>CHF(n)+"/J.",P=n=>Number(n)/100,rates=Object.fromEntries(['cautious','balanced','bold'].map(key=>[key,RiskProfiles.getRiskProfile(key).expectedRealReturn*100]));
 const assetsMeta=[['pk','🏦','Pensionskasse','Aktuelles Altersguthaben'],['p3','🌱','Säule 3a','Aktueller Stand'],['sec','📊','Wertschriften / Fonds','Aktueller Wert'],['re','🏠','Immobilien','Marktwert'],['mort','🏷️','Hypotheken','Wird abgezogen'],['cash','💳','Bank / übriges Vermögen','Liquide Mittel']];
 const postIncomeMeta=[['ahv','🟡','AHV','pro Jahr'],['pkRent','🏦','PK-Rente','pro Jahr'],['other','➕','Weitere Renten','pro Jahr'],['otherIncome','💼','Weitere Einnahmen (ohne Zinserträge)','pro Jahr']];
 const postAssetMeta=[['free','💰','Freies Kapital','heutiger Bestand'],['re','🏠','Immobilien','heutiger Wert'],['mort','🏷️','Hypotheken','wird abgezogen']];
@@ -502,7 +506,7 @@ function renderHandoff(){
   const c=adviceContext();
   let rows=[
     ['Status', st.mode==='post'?`pensioniert, heute ${st.currentAge}`:`heute ${st.currentAge}, Pensionierung ${st.retirementAge}`],
-    ['Freies Kapital', CHF(c.free)],
+    ['Verfügbares Kapital ohne Immobilien', CHF(c.free)],
     [`Einnahmen ab ${startAge()}`, CHFJ(c.rent)],
     [`Lebensstandard ab ${startAge()}`, CHFJ(st.need)]
   ];
@@ -532,9 +536,9 @@ function detailedSubmissionLines(c){
       `Weitere Renten: ${CHFJ(st.post.other)}`,
       `Weitere Einnahmen (ohne Zinserträge): ${CHFJ(st.post.otherIncome)}`,
       `Freies Kapital: ${CHF(st.post.free)}`,
-      `Gebundenes Kapital / Immobilienwert: ${CHF(st.post.re)}`,
+      `Immobilienmarktwert vor Hypotheken: ${CHF(st.post.re)}`,
       `Hypotheken: ${CHF(st.post.mort)}`,
-      `Gebundenes Kapital netto: ${CHF(Math.max(0,st.post.re-st.post.mort))}`
+      `Gebundenes Immobilienkapital nach Hypotheken: ${CHF(Math.max(0,st.post.re-st.post.mort))}`
     );
   }else{
     const p=projected(),s=split();
@@ -560,12 +564,12 @@ function detailedSubmissionLines(c){
       `Wertschriften / Fonds: ${CHF(p.sec)}`,
       `Bank / übriges Vermögen: ${CHF(p.cash)}`,
       `PK-Kapitalbezug: ${CHF(s.cap)}`,
-      `Freies Kapital total: ${CHF(c.free)}`,
+      `Verfügbares Kapital ohne Immobilien: ${CHF(c.free)}`,
       '',
       'Gebundenes Kapital im Detail',
       `Immobilienwert: ${CHF(p.re)}`,
       `Hypotheken: ${CHF(p.mort)}`,
-      `Gebundenes Kapital netto: ${CHF(c.bound)}`
+      `Gebundenes Immobilienkapital nach Hypotheken: ${CHF(c.bound)}`
     );
   }
   return lines;
@@ -603,8 +607,8 @@ function submitAdvice(){
     `Alter heute: ${st.currentAge}`,
     `Pensionierung: ${st.retirementAge}`,
     `Planung bis: ${st.planningAge}`,
-    `Freies Kapital: ${CHF(c.free)}`,
-    `Gebundenes Kapital: ${CHF(c.bound)}`,
+    `Verfügbares Kapital ohne Immobilien: ${CHF(c.free)}`,
+    `Separat gebundenes Immobilienkapital: ${CHF(c.bound)}`,
     `Sichere Einnahmen: ${CHFJ(c.rent)}`,
     `Lebensstandard: ${CHFJ(st.need)}`,
     `Beratungsthema: ${({pk:'PK-Entscheid',capital:'Kapitalanlage',gap:'Versorgungslücke',overall:'Gesamte Planung'})[selectedAdviceTopic]}`,
@@ -669,10 +673,7 @@ function saveAss(){
     st.ass.uws=readNumber(assUws.value);
   }
   persist();
-  renderResult();
-  show('result');
-  tab('overview',document.querySelector('.tabs button'));
-  window.scrollTo({top:0,behavior:'smooth'});
+  return true;
 }
 function renderEdit(){
   const modeLabel = st.mode==='post' ? 'Pensioniert' : 'Vor Pensionierung';
@@ -767,8 +768,6 @@ if(planningLocked&&st.mode){
 }
 </script>
 <link rel="stylesheet" href="retirement-planning.css?v=20260910-tax">
-<script src="historical-returns.js?v=20260909-1"></script>
-<script src="retirement-engine.js?v=20260910-tax"></script>
 <script src="financing-view.js?v=20260910-tax"></script>
 <script src="tax-view.js"></script>
 <script src="retirement-planning.js?v=20260910-tax"></script>
@@ -778,4 +777,6 @@ if(planningLocked&&st.mode){
 <link rel="stylesheet" href="compact-ui.css">
 <script src="compact-ui.js"></script>
 <script src="product-ui.js"></script>
+<link rel="stylesheet" href="check-ui.css">
+<script src="check-ui.js"></script>
 </body></html>

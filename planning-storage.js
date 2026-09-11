@@ -1,6 +1,6 @@
 /* Versioned snapshots. No changes to the live state until validation succeeds. */
 (function(root){
-  const version=2;
+  const version=4;
   function merge(defaults,value){
     if(Array.isArray(defaults))return Array.isArray(value)?structuredClone(value):structuredClone(defaults);
     if(defaults&&typeof defaults==='object'){
@@ -13,7 +13,8 @@
   function decode(raw,defaults){
     if(!raw)throw Error('Auf diesem Gerät ist noch kein persönlicher Stand gespeichert.');
     let saved;try{saved=JSON.parse(raw)}catch(_){throw Error('Der gespeicherte Stand ist beschädigt und konnte nicht geladen werden.')}
-    if(![1,version].includes(saved?.version))throw Error('Diese Speicher-Version wird noch nicht unterstützt. Bitte die App aktualisieren.');
+    if(![1,2,3,version].includes(saved?.version))throw Error('Diese Speicher-Version wird noch nicht unterstützt. Bitte die App aktualisieren.');
+    if(saved.version>=3){try{const core=typeof module!=='undefined'?require('./retirement-calculator.js'):root.RetirementCalculator;saved.state=core.toState(saved.plan);}catch(_){throw Error('Der gespeicherte Plan ist unvollständig.');}}
     if(!saved.state||!['pre','post'].includes(saved.state.mode))throw Error('Der gespeicherte Stand enthält keine gültige Planung.');
     const state=merge(defaults,saved.state);
     function validate(value,template){
@@ -22,6 +23,7 @@
     }
     validate(state,defaults);
     if(state.plan){
+      if(state.plan.volatilityFactor!==undefined&&(!Number.isFinite(state.plan.volatilityFactor)||state.plan.volatilityFactor<0))throw Error('Der gespeicherte Schwankungsfaktor ist ungültig.');
       if(!Array.isArray(state.plan.returns)||state.plan.returns.length!==3||!state.plan.returns.every(Number.isFinite)||!Array.isArray(state.plan.extras)||!state.plan.timing)throw Error('Die gespeicherten Planungsannahmen sind unvollständig.');
       for(const key of ['phase2','phase3','need2','need3','repair'])if(!Number.isFinite(state.plan[key]))throw Error('Die gespeicherten Lebensphasen sind ungültig.');
     }

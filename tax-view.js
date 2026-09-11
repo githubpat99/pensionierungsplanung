@@ -27,7 +27,10 @@ function taxIncomeSummary(row){
 function renderTaxResults(first){
   let target=document.getElementById('resultTaxes');
   if(!target){target=document.createElement('div');target.id='resultTaxes';target.className='card';document.getElementById('tab-overview').append(target);}
-  target.innerHTML=`${taxCantonField()}${taxIncomeSummary(first)}${taxCapitalSummary()}${investableCapitalSummary(planningInput())}`;
+  const sources=RetirementCalculator.incomeSourcesAtStart(RetirementCalculator.fromState(st)).filter(source=>source.annualIncome!==0);
+  const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const breakdown=`<section class="income-source-summary" aria-label="Zusammensetzung des Einkommens"><h2>So setzt sich dein Einkommen zusammen</h2><p>Ab Alter ${first.age} · vor persönlicher Einkommenssteuer</p>${sources.length?sources.map(source=>`<div class="row income-source"><span>${escape(source.name)}</span><div><strong>${CHFJ(source.annualIncome)}</strong><small>${CHF(source.annualIncome/12)} / Monat</small></div></div>`).join(''):'<p>Im ersten Planungsjahr sind keine laufenden Einnahmen vorhanden.</p>'}</section>`;
+  target.innerHTML=`${taxCantonField()}${breakdown}${taxIncomeSummary(first)}${taxCapitalSummary()}${investableCapitalSummary(planningInput())}`;
 }
 const taxOriginalUi=ui;
 ui=function(){taxOriginalUi();document.querySelectorAll('.tax-canton select').forEach(el=>{el.value=st.canton||'';el.disabled=planningLocked;});document.getElementById('pkTaxSummary').innerHTML=taxCapitalSummary();};
@@ -36,6 +39,6 @@ ui();
 
 function investableCapitalSummary(input){
   const c=input.capitalBreakdown;
-  const info=`<details class="tax-info"><summary aria-label="Zusammensetzung des Anlagekapitals">ⓘ</summary><div>Bestehendes freies Vermögen plus PK-Kapital nach Kapitalbezugssteuer. Dieses Kapital wird auf Geldmarkt, Anleihen und Aktien verteilt. Gebundenes Kapital bleibt separat.</div></details>`;
-  return `<div class="tax-summary investable-summary"><div class="row"><span>Freies Vermögen ohne PK</span><strong>${CHF(c.existingFreeCapital)}</strong></div><div class="row total"><div class="tax-label">Gesamtes Anlagekapital ${info}</div><strong>${CHF(c.totalInvestableCapital)}</strong></div></div>`;
+  const info=`<details class="tax-info"><summary aria-label="Zusammensetzung des Anlagekapitals">ⓘ</summary><div>Bestehendes freies Vermögen plus PK-Kapital nach Kapitalbezugssteuer. Dieses Kapital wird auf Geldmarkt, Anleihen und Wachstum verteilt. Gebundenes Immobilienkapital ist darin nicht enthalten.</div></details>`;
+  return `<div class="tax-summary investable-summary"><div class="row"><span>Verfügbares Vermögen ohne PK-Bezug</span><strong>${CHF(c.existingFreeCapital)}</strong></div><div class="row total"><div class="tax-label">Verfügbares Anlagekapital ${info}</div><strong>${CHF(c.totalInvestableCapital)}</strong></div></div>`;
 }

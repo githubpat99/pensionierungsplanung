@@ -1,0 +1,66 @@
+describe('One navigation hierarchy',()=>{
+ for(const [mode,width] of [['pre',1280],['post',390]])it(`${mode}: direct details, grouped edits, preserved state and explicit reset (${width}px)`,()=>{
+  cy.viewport(width,900);cy.visit('/');cy.get(`[data-mode=${mode}]`).click();
+  cy.get('#checkForm [name=canton]').select('AR');cy.get('#checkForm button[type=submit]').click();
+  cy.get('.check-answer h1').should('have.text','Dein Plan');
+  cy.get('#checkApp [data-go=understand]').should('not.exist');
+  cy.get('#checkApp .check-brand').should('not.have.attr','data-go');
+  let plan,result;
+  cy.window().then(w=>{plan=JSON.stringify(w.CheckUI.getPlan());result=JSON.stringify(w.CheckUI.getResult());});
+  const details=['income','capital',...(mode==='pre'?['pension']:[]),'scenarios'];
+  for(const route of details){
+   cy.get(`#checkApp [data-go=${route}]`).click();
+   cy.get('.check-deep-heading h1').should('be.visible');
+   cy.get('.legacy-app .actions:visible,.legacy-app .tabs:visible,.restart-link:visible').should('not.exist');
+   cy.window().then(w=>{expect(w.document.documentElement.scrollWidth).to.be.at.most(width);expect(JSON.stringify(w.CheckUI.getPlan())).to.equal(plan);});
+   cy.scrollTo('bottom');cy.get('#checkApp .check-back').should('be.visible').click();
+   cy.get('.check-answer').should('be.visible');
+   cy.window().then(w=>expect(JSON.stringify(w.CheckUI.getResult())).to.equal(result));
+  }
+  if(mode==='post')cy.get('#checkApp [data-go=pension]').should('not.exist');
+  cy.get('#checkApp [data-action=edit]').click();
+  cy.get('.check-edit-card').should('have.length',mode==='pre'?4:3);
+  cy.get('[data-go=edit_assets]').click();
+  const field=mode==='pre'?'cash':'free';
+  cy.get(`#groupEditor [name=${field}]`).clear().type('900000');
+  cy.get('#checkApp .check-back').click();cy.get('[data-go=edit_assets]').click();
+  cy.get(`#groupEditor [name=${field}]`).should('have.value','900000');
+  cy.get('#groupEditor button[type=submit]').click();cy.get('#checkApp h1').should('have.text','Angaben ändern');
+  cy.get('#checkApp .check-back').click();
+  cy.window().then(w=>{expect(JSON.stringify(w.CheckUI.getResult())).not.to.equal(result);expect(w.CheckUI.getPlan().assets[mode==='pre'?'pre':'post'][field]).to.equal(900000);});
+  cy.get('#checkApp [data-action=edit]').click();cy.get('[data-go=edit_assets]').click();
+  cy.get(`#groupEditor [name=${field}]`).clear().type('950000');cy.get('#groupEditor button[type=submit]').click();
+  cy.get('[data-go=edit_income]').click();cy.get('#groupEditor [name=monthlyNeed]').clear().type('6400');
+  cy.get('#groupEditor button[type=submit]').click();cy.get('#checkApp .check-back').click();
+  cy.window().then(w=>{expect(w.CheckUI.getResult().monthlyNeed).to.equal(6400);expect(w.CheckUI.getPlan().assets[mode==='pre'?'pre':'post'][field]).to.equal(950000);});
+  cy.get('#checkApp [data-action=save]').click();let snapshot;
+  cy.window().then(w=>{snapshot=w.localStorage.getItem('retirement-personal-snapshot-v1');cy.stub(w,'confirm').returns(false).as('resetConfirm');});
+  cy.get('[data-action=restart]').click();cy.get('.check-answer').should('be.visible');
+  cy.get('@resetConfirm').should('have.been.calledOnce');
+  cy.window().then(w=>w.confirm.returns(true));cy.get('[data-action=restart]').click();
+  cy.get('.check-welcome').should('be.visible');
+  cy.window().then(w=>{expect(w.CheckUI.getPlan().person.mode).to.equal(null);expect(w.localStorage.getItem('retirement-personal-snapshot-v1')).to.equal(snapshot);});
+  cy.get('#checkApp [data-action=load]').click();cy.get('.check-answer').should('be.visible');
+  cy.window().then(w=>expect(w.CheckUI.getResult().monthlyNeed).to.equal(6400));
+  cy.screenshot(`navigation-plan-${mode}`,{capture:'fullPage'});
+ });
+ it('keeps all existing assumptions reachable with one save action and validates editors',()=>{
+  cy.viewport(360,844);cy.visit('/');cy.get('[data-mode=pre]').click();
+  cy.get('#checkForm [name=canton]').select('ZH');cy.get('#checkForm button[type=submit]').click();
+  cy.get('[data-action=edit]').click();cy.get('[data-go=edit_personal]').click();
+  cy.get('[name=planningAge]').clear().type('60');cy.get('#groupEditor button[type=submit]').click();
+  cy.get('#checkFormError').should('contain','Reihenfolge');cy.get('[name=planningAge]').clear().type('95');
+  cy.get('#groupEditor button[type=submit]').click();cy.get('[data-go=edit_pension]').click();
+  cy.get('[name=pkEmployee]').clear().type('12345');cy.get('#groupEditor button[type=submit]').click();
+  cy.get('[data-go=assumptions]').click();cy.get('#tab-ass button.primary:visible').should('have.length',1).and('have.text','Änderungen übernehmen');
+  cy.get('#phase2').clear().type('74');cy.get('#checkApp .check-back').click();
+  cy.get('[data-go=assumptions]').click();cy.get('#phase2').should('have.value','74');
+  cy.get('#phase3').clear().type('72');cy.get('[onclick="savePlanning()"]').click();cy.get('#planError').should('contain','nach der zweiten');
+  cy.get('#phase3').clear().type('84');cy.get('.model-assumptions summary').click();
+  cy.get('#assInfl').clear().type('1,2');cy.get('[onclick="savePlanning()"]').click();
+  cy.get('#checkApp h1').should('have.text','Angaben ändern');cy.get('#checkApp .check-back').click();
+  cy.window().then(w=>{const p=w.CheckUI.getPlan();expect(p.scenarios.phase2).to.equal(74);expect(p.scenarios.phase3).to.equal(84);expect(p.assumptions.rates.inflation).to.equal(1.2);expect(p.assumptions.contributions.pkContrib).to.equal(23345);expect(p.retirement.targetAge).to.equal(95);});
+  cy.get('[data-action=edit]').click();cy.screenshot('navigation-edit-mobile',{capture:'fullPage'});
+  cy.get('[data-go=edit_income]').click();cy.screenshot('navigation-income-editor-mobile',{capture:'fullPage'});
+ });
+});

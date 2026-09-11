@@ -21,7 +21,7 @@ renderClosingAdvisor=function(){
   row.classList.toggle('provisional',!ready);row.classList.toggle('has-gap',ready&&!!gap);
 
   title.textContent=!ready?'Steuern noch nicht berücksichtigt':'Deine erste Planung steht.';
-  if(ready){const rows=planProjection(),last=rows.at(-1);closingMessage.textContent=currentPlanStatus({feasible:!gap,firstGapAge:gap?.age},st.planningAge).message+(gap?'':` Erwartetes Restkapital mit Alter ${last.age}: ca. ${CHF(last.free)}.`);}
+  if(ready){const rows=planProjection(),last=rows.at(-1);closingMessage.textContent=currentPlanStatus({feasible:!gap,firstGapAge:gap?.age},st.planningAge).message+(gap?'':` Verfügbares Restkapital mit Alter ${last.age}: ${CHF(last.free)}.`);}
   if(!ready){
     closingMessage.textContent='Für die vollständige Einschätzung fehlt noch dein Wohnkanton.';
     closingInsight.innerHTML='Vorläufige Einschätzung · Für die Steuerschätzung brauchen wir deinen Wohnkanton.';

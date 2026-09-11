@@ -20,7 +20,7 @@ function renderFeasibility(){
   }
   const status=currentPlanStatus(variant,input.end);
   overall.className='pk-status '+(variant.feasible?'feasible':'shortfall');
-  overall.innerHTML=`<strong>${status.message}</strong>${variant.feasible?`<p><strong>Erwartetes Restkapital mit Alter ${input.end}: ca. ${CHF(Math.round(variant.capitalAtHorizon/500)*500)}</strong></p>`:`<p>Ab Alter ${variant.firstGapAge} entsteht eine Finanzierungslücke.</p>`}<small>Modellrechnung · aktuell gewählte PK-Aufteilung</small>`;
+  overall.innerHTML=`<strong>${status.message}</strong>${variant.feasible?`<p><strong>Verfügbares Restkapital mit Alter ${input.end}: ${CHF(variant.capitalAtHorizon)}</strong></p>`:`<p>Ab Alter ${variant.firstGapAge} entsteht eine Finanzierungslücke.</p>`}<small>Basisrechnung · alle drei Töpfe, ohne gebundenes Immobilienkapital · aktuell gewählte PK-Aufteilung</small>`;
   current.className='pk-status';
   current.innerHTML=`<strong>Aktuelle Wahl: ${100-st.pkShare} % Rente / ${st.pkShare} % Kapital</strong><small>Die Auswirkungen dieser Wahl sind oben ausgewiesen.</small>`;
 

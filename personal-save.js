@@ -18,7 +18,10 @@ function renderPersonalSave(){
 function savePersonalStand(){
   if(!st.mode)return showStorageMessage('Bitte zuerst deine Planung erfassen.',true);
   try{
-    const raw=JSON.stringify({version:PlanningStorage.version,savedAt:new Date().toISOString(),state:structuredClone(st)});
+    // Preserve unreadable/future snapshots instead of silently replacing them.
+    const existing=localStorage.getItem(personalSaveKey);
+    if(existing)PlanningStorage.decode(existing,D);
+    const raw=JSON.stringify({version:PlanningStorage.version,savedAt:new Date().toISOString(),plan:RetirementCalculator.fromState(st)});
     PlanningStorage.decode(raw,D);
     localStorage.setItem(personalSaveKey,raw);
     if(localStorage.getItem(personalSaveKey)!==raw)throw Error('Speicherung konnte nicht bestätigt werden.');
@@ -40,8 +43,9 @@ function loadPersonalStand(){
   document.getElementById('submittedStatus')?.classList.remove('visible');
   document.getElementById('contactForm')?.classList.remove('hidden');
   document.getElementById('requestSuccess')?.classList.add('hidden');
-  ensurePlan();ui();renderResult();show('result');tab('overview',document.querySelector('.tabs button'));
+  ensurePlan();ui();
   showStorageMessage('Dein persönlicher Stand wurde geladen.');renderPersonalSave();
+  return true;
 }
 document.querySelector('[data-screen="start"]').insertAdjacentHTML('beforeend',`<div class="personal-save-start"><button class="secondary" data-personal-load onclick="loadPersonalStand()" hidden>Meinen Stand laden</button><small data-personal-date></small><p data-storage-message role="status" aria-live="polite"></p></div>`);
 document.getElementById('tab-overview').insertAdjacentHTML('beforeend',`<div class="personal-save-box"><button class="secondary" data-personal-load onclick="loadPersonalStand()" hidden>Meinen Stand laden</button><small data-personal-date></small><p>Auf diesem Gerät in diesem Browser gespeichert. Beim Löschen der Browserdaten geht der Stand verloren.</p><p id="personalSaveMessage" data-storage-message role="status" aria-live="polite"></p></div>`);

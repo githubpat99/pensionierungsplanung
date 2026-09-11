@@ -19,9 +19,13 @@ function applyProductUI(){
   document.querySelectorAll('.asset-head').forEach(el=>{el.setAttribute('role','button');el.tabIndex=0;el.setAttribute('aria-expanded',String(!el.nextElementSibling.classList.contains('hidden')));});
   document.querySelectorAll('[data-risk],[data-postrisk]').forEach(button=>{
     const key=button.dataset.risk||button.dataset.postrisk;
-    button.querySelector('b').textContent='Renditeannahme '+({cautious:'vorsichtig',balanced:'ausgewogen',bold:'chancenorientiert'})[key];
+    const profile=RiskProfiles.getRiskProfile(key);
+    button.querySelector('b').textContent=profile.label;
+    button.querySelector('span').textContent=`Erwartete reale Rendite: ${(profile.expectedRealReturn*100).toLocaleString('de-DE',{minimumFractionDigits:1})} %`;
+    button.title=profile.description;
+    button.setAttribute('aria-pressed',String(RiskProfiles.getRiskProfile(st.risk).key===profile.key));
     if(!button.parentElement.nextElementSibling?.classList.contains('risk-explanation')){
-      const note=document.createElement('p');note.className='note risk-explanation';note.textContent='Die Auswahl bestimmt die erwartete Rendite im PK-Ertragsvergleich. Die drei Töpfe verwenden ihre eigenen Renditeannahmen; ihre Aufteilung ergibt sich aus deinem Finanzierungsbedarf und den Reservejahren.';button.parentElement.after(note);
+      const note=document.createElement('p');note.className='note risk-explanation';note.textContent='Das Anlageprofil bestimmt Rendite und Schwankungen des Wachstumstopfs. Höhere Renditechancen bedeuten auch grössere Verlustrisiken. Auch eine vorsichtige Anlage kann Verluste aufweisen. Geldmarkt und Anleihen behalten ihre eigenen Annahmen.';button.parentElement.after(note);
     }
   });
   document.querySelectorAll('#planRisks table').forEach(table=>{

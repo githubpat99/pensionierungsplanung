@@ -1,9 +1,9 @@
 describe('One portrait and consistent tax cashflows',()=>{
  it('shows one missing-canton notice and one header portrait at phone widths',()=>{
   cy.visit('/');
-  cy.get('#headerGuide').should('contain','Hallo');
+  cy.get('#checkApp h1').should('contain','Reicht mein Geld');
   cy.get('img[src="pin.jpeg"]:visible').should('have.length',1);
-  cy.window().then(w=>w.eval("st=structuredClone(D);st.mode='pre';ensurePlan();ui();show('pk');"));
+  cy.window().then(w=>w.eval("st=structuredClone(D);st.mode='pre';ensurePlan();CheckUI.go('pension');"));
   cy.get('#planFeasibility').should('contain','Wohnsitzkanton');
   cy.get('#pkVariantStatus').should('not.be.visible').and('be.empty');
   [360,390,430].forEach(width=>{
@@ -11,12 +11,12 @@ describe('One portrait and consistent tax cashflows',()=>{
    cy.window().then(w=>expect(w.document.documentElement.scrollWidth).to.be.at.most(width));
    cy.get('img[src="pin.jpeg"]:visible').should('have.length',1);
   });
-  cy.window().then(w=>w.eval("show('ageNow');"));
-  cy.get('[data-screen="ageNow"] select').find('option:selected').should('have.text','Dein Wohnsitzkanton');
-  cy.get('[data-screen="ageNow"] select').select('AR');
-  cy.window().then(w=>w.eval("show('pk');"));
+  cy.window().then(w=>w.eval("jump('ageNow');"));
+  cy.get('#groupEditor [name=canton]').find('option:selected').should('have.text','Bitte auswählen');
+  cy.get('#groupEditor [name=canton]').select('AR');cy.get('#groupEditor button[type=submit]').click();
+  cy.window().then(w=>w.eval("CheckUI.go('pension');"));
   cy.get('#pkVariantStatus').should('be.visible');
-  cy.window().then(w=>w.eval("renderResult();show('result');"));
+  cy.window().then(w=>w.eval("CheckUI.go('answer');"));
   cy.get('.completion-row img').should('not.exist');
   cy.get('img[src="pin.jpeg"]:visible').should('have.length',1);
  });
@@ -39,7 +39,7 @@ describe('One portrait and consistent tax cashflows',()=>{
    w.renderChart();
    expect(calls).to.include('historicalPessimistic').and.include('historicalOptimistic');
    expect(w.document.querySelector('.chart-context').textContent).to.include('geschätzten Steuern');
-   w.eval("tab('dev',document.querySelector('[data-tab=dev]'));show('result');");
+   w.eval("CheckUI.go('scenarios');");
   });
   cy.viewport(390,844);cy.scrollTo('top');cy.screenshot('shared-chart-mobile',{capture:'viewport'});
  });

@@ -38,8 +38,8 @@
       after[0]+=Math.max(0,c.income-c.need-c.special);
       const rates=p.returns.map(x=>x/100);
       const t=age-p.start;
-      if((scenario==='crash'||scenario==='combined')&&t===0)rates[2]=-.30;
-      if(scenario==='weak'&&t<5){rates[2]=t===0?-.15:0;rates[1]=t===0?-.08:0;}
+      if((scenario==='crash'||scenario==='combined')&&t===0)rates[2]=p.growthShocks?.crash??-.30;
+      if(scenario==='weak'&&t<5){rates[2]=t===0?(p.growthShocks?.weak??-.15):0;rates[1]=t===0?-.08:0;}
       if(Array.isArray(p.equityReturns)&&t<p.equityReturns.length)rates[2]=p.equityReturns[t]/100;
       const gains=after.map((v,i)=>v*rates[i]);
       const endBuckets=after.map((v,i)=>Math.max(0,v+gains[i]));

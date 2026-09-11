@@ -123,3 +123,7 @@
 .pk-status.shortfall{background:#fbf7ed;border-color:#e9ddbd}
 .pk-question{font-size:21px;margin:22px 0 14px}
 @media(max-width:600px){.pk-status{padding:14px}.pk-status>strong{font-size:17px}.pk-question{font-size:19px}}
+/* Every scenario view uses the full available capital and the same target age. */
+.scenario-base-value{font-size:14px;color:#38574a;margin-top:10px;line-height:1.4}
+.scenario-base-value[hidden]{display:none}
+.check-v2 #chart,.check-v2 #profileComparison{scroll-margin-top:120px}
