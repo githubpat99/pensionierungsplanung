@@ -88,3 +88,28 @@
  #tab-dev .hcard{padding:14px 9px}
  #tab-dev .hcard b,#tab-dev .hcard span{font-size:17px}
 }
+.input-caption{display:block;font-size:13px;color:#475569;margin:8px 0 5px}
+#exampleNotice{font-size:14px;padding:10px 12px;background:#fff8e8;border-radius:8px;margin:10px 0}
+#exampleNotice[hidden]{display:none}
+.risk-explanation{font-size:14px!important;line-height:1.5}
+.risk b{font-size:13px;overflow-wrap:anywhere}
+.plan-scroll-hint{display:none}
+@media(max-width:600px){
+ #planRisks .plan-table{overflow:visible;max-width:100%}
+ #planRisks table,#planRisks tbody,#planRisks tr,#planRisks td{display:block;min-width:0;width:100%}
+ #planRisks thead{display:none}
+ #planRisks tr{padding:10px 0;border-bottom:1px solid #dce3e9}
+ #planRisks td{display:flex;justify-content:space-between;gap:12px;white-space:normal;text-align:right;border:0}
+ #planRisks td::before{content:attr(data-label);text-align:left;color:#64748b;font-size:13px}
+ .side.rent .row{flex-wrap:wrap}.side.rent .row>strong{max-width:100%;overflow-wrap:anywhere}
+ .finance-flow-arrows{display:none}
+ .finance-model .finance-pots::before{content:'Topf 3 → Topf 2 → Topf 1 → Lebensbedarf';grid-column:1/-1;font-size:14px;text-align:center;color:#475569;margin-bottom:8px}
+}
+.completion-row.has-gap .completion-copy span,.completion-row.provisional .completion-copy span{color:#475569}
+[data-personal-date],[data-storage-message],.personal-save-box p{font-size:14px;line-height:1.5}
+@media(max-width:600px){
+ .completion-actions{grid-template-columns:1fr}
+ #tab-overview .split{grid-template-columns:1fr}
+ #planRisks td{display:block;text-align:left;overflow-wrap:anywhere}
+ #planRisks td::before{display:block;margin-bottom:3px}
+}

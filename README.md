@@ -53,3 +53,14 @@ Zusätzliche Prüfung: `node retirement-feasibility.test.js`; Browserfälle in `
 Der Test mit CHF 323'348 freiem Vermögen und CHF 1'100'943 PK-Bezug ergibt in AR rund CHF 1'301'646 Anlagekapital. Der zuvor in der Übersicht ausgewiesene Wert «Verfügbar» war dagegen bereits nach PK-Steuer; die dortigen CHF 1'424'291 sind keine Bruttobasis für einen weiteren Steuerabzug.
 
 Die Entwicklungsseite zeigt das gesamte Anlagekapital direkt bei den drei Töpfen. Desktop: bis 900 px Breite und 350 px Charthöhe; Mobile: 280 px Charthöhe, nur Start-/Endlabels und exakte Zwischenwerte in den Karten.
+
+
+## Verbindliche Regeln und Aktualisierung vom 11. September 2026
+
+Vor Änderungen sind [AGENTS.md](AGENTS.md) und [docs/PRODUCT_RULES.md](docs/PRODUCT_RULES.md) vollständig zu lesen. Die beauftragte Gesamtspezifikation inklusive Abschnitt 0 ist unter [docs/OPTIMIZATION_SPEC_2026-09-11.md](docs/OPTIMIZATION_SPEC_2026-09-11.md) erhalten.
+
+Die neuen Produktregeln ersetzen ausdrücklich die bisherige Hervorhebung der allgemeinen Machbarkeit: Der sichtbare Ergebnisstatus bewertet jetzt die aktuelle PK-Wahl; die Variantenprüfung bleibt intern verfügbar. Die jährliche Topfauffüllung bleibt unverändert und garantiert keine Vermeidung von Aktienverkäufen nach Verlusten. Der gezeigte Geldfluss lautet Aktien → Anleihen → Geldmarkt → Lebensbedarf.
+
+Persönliche Speicherstände verwenden Schema 2; gültige Schema-1-Stände werden beim Laden migriert. Vollständiger State, Speicherzeit und verständliche Fehlerausgabe werden geprüft. Automatische Arbeitsstände und persönliche Speicherstände bleiben getrennt. Der bestehende Browser-Speicherschlüssel wird für die Kompatibilität beibehalten.
+
+Neue Browser-Regressionen in `tests/product-rules.cy.js` prüfen beide vollständigen Wege, Netto-Einkommensgruppen, Steuertexte, Speicherung nach Reload, Schema-1-Kompatibilität und Speicherfehler. Ein tatsächliches neues Deployment ist hierfür nicht nötig; die ältere Datenversion wird gegen den aktuellen Code geladen.

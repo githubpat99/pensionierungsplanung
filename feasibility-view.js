@@ -1,4 +1,4 @@
-/* Overall feasibility is independent of the selected slider position. */
+/* Comparison remains available; the primary status evaluates the current choice. */
 let feasibilityCache=null;
 function getPlanFeasibility(){
   const inputs=Array.from({length:11},(_,i)=>({capitalShare:i*10,input:planningInput(i*10)}));
@@ -18,19 +18,17 @@ function renderFeasibility(){
     current.innerHTML='';
     return;
   }
-  const result=getPlanFeasibility(),differentPhases=input.phases.some(p=>p.from<input.end&&p.need!==input.phases[0].need);
-  const rounded=n=>CHF(Math.round(n/500)*500);
-  overall.className='pk-status '+(result.planFeasible?'feasible':'shortfall');
-  if(result.planFeasible){
-    overall.innerHTML=`<strong>✓ Dein Plan geht grundsätzlich auf</strong><p>${differentPhases?`Dein geplanter Lebensstandard mit anfangs ${CHF(st.need)} pro Jahr und den hinterlegten Lebensphasen`:`Dein gewünschter Lebensstandard von ${CHF(st.need)} pro Jahr`} ist bis Alter ${input.end} finanzierbar.</p><small>Mindestens eine PK-Aufteilung ist unter deinen Modellannahmen finanzierbar.</small>`;
-  }else{
-    overall.innerHTML=`<strong>Dein Plan geht noch nicht vollständig auf</strong>${result.annualShortfall===null?'<p>Auch mit reduziertem Lebensbedarf bleibt eine Finanzierungslücke. Prüfe deine Einnahmen und Annahmen.</p>':`<p>Mit den aktuellen Annahmen fehlen langfristig ca. ${rounded(result.annualShortfall)} pro Jahr.</p><p>Nachhaltig finanzierbar: ca. ${rounded(result.sustainableAnnualNeed)} pro Jahr${differentPhases?' zu Beginn':''}.</p>`}<small>${differentPhases?'Dafür wird der Bedarf in jeder Lebensphase um denselben Jahresbetrag gesenkt, mindestens auf null. ':''}Prüfe deinen Lebensstandard oder deine Annahmen.</small>`;
-  }
-  current.className='pk-status '+(variant.feasible?'feasible':'shortfall');
-  current.innerHTML=variant.feasible?`<strong>✓ Diese Variante reicht bis mindestens Alter ${input.end}</strong><p>Restkapital mit Alter ${input.end}: ca. ${rounded(variant.capitalAtHorizon)}</p>`:
-    `<strong>${variant.firstGapAge===input.start?'Diese Variante deckt bereits das erste Ruhestandsjahr nicht vollständig.':`Diese Variante reicht voraussichtlich bis Alter ${variant.firstGapAge}.`}</strong><p>Ab Alter ${variant.firstGapAge} entsteht eine Finanzierungslücke (Jahr ${variant.firstGapAge}–${variant.firstGapAge+1}).</p>`;
-  current.insertAdjacentHTML('beforeend',`<small>Aktuelle Wahl: ${100-st.pkShare} % Rente / ${st.pkShare} % Kapital · Modellrechnung</small>`);
+  const status=currentPlanStatus(variant,input.end);
+  overall.className='pk-status '+(variant.feasible?'feasible':'shortfall');
+  overall.innerHTML=`<strong>${status.message}</strong>${variant.feasible?`<p><strong>Erwartetes Restkapital mit Alter ${input.end}: ca. ${CHF(Math.round(variant.capitalAtHorizon/500)*500)}</strong></p>`:`<p>Ab Alter ${variant.firstGapAge} entsteht eine Finanzierungslücke.</p>`}<small>Modellrechnung · aktuell gewählte PK-Aufteilung</small>`;
+  current.className='pk-status';
+  current.innerHTML=`<strong>Aktuelle Wahl: ${100-st.pkShare} % Rente / ${st.pkShare} % Kapital</strong><small>Die Auswirkungen dieser Wahl sind oben ausgewiesen.</small>`;
+
 }
 const feasibilityOriginalUi=ui;
 ui=function(){feasibilityOriginalUi();renderFeasibility();};
 renderFeasibility();
+
+function currentPlanStatus(variant,end){
+  return {message:variant.feasible?`Unter den gewählten Annahmen ist dein gewünschter Lebensstandard bis Alter ${end} finanzierbar.`:`Unter den gewählten Annahmen reicht dein verfügbares Kapital voraussichtlich bis Alter ${variant.firstGapAge}.`};
+}

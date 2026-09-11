@@ -1,0 +1,13 @@
+const assert=require('node:assert/strict');
+const {decode}=require('./planning-storage.js');
+const defaults={mode:null,currentAge:56,retirementAge:65,planningAge:92,assets:{pk:100,cash:50},ass:{inflation:2},exampleValues:true};
+const state={...defaults,mode:'pre',assets:{pk:500,cash:70},custom:'preserve'};
+const old=decode(JSON.stringify({version:1,savedAt:'2026-09-11T12:00:00Z',state}),defaults);
+assert.equal(old.version,2);assert.equal(old.state.custom,'preserve');assert.equal(old.state.exampleValues,false);
+assert.deepEqual(decode(JSON.stringify({...old,version:2}),defaults),old);
+assert.equal(decode(JSON.stringify({version:1,state:{mode:'post',currentAge:67}}),defaults).state.assets.cash,50);
+assert.throws(()=>decode('{',defaults),/beschädigt/);
+assert.throws(()=>decode(JSON.stringify({version:9,state}),defaults),/Version/);
+assert.throws(()=>decode(JSON.stringify({version:2,state:{...state,assets:{pk:'broken',cash:70}}}),defaults),/Zahlen/);
+assert.throws(()=>decode(JSON.stringify({version:2,state:{...state,planningAge:60}}),defaults),/Zielalter/);
+console.log('Passed: schema migration, complete roundtrip, legacy defaults, unknown fields, corrupt data, invalid numbers and future versions.');

@@ -294,9 +294,9 @@ input.money,input.pct{font-size:16px;min-height:50px}
     <div class="dev-focus-note"><span aria-hidden="true">ⓘ</span><div>Gleiche Renditen 2016–2025, unterschiedlich angeordnet. Topf 1 und 2 finanzieren die nächsten Entnahmen.</div></div>
   </div>
   <div class="card dev-chart-card">
-    <div class="dev-chart-title"><h2>Pessimistische und optimistische Variante</h2><details class="dev-history-info"><summary aria-label="Historische Berechnung erklären">ⓘ</summary><p>MSCI World brutto in CHF, nach Schweizer Inflation und vor Anlagekosten. Pessimistisch: schwache Jahre zuerst. Optimistisch: starke Jahre zuerst. Beide Varianten verwenden dieselben zehn Jahresrenditen und sind keine Prognose. Quellen: MSCI und BFS.</p></details></div>
+    <div class="dev-chart-title"><h2>Ungünstige und günstige Renditereihenfolge</h2><details class="dev-history-info"><summary aria-label="Historische Berechnung erklären">ⓘ</summary><p>MSCI World brutto in CHF, nach Schweizer Inflation und vor Anlagekosten. Beide Varianten verwenden dieselben historischen Jahresrenditen von 2016 bis 2025. Nur deren Reihenfolge ist unterschiedlich. Dies ist keine Prognose. Quellen: MSCI und BFS.</p></details></div>
     <div class="chart-wrap"><canvas id="chart" width="520" height="300" role="img" aria-label="Entwicklung des Aktientopfs mit pessimistischer und optimistischer Reihenfolge der realen Renditen von 2016 bis 2025"></canvas></div>
-    <div class="legend"><span><i style="background:var(--red)"></i>Pessimistisch</span><span><i style="background:var(--blue)"></i>Optimistisch</span></div>
+    <div class="legend"><span><i style="background:var(--red)"></i>Ungünstige Reihenfolge</span><span><i style="background:var(--blue)"></i>Günstige Reihenfolge</span></div>
     <div class="horizon"><div class="hcard"><small id="a0"></small><b id="v0"></b><span id="s0"></span></div><div class="hcard"><small id="a10"></small><b id="v10"></b><span id="s10"></span></div><div class="hcard"><small id="a20"></small><b id="v20"></b><span id="s20"></span></div><div class="hcard"><small id="ae"></small><b id="ve"></b><span id="se"></span></div></div>
     <div id="gapPoint" class="gap-point" aria-live="polite"></div>
   </div>
@@ -336,15 +336,16 @@ input.money,input.pct{font-size:16px;min-height:50px}
 </section>
 </main></div>
 
+<script src="planning-storage.js"></script>
 <script src="tax-config.js"></script>
 <script src="tax-model.js"></script>
 <script>
-const D={mode:null,canton:null,currentAge:56,retirementAge:65,planningAge:92,need:90000,
+const D={exampleValues:true,mode:null,canton:null,currentAge:56,retirementAge:65,planningAge:92,need:90000,
 assets:{pk:550000,p3:120000,sec:180000,re:800000,mort:500000,cash:50000},
 build:{pkContrib:22000,pkEmployee:11000,pkEmployer:11000,p3Contrib:7000,otherSave:10000},
 income:{ahv:28200,other:0,rent:0},post:{ahv:28200,pkRent:26000,other:0,otherIncome:0,free:650000,re:800000,mort:500000},
 pkShare:50,risk:'balanced',ass:{pkInterest:4.33,p3Return:4.5,secReturn:4.5,capitalReturn:4.5,inflation:.6,uws:5.2}};
-let st=JSON.parse(localStorage.getItem('retirementMvp5')||'null')||structuredClone(D),flow=[],i=0,openAsset=null,planningLocked=localStorage.getItem('retirementMvp5-submitted')==='1',returnToResult=false;
+let st=initialPlanningState(D),flow=[],i=0,openAsset=null,planningLocked=readLocal('retirementMvp5-submitted')==='1',returnToResult=false;
 if(!Number.isFinite(st.build?.pkEmployee)) st.build.pkEmployee=Math.round((st.build?.pkContrib||0)/2);
 if(!Number.isFinite(st.build?.pkEmployer)) st.build.pkEmployer=Math.max(0,(st.build?.pkContrib||0)-st.build.pkEmployee);
 if(!Number.isFinite(st.income?.rent)) st.income.rent=0;
@@ -355,7 +356,7 @@ const CHF=n=>"CHF "+Math.round(n).toLocaleString("de-CH"),CHFJ=n=>CHF(n)+"/J.",P
 const assetsMeta=[['pk','🏦','Pensionskasse','Aktuelles Altersguthaben'],['p3','🌱','Säule 3a','Aktueller Stand'],['sec','📊','Wertschriften / Fonds','Aktueller Wert'],['re','🏠','Immobilien','Marktwert'],['mort','🏷️','Hypotheken','Wird abgezogen'],['cash','💳','Bank / übriges Vermögen','Liquide Mittel']];
 const postIncomeMeta=[['ahv','🟡','AHV','pro Jahr'],['pkRent','🏦','PK-Rente','pro Jahr'],['other','➕','Weitere Renten','pro Jahr'],['otherIncome','💼','Weitere Einnahmen (ohne Zinserträge)','pro Jahr']];
 const postAssetMeta=[['free','💰','Freies Kapital','heutiger Bestand'],['re','🏠','Immobilien','heutiger Wert'],['mort','🏷️','Hypotheken','wird abgezogen']];
-function persist(){localStorage.setItem('retirementMvp5',JSON.stringify(st))}
+function persist(){try{localStorage.setItem('retirementMvp5',JSON.stringify(st))}catch(_){globalThis.storageWarning='Automatisches Speichern nicht möglich. Bitte die Browsereinstellungen prüfen.';if(typeof showStorageMessage==='function')showStorageMessage(storageWarning,true)}}
 function chooseMode(m){
   st.mode=m;
   if(m==='post'){
@@ -462,7 +463,7 @@ function renderClosingAdvisor(){
   const c=adviceContext();
   let submittedTopic='';
   if(planningLocked){
-    try{submittedTopic=JSON.parse(localStorage.getItem('retirementMvp5-submission')||'{}').topic||''}catch(_){ }
+    try{submittedTopic=JSON.parse(readLocal('retirementMvp5-submission')||'{}').topic||''}catch(_){ }
     if(['pk','capital','gap','overall'].includes(submittedTopic))selectedAdviceTopic=submittedTopic;
   }
   let msg='', insight='';
@@ -634,8 +635,8 @@ function submitAdvice(){
 function restoreSubmissionState(){
   if(!planningLocked)return;
   let submission={};
-  try{submission=JSON.parse(localStorage.getItem('retirementMvp5-submission')||'{}')}catch(_){ }
-  const storedTopic=submission.topic||localStorage.getItem('retirementMvp5-selected-topic')||'';
+  try{submission=JSON.parse(readLocal('retirementMvp5-submission')||'{}')}catch(_){ }
+  const storedTopic=submission.topic||readLocal('retirementMvp5-selected-topic')||'';
   if(['pk','capital','gap','overall'].includes(storedTopic))selectedAdviceTopic=storedTopic;
   adviceFlow.classList.remove('hidden');
   document.querySelectorAll('.advice-topic').forEach(b=>{b.classList.toggle('active',b.dataset.topic===selectedAdviceTopic);b.disabled=true});
@@ -662,10 +663,10 @@ function renderChart(){const c=chart,ctx=c.getContext('2d'),d=proj(),pad={l:58,r
 function tab(n,b){['overview','dev','ass','edit','pots'].forEach(x=>document.getElementById('tab-'+x).classList.add('hidden'));document.getElementById('tab-'+n).classList.remove('hidden');document.querySelectorAll('.tabs button').forEach(x=>x.classList.remove('active'));(b||document.querySelector(`.tabs button[data-tab="${n}"]`))?.classList.add('active')}
 function saveAss(){
   if(planningLocked)return;
-  st.ass.inflation=+assInfl.value||0;
+  st.ass.inflation=readNumber(assInfl.value);
   if(st.mode!=='post'){
-    st.ass.capitalReturn=+assCap.value||0;
-    st.ass.uws=+assUws.value||0;
+    st.ass.capitalReturn=readNumber(assCap.value);
+    st.ass.uws=readNumber(assUws.value);
   }
   persist();
   renderResult();
@@ -725,7 +726,7 @@ function renderEdit(){
                 <div class="edit-tags">${item.tags.map(t=>`<span class="edit-tag">${t}</span>`).join('')}</div>
               </div>
               <div class="edit-actions">
-                <button class="linkbtn" ${planningLocked?'disabled':''} onclick="jump('${item.screen}')">${planningLocked?'Gespeichert':'Aendern'}</button>
+                <button class="linkbtn" ${planningLocked?'disabled':''} onclick="jump('${item.screen}')">${planningLocked?'Gespeichert':'Ändern'}</button>
               </div>
             </div>
           </div>
@@ -776,4 +777,5 @@ if(planningLocked&&st.mode){
 <script src="personal-save.js"></script>
 <link rel="stylesheet" href="compact-ui.css">
 <script src="compact-ui.js"></script>
+<script src="product-ui.js"></script>
 </body></html>
