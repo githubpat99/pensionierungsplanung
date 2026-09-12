@@ -19,11 +19,11 @@ Zwei Wege: Menschen vor Pensionierung (`pre`) und bereits Pensionierte (`post`).
 - Reicht das verfügbare Kapital bis zu meinem Zielalter, und was bleibt übrig?
 - Woraus bestehen Einkommen und Vermögen?
 - Wie wirkt sich vor Pensionierung meine Wahl zwischen PK-Rente und Kapital aus?
-- Was bedeuten andere Anlageprofile, ungünstige Renditereihenfolgen oder Belastungsszenarien?
+- Was bedeuten ungünstige Renditereihenfolgen oder Belastungsszenarien?
 
 ## 3. UX-Grundsätze
 
-Einfach beginnen, Zusammenhänge im Plan erklären und fachliche Vertiefung freiwillig öffnen. Monatliche Beträge sind die primäre Sprache von Basischeck, Plan und Einkommenseditor; intern werden Jahresbeträge verwendet. Vorsorgebeiträge ausdrücklich pro Jahr erfassen.
+Einfach beginnen, Zusammenhänge im Plan erklären und fachliche Vertiefung freiwillig öffnen. Der Hauptfluss erfasst persönliche und finanzielle Fakten. Keine Anlageprofilwahl und keine Zielalterfrage im Basischeck; neue Planungen verwenden zentrale Anlageannahmen und einen automatisch abgeleiteten Planungshorizont. Modellannahmen werden offengelegt und später unter «Lebensphasen & Annahmen» bearbeitet; eine erweiterte Profilwahl ist nicht Bestandteil des Produkts. Monatliche Beträge sind die primäre Sprache von Basischeck, Plan und Einkommenseditor; intern werden Jahresbeträge verwendet. Vorsorgebeiträge ausdrücklich pro Jahr erfassen.
 
 Bestehende Farbwelt, Typografie, Karten und Visualisierungen erhalten. Mobile ohne horizontales Seitenscrollen. Jede Seite hat einen verständlichen Titel, jede Unterseite genau einen logisch übergeordneten Rückweg. Keine konkurrierende Wizard-Navigation. Eine klare primäre Aktion, soweit die Seite eine benötigt; Detailseiten brauchen keine künstliche Weiter-Aktion.
 
@@ -35,8 +35,8 @@ Beispielwerte sichtbar kennzeichnen. Kein Portrait in Ergebnisboxen; Patrick ers
 START
 └── DEINE ANGABEN
     └── DEIN PLAN
-        ├── Einkommen & Steuern
         ├── Kapital & 3-Töpfe-Modell
+        │   └── Einkommen & Steuern [Info-Button]
         ├── PK – Rente oder Kapital [nur pre]
         ├── Szenarien & Risiken
         ├── Angaben ändern
@@ -61,7 +61,8 @@ Die drei Hauptbereiche sind Start, Deine Angaben und Dein Plan. Es gibt keine Zw
 | situation | Start mit Situationswahl, aktuellem Plan und Laden | keiner |
 | basic | Bestehender kompakter Basischeck „Deine Angaben“ | situation |
 | plan | Zentrales Ergebnis „Dein Plan“ | keiner; Bearbeitung über Angaben ändern |
-| income / capital / scenarios | Die drei gleichnamigen Detailbereiche | plan |
+| capital / scenarios | Die gleichnamigen Detailbereiche | plan |
+| income | Einkommen & Steuern, über Info-Button im Kapitalbereich | capital |
 | pension | PK – Rente oder Kapital, nur pre | plan |
 | advice | Beratung | plan |
 | edit_overview | Angaben ändern | plan |
@@ -72,7 +73,7 @@ Die Kompatibilitätsnamen `answer` und `details` werden auf `plan` und `edit_ove
 
 Start → Situation auswählen → Basischeck → „Meine erste Antwort ansehen“ → Dein Plan. Der Plan enthält seine drei Ergebniswerte, Status, direkte Links unter „Dein Plan im Detail“, Angaben ändern, Speichern und Beratung.
 
-Detailseite → **← Dein Plan**. Angabenübersicht → **← Dein Plan**. Gruppen- und Annahmeneditor → **← Angaben ändern**. Nach **Änderungen übernehmen** wird gespeichert und die Angabenübersicht geöffnet; der nächste Planaufruf berechnet aktuelle Ergebnisse. Kein Wechsel zum nächsten alten Wizard-Schritt.
+Kapital, PK und Szenarien → **← Dein Plan**. Einkommen & Steuern → **← Kapital & 3-Töpfe-Modell**. Angabenübersicht → **← Dein Plan**. Gruppen- und Annahmeneditor → **← Angaben ändern**. Nach **Änderungen übernehmen** wird gespeichert und die Angabenübersicht geöffnet; der nächste Planaufruf berechnet aktuelle Ergebnisse. Kein Wechsel zum nächsten alten Wizard-Schritt.
 
 Eine neue logische Seite öffnet oben. Der Rückweg mit Titel bleibt beim Scrollen oben erreichbar. Navigation verändert keine gespeicherten Eingaben. Noch nicht übernommene Formularwerte bleiben beim Verlassen und Wiederöffnen desselben Editors innerhalb der Sitzung als Entwurf erhalten. Abhängige Entwürfe werden nach übernommenen Änderungen aktualisiert bzw. verworfen, damit sie keine alten gespeicherten Werte verdecken.
 
@@ -86,15 +87,15 @@ Alle Geldbeträge sind CHF, Alter ganze Jahre, Prozentwerte in Eingaben Prozentp
 
 | Gruppe | Gemeinsame bzw. Post-Angaben | Zusätzliche Pre-Angaben |
 |---|---|---|
-| Persönliche Situation | Modus beim Einstieg, Alter heute, Zielalter, Wohnkanton | Pensionierungsalter |
+| Persönliche Situation | Modus beim Einstieg, Alter heute, Wohnkanton | Pensionierungsalter |
 | Einkommen & Bedarf | AHV, weitere Renten, weitere Einnahmen/Nettomiete, Lebensbedarf; post zusätzlich bestehende PK-Rente | PK-Rente wird aus PK-Aufteilung berechnet |
 | Vermögen | Immobilienwert, Hypotheken; post vorhandenes freies Gesamtvermögen | Bankguthaben und Wertschriften separat |
 | Vorsorge | Kein künftiger Aufbau im Post-Weg | PK-Guthaben, Säule 3a, PK-Beiträge Arbeitnehmer/Arbeitgeber, 3a-Beitrag, weitere Sparleistung; PK-Zins, 3a-/Wertschriftenrendite |
-| Entscheidungen und Annahmen | Profil, Inflation, Lebensphasen, Einnahmelaufzeiten, Immobilienaufteilung, drei Topfrenditen, Reparaturstress | PK-Kapitalanteil, Umwandlungssatz, Vergleichsrendite PK-Kapitalbezug |
+| Entscheidungen und Annahmen | Planungshorizont, hinterlegte Anlageannahme ohne Profilwahl, Inflation, Lebensphasen, Einnahmelaufzeiten, Immobilienaufteilung, drei Topfrenditen, Reparaturstress | PK-Kapitalanteil, Umwandlungssatz, Vergleichsrendite PK-Kapitalbezug |
 
 Der Basischeck fasst AHV und Renten zusammen (pre ohne PK), weitere Einnahmen separat sowie Bank/Wertschriften zu einem Betrag. Bei Änderung eines Sammelbetrags bleiben bestehende Einzelanteile proportional erhalten; war der vorherige Gesamtwert null, wird der erste Einzelposten verwendet. Bestehende zeitlich begrenzte Einnahmen und Lebensphasen werden nicht gelöscht. Einzelbeträge werden anschliessend in den Gruppen bearbeitet.
 
-Basischeck und persönlicher Editor validieren Alter 18–100, Pensionierung pre 50–100, Zielalter höchstens 110 und strikt nach Planungsstart. Pre-Pensionierung darf nicht vor dem aktuellen Alter liegen. Post startet heute; ein bislang späteres Pensionierungsalter wird beim Übernehmen auf das aktuelle Alter begrenzt.
+Basischeck und persönlicher Editor validieren Alter 18–100 und Pensionierung pre 50–100. Der Horizont wird ausschliesslich unter «Lebensphasen & Annahmen» bearbeitet: ganzzahlig, höchstens 110 und strikt nach Planungsstart. Pre-Pensionierung darf nicht vor dem aktuellen Alter liegen. Post startet heute; ein bislang späteres Pensionierungsalter wird beim Übernehmen auf das aktuelle Alter begrenzt.
 
 Basischeck: Frage nach behaltenen Immobilien blendet Marktwert/Hypotheken ein; bei Nein werden beide auf null gesetzt. Ein dadurch ungültiger Renditeobjektanteil wird deaktiviert. Direkte Gruppeneditoren zeigen nur vorhandene modellierte Felder; sie führen keine neue Vermögenskategorie ein.
 
@@ -104,11 +105,13 @@ Basischeck: Frage nach behaltenen Immobilien blendet Marktwert/Hypotheken ein; b
 
 Simulation beginnt pre am Pensionierungsalter, post am aktuellen Alter. Vor Pensionierung keine Inflation auf Lebensbedarf und keine zusätzliche Abzinsung des projizierten Startkapitals. Alle frei verfügbaren Beträge gehen am Start in die Kapitalbasis ein.
 
-Die Ruhestandsrechnung verwendet konstante Kaufkraft des Startjahres. Pro Phase bleibt der reale Lebensbedarf konstant; das entspricht nominalem Wachstum mit Inflation. Eine zusätzliche Inflationierung desselben realen Bedarfs wäre Doppelzählung. „Heutige Kaufkraft“ in Ruhestandsansichten bezeichnet diesen Modellpreisstand. „Wert bei Pensionierung“ bezeichnet die hochgerechneten Startwerte.
+Die Ruhestandsrechnung verwendet konstante Kaufkraft des Startjahres. Pro Phase bleibt der reale Lebensbedarf konstant; das entspricht nominalem Wachstum mit Inflation. Eine zusätzliche Inflationierung desselben realen Bedarfs wäre Doppelzählung. Ruhestandsansichten nennen diesen Modellpreisstand „Kaufkraft zu Beginn deiner Pensionierung“, bei bereits Pensionierten „Kaufkraft zu Beginn deiner Planung“. „Wert bei Pensionierung“ bezeichnet die hochgerechneten Startwerte.
 
 Ausgabenjahre laufen von Startalter inklusive bis Zielalter exklusive. Eine zusätzliche Terminalzeile zeigt Kapital am Zielalter ohne weitere Jahresausgabe. Rechenwerte bleiben ungerundet; CHF-Anzeigen werden gerundet.
 
 ## 8. Einkommen
+
+Im Kapitalbereich erscheint nur die kompakte Summe «Netto verfügbar» mit Betrag pro Jahr und Bezugsalter; ohne Kanton ausdrücklich vorläufig ohne Steuerabzug. Ein beschrifteter Info-Button öffnet die bestehende Einkommenssicht mit Quellen und Steuerdetails. Kein separater Einkommenseintrag in der Plannavigation.
 
 Quellen: AHV, PK-Rente, weitere Renten und weitere Einnahmen. Die zusätzliche reguläre Einnahme kann als Nettomietertrag markiert werden. Bis zu drei zusätzliche benannte Einnahmen können mit Betrag, Beginn, Ende und Inflationsanpassung erfasst werden. Kein Ansatz sicherer laufender Kapitalerträge.
 
@@ -128,6 +131,8 @@ Nominal feste Einnahmen verlieren damit Kaufkraft. Steuerbare Quellen bilden die
 Die additive Nettoaufteilung zwischen AHV/Renten und weiteren Einnahmen verteilt die eine Gesamtsteuer proportional. Sie ist eine Darstellung, keine unabhängige Steuerberechnung je Quelle.
 
 ## 9. Vermögen und Kapital
+
+Verfügbares Kapital und laufende Finanzierung stehen visuell im Vordergrund. Gebundenes Immobilienkapital bleibt Bestandteil des Vermögens, erscheint aber kleiner, zurückhaltend und nach den Finanzierungselementen. Keine gleichwertige Kennzahl oder vierte Topfgrafik. Bei einer Gesamtkapitalangabe werden verfügbarer und gebundener Anteil getrennt; der verfügbare Betrag erhält Vorrang. Immobilienwert und Hypotheken bleiben unter «Angaben ändern → Vermögen» vollständig editierbar; gebundenes Kapital finanziert keine automatischen Entnahmen.
 
 Die Kapitalbegriffe im UI sind verbindlich: **Verfügbares Kapital** bzw. **verfügbares Anlagekapital** umfasst nur die drei Finanzierungstöpfe, ohne gebundenes Immobilienkapital. **Verfügbares Restkapital** ist deren verbleibender Betrag am genannten Alter; Jahresdaten nennen **verfügbares Kapital am Jahresende**. **Gebundenes Immobilienkapital** ist Marktwert minus Hypotheken und bleibt separat. **Gesamtkapital inkl. Immobilien netto** darf ausschliesslich für die Summe aus verfügbarem und gebundenem Kapital verwendet werden. Unqualifizierte Labels wie „Gesamt“, „Endkapital“ oder „Freies Gesamtkapital“ vermeiden. PK-Bezugsbeträge ausdrücklich als PK-Kapital brutto/netto kennzeichnen.
 
@@ -217,9 +222,9 @@ Zentrale Profilparameter in `risk-profiles.js`:
 
 Profile bestimmen Rendite und Schwankung des langfristigen Wachstumstopfs, keine feste Aktienquote. Die Quote des Wachstumstopfs ergibt sich nach Reservierung in Topf 1/2. Höhere Renditechancen bedeuten grössere Verlustrisiken; auch Vorsichtig kann Verluste ausweisen. Höheres Risiko garantiert in keinem Szenario höheres Endkapital.
 
-Eine ausdrückliche Profilwahl setzt Wachstumsrendite, Schwankungsfaktor und PK-Vergleichsrendite. Geldmarkt und Anleihen behalten ihre Annahmen. Individuelle gespeicherte Renditen werden beim Laden erhalten und als „Individuell angepasst“ markiert; erst erneute Profilwahl stellt Profilparameter her. Alter Schlüssel `bold` wird als `growth` gelesen.
+Im normalen Benutzerfluss gibt es keine Auswahl des Anlagerisikos: weder Basischeck, Plan, Kapitaldetail, PK-Detail, Szenarien noch Annahmen zeigen Profilbuttons oder Profilvergleichskarten. Die technischen Profile bleiben für kompatible Speicherstände, Regressionen und spätere Erweiterungen erhalten. Eine künftige Profilwahl gehört in erweiterte Annahmen und ist nicht implementiert.
 
-Alle Auswahlstellen verwenden dieselbe kompakte dreigeteilte Leiste, auch auf Mobile nebeneinander: Name, Rendite und markierte Auswahl. Erklärungen über Infohinweis. Insbesondere PK und Kapitaldetail bearbeiten dieselbe gespeicherte Auswahl. Profilwechsel aktualisieren relevante Ergebnisse, Diagramme und Status ohne Reload.
+Neue Planungen verwenden `RiskProfiles.defaultProfile = balanced`: reale Topfrenditen 0 / 1 / 4,5 %, Schwankungsfaktor 0,70 und PK-Vergleichsrendite 4,5 %. Alle Ansichten verwenden denselben Rechenkern und dieselben hinterlegten Anlageannahmen. Bestehende gespeicherte Profile, individuelle Renditen und Schwankungsfaktoren bleiben unverändert; sie werden als gespeicherte Anlageannahmen kenntlich gemacht. Alter Schlüssel `bold` wird als `growth` gelesen. Keine Zwangsmigration persönlicher Werte.
 
 ## 13. Kapitalentwicklung und Simulation
 
@@ -238,19 +243,31 @@ Jahresdaten enthalten Alter, freies und gebundenes Anfangskapital, Gesamtkapital
 
 ## 14. 3-Töpfe-Modell
 
-Geldfluss **Topf 3 Wachstum → Topf 2 Anleihen → Topf 1 Geldmarkt → Lebensbedarf**. Topf 2 wird grundsätzlich aus Topf 3 aufgefüllt, Topf 1 aus Topf 2. Jährliche bedarfsgerechte Prüfung und Zielauffüllung.
+Standardansicht: verfügbares Anlagekapital als primärer Betrag, Zeitpunkt (Start heute/bei Pensionierung bzw. Jahresbeginn der gewählten Phase und Alter) und die drei Töpfe mit Namen und Beträgen. Gebundenes Immobilienkapital folgt als kompakte Nebenzeile unter den Finanzierungselementen, ohne eigene grosse Karte, Goldtopf oder umfangreichen Dauertext. Definition über Info-Icon: Immobilienwert minus Hypotheken, nicht für laufende Entnahmen eingeplant; keine modellierten Verkäufe, Teilverkäufe oder zusätzliche Belehnung.
+
+Info-Icons bei Anlagekapital und jedem Topf öffnen einen zugeordneten Hilfebereich im Seitenfluss. Anlagekapital erklärt Zusammensetzung inklusive gewähltem PK-Nettobezug, Ausschluss von Immobilienkapital, tatsächlichen Zeitpunkt und Kaufkraft des Planungsstarts; Vorschauwerte werden kenntlich gemacht. Topfhilfen erklären kurzfristigen Bedarf, mittelfristige Reserve und langfristiges Wachstum samt Risiken. Methodik (Reserven, jährliche Auffüllung und mögliche Verkäufe nach Verlusten) steht hinter «So funktionieren die Töpfe». Keine doppelte Kapitalkennzahl oder permanente Methodik-/Zielkarte. Fehlbeträge und der Hinweis auf fehlenden Kanton bleiben sichtbar.
+
+Geldfluss **Topf 3 Wachstum → Topf 2 Anleihen → Topf 1 Geldmarkt → Lebensbedarf**. Die Darstellung folgt dieser Reihenfolge: Topf 3 → Topf 2 → Topf 1, anschliessend laufende Kosten. Die Topfkarten stehen in Flussrichtung hintereinander; Pfeile verbinden benachbarte Töpfe. Auch die Topfübersicht in den Szenarien verwendet 3 → 2 → 1. Topf 2 wird grundsätzlich aus Topf 3 aufgefüllt, Topf 1 aus Topf 2. Jährliche bedarfsgerechte Prüfung und Zielauffüllung.
 
 Topf 1 reserviert die aktuelle Jahresentnahme. Topf 2 reserviert die Summe der folgenden zwei Jahresentnahmen. Nur verbleibendes Kapital geht in Topf 3. Bei knappen Mitteln hat Topf 1 Vorrang, danach Topf 2. Die Summe der drei Anfangstöpfe entspricht dem gesamten verfügbaren Anlagekapital.
 
 Auch nach Kursverlusten erfolgt die bestehende Zielauffüllung; dadurch können Verkäufe im Wachstumstopf notwendig sein. Keine implementierte Verlust-Verkaufsvermeidung behaupten. Die Jahresengine gleicht Zielbestände rechnerisch aus; ihre Transferwerte sind Bestandsdifferenzen, kein separates Orderbuch einzelner Überweisungen.
 
-Das Modell ist eine freiwillige Kapitalvertiefung, kein zusätzlicher Pflichtschritt im Basischeck. Gesamtes Anlagekapital, laufende Finanzierung, Reserven und verbleibender Wachstumstopf müssen verständlich zusammenpassen. Gebundenes Immobilienkapital bleibt separat. Vorschauwerte ändern keine gespeicherten Topfannahmen.
+Das Modell ist eine freiwillige Kapitalvertiefung, kein zusätzlicher Pflichtschritt im Basischeck. Keine Risikowahl; Topf 1 erklärt den kurzfristigen Bedarf, Topf 2 die mittelfristige Reserve, Topf 3 das langfristige Wachstum mit den hinterlegten Anlageannahmen. Gesamtes Anlagekapital, laufende Finanzierung, Reserven und verbleibender Wachstumstopf müssen verständlich zusammenpassen. Gebundenes Immobilienkapital bleibt separat. Vorschauwerte ändern keine gespeicherten Topfannahmen.
 
 ## 15. Lebensphasen / Planungshorizont
 
 Drei Bedarfsphasen mit individuellem Jahresbedarf: erste ab Planungsstart, zweite standardmässig ab 73, dritte ab 83. Die dritte Phase muss nach der zweiten beginnen. Massgebend ist die letzte zum aktuellen Alter begonnene Phase.
 
-Der Benutzer bestimmt das Zielalter. Es wird keine Sterbewahrscheinlichkeit oder automatische Lebenserwartung berechnet. Das Langzeitszenario verlängert den gewählten Horizont um fünf Jahre.
+Neue Planungen leiten das Zielalter automatisch aus der statistischen Restlebenserwartung im **heutigen Alter** ab. Die bestätigte altersabhängige Referenz ersetzt ausdrücklich den ursprünglich vorgesehenen festen Schweizer Standardwert und die bisherige manuelle Zielalterfrage im Hauptfluss. Kein neues Geschlechtsfeld und keine persönliche Sterbewahrscheinlichkeit.
+
+**IMPLEMENTIERT:** Zentrale Referenz `life-expectancy.js`, Kennung `bfs-period-2023`: [BFS-Periodensterbetafeln 2023 für die Schweiz](https://www.bfs.admin.ch/asset/de/px-x-0102020300_102), Bezugsjahr 2023, Beobachtungseinheit `ex`, Alter 18–100, abgerufen am 12. September 2026. Es handelt sich um Werte des Schweizer Mortalitätsmodells (Publikation 2023), nicht um die jährliche Sterbetafel 2024. Die vollständige Tabelle deckt auch Alter 100 ab. Quelle und Einzelwerte je Geschlecht stehen zentral im Modul; keine Live-Abfrage und kein automatisches Datenupdate.
+
+Ohne Geschlechtserfassung wird der arithmetische Mittelwert der verbleibenden Jahre für Frauen und Männer verwendet. Diese Gleichgewichtung ist eine transparente Produktannahme, kein vom BFS publizierter bevölkerungsgewichteter Gesamtdurchschnitt. Zielalter = aufgerundet(heutiges Alter + mittlere Restlebenserwartung). Beispiele: Alter 56 → 86, 65 → 87, 80 → 90, 100 → 102. Falls eine sehr späte Pensionierung den statistischen Zielwert erreicht oder überschreitet, gilt mindestens Planungsstart + 1; diese technische Mindestspanne wird ausdrücklich erklärt. Planungsstart bleibt pre bei Pensionierung und post heute.
+
+Änderungen an Alter/Situation aktualisieren automatische Horizonte bei Übernahme der persönlichen Angaben. Ein gespeichertes Zielalter wird beim Laden unverändert übernommen. Alte Pläne ohne Automatikkennzeichnung behalten ihren bisherigen Horizont. Eine Änderung des Horizonts unter «Lebensphasen & Annahmen» wechselt auf manuell; weitere Altersänderungen überschreiben ihn nicht. Unverändertes Übernehmen des Annahmenformulars erhält die Automatik. Manuelle/alte Horizonte vor einem neuen Planungsstart müssen zuerst in den Annahmen verlängert werden. Das Langzeitszenario verlängert den verwendeten Horizont weiterhin um fünf Jahre.
+
+**ZU VERIFIZIEREN:** Aktualisierungsrhythmus der BFS-Referenz und langfristige Eignung der gleichgewichteten Periodenreferenz. Keine individuelle Lebensdauerprognose, keine Kohortenfortschreibung oder Gesundheitsdaten.
 
 Basischeck und Einkommenseditor übernehmen eine Änderung des Anfangsbedarfs in Phase 2/3 nur, wenn deren Werte noch genau dem bisherigen Anfangsbedarf entsprechen; individuell abweichende spätere Bedarfe bleiben erhalten.
 
@@ -258,21 +275,25 @@ Laufzeiten sind ab Alter inklusive, bis Alter exklusiv; Ende muss nach Beginn li
 
 ## 16. Ergebnisdarstellung
 
-„Dein Plan“ zeigt drei Aussagen: laufende monatliche Nettoeinnahmen, monatliche Ergänzung aus Vermögen und verfügbares Restkapital am Zielalter bzw. erstes Lückenalter. Dazu Planungsspanne und sichtbare Modellkennzeichnung.
+Gebundenes Kapital ist keine Hauptkennzahl von «Dein Plan». Ergänzende Vermögensangaben stehen nach den zentralen Finanzierungswerten und werden visuell zurückgestuft. Kapital-/Entnahmegrafiken und Topfdarstellungen umfassen weiterhin ausschliesslich verfügbares Anlagekapital; gebundene Beträge bleiben getrennt.
+
+„Dein Plan“ ergänzt bei laufenden Einnahmen und Kapitalentnahme die zugehörigen Jahresbeträge aus dem gemeinsamen Ergebnisobjekt unter den primären Monatswerten.
+
+„Dein Plan“ zeigt drei Aussagen: laufende monatliche Nettoeinnahmen, monatliche Ergänzung aus Vermögen und verfügbares Restkapital am Zielalter bzw. erstes Lückenalter. Dazu Planungsspanne und sichtbare Modellkennzeichnung. Der Plan nennt das verwendete Zielalter und weist bei automatischem Horizont auf die Schweizer Restlebenserwartung hin; manuelle/alte Horizonte werden als gespeichert bezeichnet. Beide Hinweise nennen «Lebensphasen & Annahmen» als Änderungsort. Der Plan zeigt «Planung bis Alter …» sowie einen kurzen Hinweis auf die altersabhängige Schweizer Referenz und die Anpassung unter Annahmen; manuelle/alte Horizonte werden als gespeicherter Planungshorizont bezeichnet.
 
 Statusregel der gewählten Planung: ohne Kanton neutral/vorläufig; sonst rot bei Lücke in Basisrechnung, gold wenn nur „Fünf schwache Jahre“ eine Lücke zeigt, grün wenn beide gedeckt sind. Gold erklären, keine Erfolgswahrscheinlichkeit erfinden.
 
 Positive Kernaussage: Unter den gewählten Annahmen ist der gewünschte Lebensstandard bis zum Zielalter finanzierbar. «Verfügbares Restkapital» ergänzen: alle drei Töpfe, ohne gebundenes Immobilienkapital. PK und Plan zeigen denselben Betrag, gerundet auf CHF; keine zusätzliche Rundung auf CHF 500. Bei Lücke Alter nennen und keine grüne Erfolgsaussage zeigen. Abschlussformulierung „Deine erste Planung steht“.
 
-„Szenarien & Risiken“ enthält die Grafik des verfügbaren Kapitals, Profilvergleich und bestehende Belastungsszenarien/Jahresdetails. Grafiküberschrift „Wie kann sich dein verfügbares Kapital entwickeln?“, Untertitel mit Profil und realer Zielrendite. Legenden „Basisrechnung“, „Ungünstige Reihenfolge“ und „Günstige Reihenfolge“. Die Basislinie entspricht dem Ergebnis unter „Dein Plan“. Datenpunktkarten zeigen Start, ungefähr ein Drittel und zwei Drittel des Horizonts sowie Zielalter, jeweils aus denselben Jahresreihen. Bei kurzen Horizonten doppelte Zeitpunkte weglassen.
+„Szenarien & Risiken“ enthält die Grafik des verfügbaren Kapitals und bestehende Belastungsszenarien/Jahresdetails. Grafiküberschrift „Wie kann sich dein verfügbares Kapital entwickeln?“, Untertitel mit durchschnittlicher bzw. gespeicherter Anlageannahme und realer Zielrendite. Legenden „Basisrechnung“, „Ungünstige Reihenfolge“ und „Günstige Reihenfolge“. Die Basislinie entspricht dem Ergebnis unter „Dein Plan“. Datenpunktkarten zeigen Start, ungefähr ein Drittel und zwei Drittel des Horizonts sowie Zielalter, jeweils aus denselben Jahresreihen. Bei kurzen Horizonten doppelte Zeitpunkte weglassen.
 
-Grafik und Profilvergleichskarten: verfügbares Kapital aller drei Töpfe bis zum selben gewählten Zielalter. Gebundenes Immobilienkapital bleibt ausgeschlossen. Die ersten zehn Jahre sind lediglich die Länge des verwendeten Renditemusters, kein separater Betrachtungshorizont. Profilkarten zeigen Basisrechnung und beide Varianten am Zielalter; das gewählte Standardprofil ist markiert. Bei individuellen Annahmen gilt die Grafik für den individuellen Plan, die Vergleichskarten bleiben ausdrücklich Standardprofile. Y-Skala über alle Standardprofile bei gleichen Eingaben identisch; individuelle aktuelle Rendite zusätzlich berücksichtigen, falls sie die Skala erweitert.
+Die Grafik zeigt verfügbares Kapital aller drei Töpfe bis zum verwendeten Zielalter. Gebundenes Immobilienkapital bleibt ausgeschlossen. Die ersten zehn Jahre sind lediglich die Länge des Renditemusters, kein separater Betrachtungshorizont. Keine Profilvergleichskarten und keine zusätzlichen Profilrechnungen für die Achsenskalierung. Eine gemeinsame Y-Skala umfasst Basisrechnung und beide Renditereihenfolgen des aktuellen Plans.
 
 Keine redundanten Opt./Pess.-Präfixe vor farblich zugeordneten Kartenbeträgen; zugängliche Beschriftungen behalten. Nullachse „0“, auf Mobile weniger Diagrammlabels und vollständige Werte in Karten.
 
 ## 17. Szenarien und Risiken
 
-Basis: konstante gewählte reale Topfrenditen. Historische Varianten verwenden dasselbe Schwankungsmuster, transformiert auf das gewählte Profil, in günstiger bzw. ungünstiger Reihenfolge. Keine Monte-Carlo-Simulation implementiert.
+Basis: konstante gewählte reale Topfrenditen. Historische Varianten verwenden dasselbe Schwankungsmuster, transformiert mit der zentralen durchschnittlichen Anlageannahme (bei bestehenden Plänen mit den erhaltenen Anlageannahmen), in günstiger bzw. ungünstiger Reihenfolge. Keine Monte-Carlo-Simulation implementiert.
 
 Das vorhandene Muster basiert auf MSCI-World-Bruttorenditen in CHF und Schweizer Inflation:
 
@@ -311,9 +332,9 @@ Erläuterungen zeigen tatsächlich verwendete profilspezifische Verluste. Steuer
 
 ## 18. Annahmen
 
-Neue Planungen verwenden ausgewogen und reale Topfrenditen 0 / 1 / 4,5 % (Geldmarkt/Anleihen/Wachstum). Vorhandene individuelle Werte bleiben beim Laden erhalten.
+Unter «Lebensphasen & Annahmen» werden Kapitalanlage, tatsächlich verwendete langfristige reale Wachstumsrendite und der veränderbare Planungshorizont erklärt. Keine Profilwahl. Neue Planungen verwenden die zentrale durchschnittliche Anlageannahme und reale Topfrenditen 0 / 1 / 4,5 % (Geldmarkt/Anleihen/Wachstum). Vorhandene individuelle Werte bleiben beim Laden erhalten.
 
-**IMPLEMENTIERT – vorausgefüllte Modell-/Beispielwerte:** Alter 56, Pensionierung 65, Zielalter 92; Lebensbedarf CHF 90’000/Jahr; Inflation 0,6 %; PK-Zins 4,33 %; 3a-/Wertschriftenrendite 4,5 %; PK-Vergleichsrendite 4,5 %; Umwandlungssatz 5,2 %; PK-Bezug 50 %.
+**IMPLEMENTIERT – vorausgefüllte Modell-/Beispielwerte:** Alter 56, Pensionierung 65, Zielalter automatisch gemäss Kapitel 15; Lebensbedarf CHF 90’000/Jahr; Inflation 0,6 %; PK-Zins 4,33 %; 3a-/Wertschriftenrendite 4,5 %; PK-Vergleichsrendite 4,5 %; Umwandlungssatz 5,2 %; PK-Bezug 50 %.
 
 Pre-Beispiele: PK 550’000, 3a 120’000, Wertschriften 180’000, Bank 50’000, Immobilie 800’000, Hypothek 500’000; PK-Beiträge je 11’000 Arbeitnehmer/Arbeitgeber, 3a 7’000, übriges Sparen 10’000 jährlich; AHV 28’200, weitere Einkommen null. Post-Beispiele: AHV 28’200, PK-Rente 26’000 jährlich, übrige Einkommen null, frei 650’000, Immobilie 800’000 und Hypothek 500’000. Keine automatische Kantonsannahme.
 
@@ -338,11 +359,11 @@ Kanonischer Plan, verbunden mit dem bestehenden Arbeitsstate durch `fromState`/`
 | assumptions | rates: pkInterest, p3Return, secReturn, capitalReturn, inflation, uws; contributions: pkContrib, pkEmployee, pkEmployer, p3Contrib, otherSave; legacy risk |
 | riskProfile | cautious / balanced / growth |
 | scenarios | version, phase2/3, need2/3, returns[3], volatilityFactor, timing, extras, rental, repair, propertySplit/value/debt |
-| metadata | Erhaltene weitere Zustandsdaten, insbesondere exampleValues |
+| metadata | Erhaltene weitere Zustandsdaten, insbesondere exampleValues, horizonMode (automatic/manual/saved), horizonReference |
 
 Navigationszustand und Formularentwürfe sind davon getrennt. Öffnen/Schliessen eines Details setzt weder Modell noch Profil zurück. Editorübernahme schreibt nur die bearbeitete Gruppe, behält andere Modellteile und speichert den Arbeitsstand. Unverändert übernommene monatliche Einzelfelder erhalten den exakten gespeicherten Jahresbetrag.
 
-Automatischer Arbeitsstand: `retirementMvp5`. Persönlicher Snapshot separat: `retirement-personal-snapshot-v1`, Hülle `{version:4, savedAt, plan}`. Unterstützte Altschemas 1/2 mit `state`, 3 mit `plan`; Migration erhält Werte und individuelle Renditen. Schema 4 enthält kanonisches Profil und Schwankungsfaktor.
+Automatischer Arbeitsstand: `retirementMvp5`. Persönlicher Snapshot separat: `retirement-personal-snapshot-v1`, Hülle `{version:4, savedAt, plan}`. Unterstützte Altschemas 1/2 mit `state`, 3 mit `plan`; Migration erhält Werte und individuelle Renditen. Schema 4 enthält kanonisches Profil und Schwankungsfaktor. Horizontmodus und Referenzkennung werden kompatibel über metadata gespeichert. Fehlende alte Horizontkennzeichnung wird als saved behandelt, niemals vom neuen Automatikdefault übernommen. Laden verändert weder Zielalter noch Jahresergebnisse.
 
 Vor Laden validieren, bestehende Arbeitswerte nach Bestätigung ersetzen, vorherigen Stand unter `retirement-before-personal-load` sichern. Persönliche Daten nicht als Beispiel markieren. Beschädigte oder unbekannte zukünftige Versionen nicht überschreiben. Speicherfehler sichtbar melden. Identisch wiederhergestellte Modelle müssen identische Jahresergebnisse erzeugen.
 
@@ -356,11 +377,12 @@ Statische Browseranwendung ohne Framework-Migration. `index.html` ist produktive
 
 | Verantwortung | Komponenten |
 |---|---|
-| Navigation, Basischeck, Plan, Gruppeneditoren, gemeinsame Profilleiste | check-ui.js / check-ui.css |
+| Navigation, Basischeck, Plan, Gruppeneditoren | check-ui.js / check-ui.css |
 | Reiner Planadapter, Projektion und Bewertung | retirement-calculator.js |
 | Jahresrechnung, Entnahmen, Töpfe | retirement-engine.js |
 | Steuermodell und Parameter | tax-model.js / tax-config.js |
 | Steuer-/Einkommensdarstellung | tax-view.js |
+| Altersabhängige Schweizer Horizontreferenz und Ableitung | life-expectancy.js |
 | Risikoparameter, Reihenfolge, historische Ausgangsdaten | risk-profiles.js / historical-returns.js |
 | Erhaltene Detailintegration, Phasenformular, Chart, Jahres-/Stressdetails | retirement-planning.js / retirement-planning.css |
 | Kapital-/Topfvisualisierung | financing-view.js |
@@ -376,13 +398,15 @@ Gezielte Qualitätssicherung: `tests/navigation.cy.js` für Hauptwege, Rückwege
 
 ## 21. UI-Komponenten und Darstellungsregeln
 
+Fachliche Zusatzinformationen, Definitionen und methodische Hinweise liegen, soweit für das unmittelbare Verständnis nicht erforderlich, hinter Info-Icons, Aufklappern oder «So rechnen wir». Beträge, Status, Zeitpunkt und wichtigste Hebel haben Vorrang. Im Kapitalbereich sind Hilfen standardmässig geschlossen; höchstens eine neue Info-Erklärung ist gleichzeitig offen. Beschriftete Buttons funktionieren mit Klick, Touch und Tastatur, melden ihren Zustand mit `aria-expanded` und verweisen auf den Hilfebereich. Erneuter Klick, «Hinweis schliessen» oder Escape schliesst ihn. Hilfen erscheinen im Seitenfluss, ohne Hauptnavigation zu überlagern. Gebundenes Kapital bleibt eine kleine ergänzende Zeile unterhalb der Finanzierungselemente.
+
 Header mit statischer Marke und einem Portrait. Basischeck mit klar gegliederten Feldern, sichtbaren Einheiten, Beispielhinweis und aufklappbarem „So rechnen wir“. Plan mit drei Ergebniswerten, Ampel/Erklärung und direkter Detailnavigation.
 
 Angabenübersicht mit vier Gruppen vor bzw. drei nach Pensionierung: aktuelle Zusammenfassung und eindeutig benanntem „Ändern“-Button je Gruppe. Editor: Rückweg, Gruppentitel, vorhandene Felder und **Änderungen übernehmen**. Lebensphasen und Annahmen verwenden eine gemeinsame Übernahmeaktion.
 
-Details: einheitliche Titel und **← Dein Plan**, darunter vorhandene fachliche Darstellung und passende Interaktionen wie PK-Regler oder Profilleiste. Keine gleichzeitigen alten Haupttabs, Wizard-Fortschritte oder Weiter/Zurück-Zeilen.
+Details: einheitliche Titel und **← Dein Plan** (Einkommen & Steuern: **← Kapital & 3-Töpfe-Modell**), darunter vorhandene fachliche Darstellung und passende Interaktionen wie PK-Regler oder Horizontfeld. Keine gleichzeitigen alten Haupttabs, Wizard-Fortschritte oder Weiter/Zurück-Zeilen.
 
-Jedes Feld hat sichtbaren Kontext/Label und zugänglichen Namen. Interaktive Elemente per Tastatur bedienbar, Auswahlzustand zugänglich (`aria-pressed` für Profile). Rückwege bleiben beim Scrollen sichtbar. Schweizer Tausendertrennzeichen und Dezimalkomma für Prozentwerte. „Ändern“, keine Umschrift „Aendern“.
+Jedes Feld hat sichtbaren Kontext/Label und zugänglichen Namen. Interaktive Elemente per Tastatur bedienbar, Eingaben haben zugängliche Beschriftungen. Rückwege bleiben beim Scrollen sichtbar. Schweizer Tausendertrennzeichen und Dezimalkomma für Prozentwerte. „Ändern“, keine Umschrift „Aendern“.
 
 Diagrammwerte und Karten müssen lesbar bleiben, Tabellen auf Mobile umbrechen; kein horizontales Seitenscrollen. Wichtige Erklärungen mindestens 13 px, normale Texte etwa 15–16 px. Kompakter Kantonsselect ohne redundante Labelblöcke in Details. Keine rein dekorativen Zwischenansichten.
 

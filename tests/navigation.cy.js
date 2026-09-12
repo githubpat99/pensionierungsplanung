@@ -7,7 +7,7 @@ describe('One navigation hierarchy',()=>{
   cy.get('#checkApp .check-brand').should('not.have.attr','data-go');
   let plan,result;
   cy.window().then(w=>{plan=JSON.stringify(w.CheckUI.getPlan());result=JSON.stringify(w.CheckUI.getResult());});
-  const details=['income','capital',...(mode==='pre'?['pension']:[]),'scenarios'];
+  const details=['capital',...(mode==='pre'?['pension']:[]),'scenarios'];
   for(const route of details){
    cy.get(`#checkApp [data-go=${route}]`).click();
    cy.get('.check-deep-heading h1').should('be.visible');
@@ -18,6 +18,12 @@ describe('One navigation hierarchy',()=>{
    cy.window().then(w=>expect(JSON.stringify(w.CheckUI.getResult())).to.equal(result));
   }
   if(mode==='post')cy.get('#checkApp [data-go=pension]').should('not.exist');
+  cy.get('.check-next [data-go=income]').should('not.exist');
+  cy.get('.check-annual').should('have.length',2).each(el=>expect(el.text()).to.contain('pro Jahr'));
+  cy.get('#checkApp [data-go=capital]').click();cy.get('#financeIncome .finance-source-list,#financeIncome .tax-summary').should('not.exist');
+  cy.get('[data-income-details]').click();cy.get('.check-deep-heading h1').should('have.text','Einkommen & Steuern');
+  cy.get('.check-back').should('contain','Kapital & 3-Töpfe-Modell').click();cy.get('#financeModel').should('be.visible');cy.get('.check-back').click();
+
   cy.get('#checkApp [data-action=edit]').click();
   cy.get('.check-edit-card').should('have.length',mode==='pre'?4:3);
   cy.get('[data-go=edit_assets]').click();
@@ -48,12 +54,12 @@ describe('One navigation hierarchy',()=>{
   cy.viewport(360,844);cy.visit('/');cy.get('[data-mode=pre]').click();
   cy.get('#checkForm [name=canton]').select('ZH');cy.get('#checkForm button[type=submit]').click();
   cy.get('[data-action=edit]').click();cy.get('[data-go=edit_personal]').click();
-  cy.get('[name=planningAge]').clear().type('60');cy.get('#groupEditor button[type=submit]').click();
-  cy.get('#checkFormError').should('contain','Reihenfolge');cy.get('[name=planningAge]').clear().type('95');
+  cy.get('[name=retirementAge]').clear().type('50');cy.get('#groupEditor button[type=submit]').click();
+  cy.get('#checkFormError').should('contain','Pensionierungsalter');cy.get('[name=retirementAge]').clear().type('65');
   cy.get('#groupEditor button[type=submit]').click();cy.get('[data-go=edit_pension]').click();
   cy.get('[name=pkEmployee]').clear().type('12345');cy.get('#groupEditor button[type=submit]').click();
   cy.get('[data-go=assumptions]').click();cy.get('#tab-ass button.primary:visible').should('have.length',1).and('have.text','Änderungen übernehmen');
-  cy.get('#phase2').clear().type('74');cy.get('#checkApp .check-back').click();
+  cy.get('#planning-age').clear().type('95');cy.get('#phase2').clear().type('74');cy.get('#checkApp .check-back').click();
   cy.get('[data-go=assumptions]').click();cy.get('#phase2').should('have.value','74');
   cy.get('#phase3').clear().type('72');cy.get('[onclick="savePlanning()"]').click();cy.get('#planError').should('contain','nach der zweiten');
   cy.get('#phase3').clear().type('84');cy.get('.model-assumptions summary').click();

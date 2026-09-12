@@ -17,6 +17,10 @@
     if(saved.version>=3){try{const core=typeof module!=='undefined'?require('./retirement-calculator.js'):root.RetirementCalculator;saved.state=core.toState(saved.plan);}catch(_){throw Error('Der gespeicherte Plan ist unvollständig.');}}
     if(!saved.state||!['pre','post'].includes(saved.state.mode))throw Error('Der gespeicherte Stand enthält keine gültige Planung.');
     const state=merge(defaults,saved.state);
+    // Old horizons are user data, never inherit the new automatic default marker.
+    state.horizonMode=saved.state.horizonMode||'saved';
+    if(state.horizonMode!=='automatic')delete state.horizonReference;
+    if(!['automatic','manual','saved'].includes(state.horizonMode))throw Error('Der gespeicherte Planungshorizont ist ungültig.');
     function validate(value,template){
       if(typeof template==='number'&&(!Number.isFinite(value)))throw Error('Der gespeicherte Stand enthält ungültige Zahlen.');
       if(template&&typeof template==='object')for(const key of Object.keys(template))validate(value?.[key],template[key]);

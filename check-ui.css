@@ -119,3 +119,47 @@ body.check-v2{background:#f7f8f5;color:#1b302d;font-family:Inter,system-ui,-appl
 .profile-comparison span{display:block;margin-top:15px;font-size:13px;color:#5d7167}
 .profile-comparison b{display:block;font-size:18px;overflow-wrap:anywhere;color:#233e31;margin-top:5px}
 @media(max-width:600px){.profile-comparison{grid-template-columns:1fr}#profileComparison{padding:16px}}
+
+#planningForm .plan-horizon .note,#planningForm .plan-investment .note{font-size:14px;line-height:1.55}
+#planningForm .plan-investment{margin:20px 0}
+
+/* Read the funding chain in the same order as the money flows. */
+.check-v2 .finance-pots{padding-top:0;gap:20px}
+.check-v2 .finance-pots::before{content:none}
+.check-v2 .finance-pot{position:relative}
+.check-v2 .finance-pot:not(:last-child)::after{content:'→';position:absolute;right:-20px;top:65px;width:20px;font-size:23px;color:#587267}
+.check-v2 .finance-model .finance-payout{display:block;width:calc((100% - 40px)/3);max-width:none;margin:14px 0 14px auto;box-sizing:border-box}
+.check-v2 .finance-pot p{font-size:13px}
+@media(max-width:600px){
+ .check-v2 .finance-pot:not(:last-child)::after{top:40px}
+ .check-v2 .finance-pot>b{font-size:13px}
+ .check-v2 .finance-model .finance-payout{font-size:13px;padding:8px 3px}
+}
+
+/* Available capital leads; property remains a compact supplementary amount. */
+.check-v2 .finance-layout{grid-template-columns:minmax(220px,1fr) minmax(300px,1.5fr) minmax(230px,1fr);grid-template-areas:'income need controls' 'income model controls'}
+.check-v2 .finance-bound-secondary{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;margin:18px 0 0;padding:12px 0;border-top:1px solid #dce3dd;color:#65746b;font-size:13px;line-height:1.5}
+.check-v2 .finance-bound-secondary strong{font-size:13px;font-weight:500}
+.check-v2 .capital-secondary,.check-v2 .capital-secondary strong{font-size:13px;font-weight:400;color:#65746b}
+.check-v2 .finance-capital-header>div{display:flex;align-items:center;gap:6px}
+.check-v2 .finance-capital-header h3{font-size:17px;margin:0}
+.check-v2 .finance-capital-header>strong{display:block;font-size:28px;margin:5px 0;color:#233e31;overflow-wrap:anywhere}
+.check-v2 .finance-capital-header small{font-size:13px}
+.check-v2 .finance-help-button{display:inline-grid;place-items:center;min-width:32px;min-height:32px;padding:3px;border:0;background:transparent;color:#426d59;font-size:20px;cursor:pointer;vertical-align:middle}
+.check-v2 .finance-help-button:focus-visible{outline:2px solid #426d59;outline-offset:2px;border-radius:5px}
+.check-v2 .finance-pot>.finance-help-button{display:block;margin:2px auto 0}
+.check-v2 .finance-help-panel{margin:12px 0;padding:14px;border:1px solid #dce3dd;border-radius:10px;background:#f5f8f3;color:#42594a;font-size:14px;line-height:1.55;clear:both}
+.check-v2 .finance-help-panel p{display:block;position:static;font-size:14px;line-height:1.55;color:inherit;margin:7px 0 10px}
+.check-v2 .finance-help-panel button{font:inherit;color:#285540;background:transparent;border:0;padding:6px 0;text-decoration:underline;cursor:pointer}
+.check-v2 .finance-method-help{display:flex;align-items:center;gap:6px;font-size:13px;color:#65746b}
+@media(min-width:700px) and (max-width:1199px){.check-v2 .finance-layout{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:'income need' 'model controls'}}
+@media(max-width:699px){.check-v2 .finance-layout{display:flex}.check-v2 .finance-capital-header h3{font-size:16px}.check-v2 .finance-capital-header>strong{font-size:25px}}
+
+.check-v2 #financeHelp:not([hidden]){display:block}
+
+.check-annual{font-size:14px;color:#62746b;margin-top:7px}
+.check-v2 .finance-income-compact{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;text-align:left}
+.check-v2 .finance-income-compact span{font-size:14px}
+.check-v2 .finance-income-compact strong{display:block;font-size:21px;margin:7px 0}
+.check-v2 .finance-income-compact strong small{display:inline;font-size:13px;font-weight:400}
+.check-v2 .finance-income-compact>div>small{font-size:13px}

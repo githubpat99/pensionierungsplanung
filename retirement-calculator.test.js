@@ -2,7 +2,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
 const core=require('./retirement-calculator.js'),tax=require('./tax-model.js'),engine=require('./retirement-engine.js');
 const storage=require('./planning-storage.js');
 const html=fs.readFileSync('index.html','utf8');
-const defaults=vm.runInNewContext('('+html.match(/const D=(\{[\s\S]*?);\s*let st=/)[1]+')',{RiskProfiles:require('./risk-profiles.js')});
+const defaults=vm.runInNewContext('('+html.match(/const D=(\{[\s\S]*?);\s*let st=/)[1]+')',{RiskProfiles:require('./risk-profiles.js'),LifeExpectancy:require('./life-expectancy.js')});
 const names=['compound','projected','split','capitalComponents','free0','bound0','startAge'];
 const source=names.map(name=>{
  const start=html.indexOf('function '+name+'('),end=html.indexOf('\nfunction ',start+1);

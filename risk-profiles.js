@@ -5,7 +5,8 @@
     balanced:Object.freeze({label:'Ausgewogen',expectedRealReturn:0.045,volatilityFactor:0.70,description:'Mittlere Schwankungen und mittlere erwartete Rendite.'}),
     growth:Object.freeze({label:'Chancenorientiert',expectedRealReturn:0.06,volatilityFactor:1,description:'Grössere Gewinnchancen, aber auch deutlich stärkere Wertschwankungen.'})
   });
-  function getRiskProfile(key='balanced'){
+  const defaultProfile='balanced';
+  function getRiskProfile(key=defaultProfile){
     key=key==='bold'?'growth':key;
     if(!profiles[key])throw Error('Unbekanntes Anlageprofil: '+key);
     return {key,...profiles[key]};
@@ -20,6 +21,6 @@
   const buildUnfavourableSequence=returns=>[...returns].sort((a,b)=>a-b);
   // Shocks retain their adverse direction; do not re-centre a crash to a positive target.
   const scaleShock=(loss,factor)=>Math.expm1(Math.log1p(loss)*factor);
-  root.RiskProfiles={profiles,getRiskProfile,buildProfileReturnSeries,buildFavourableSequence,buildUnfavourableSequence,scaleShock};
+  root.RiskProfiles={defaultProfile,profiles,getRiskProfile,buildProfileReturnSeries,buildFavourableSequence,buildUnfavourableSequence,scaleShock};
   if(typeof module!=='undefined')module.exports=root.RiskProfiles;
 })(globalThis);

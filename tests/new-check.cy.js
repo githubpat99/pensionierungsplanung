@@ -5,6 +5,7 @@ describe('New simple check and optional depth',()=>{
   cy.get('img[src="pin.jpeg"]:visible').should('have.length',1);
   cy.get(`[data-mode=${mode}]`).click();
   cy.get('#checkForm [name=canton]').select('AR');
+  cy.get('[name=planningAge],button[data-profile],.risks').should('not.exist');
   cy.get('#checkForm [name=monthlyNeed]').clear().type('6500');
   if(mode==='pre')cy.get('#checkForm [name=pk]').should('be.visible');
   else cy.get('#checkForm [name=pk]').should('not.exist');
@@ -27,22 +28,19 @@ describe('New simple check and optional depth',()=>{
  it('offers monthly editing, validation and a clear overview on small phones',()=>{
   cy.viewport(360,844);cy.visit('/');cy.screenshot('new-start-mobile',{capture:'viewport'});
   cy.get('[data-mode=pre]').click();cy.get('[name=canton]').select('ZH');
-  cy.get('[name=planningAge]').clear().type('60');cy.get('#checkForm button[type=submit]').click();cy.get('#checkFormError').should('contain','Reihenfolge');
-  cy.get('[name=planningAge]').clear().type('95');cy.get('#checkForm button[type=submit]').click();
+  cy.get('[name=retirementAge]').clear().type('50');cy.get('#checkForm button[type=submit]').click();cy.get('#checkFormError').should('contain','Pensionierungsalter');
+  cy.get('[name=retirementAge]').clear().type('65');cy.get('#checkForm button[type=submit]').click();
   cy.get('#checkApp [data-action=edit]').click();cy.get('[data-go=edit_income]').click();cy.get('[name=monthlyNeed]').should('have.value','7500');
   cy.window().then(w=>expect(w.document.documentElement.scrollWidth).to.be.at.most(360));
  });
- it('applies return profiles to the common result and fits all navigation states',()=>{
+ it('uses central investment assumptions and fits all navigation states',()=>{
   cy.visit('/');cy.window().then(w=>w.eval("st=structuredClone(D);st.mode='pre';st.canton='AR';st.pkShare=37;ensurePlan();CheckUI.go('basic');"));
   cy.get('#checkForm [name=pkShare]').should('have.value','37');
   cy.get('#checkForm button[type=submit]').click();
   cy.window().then(w=>{expect(w.CheckUI.getPlan().pensionDecision.capitalShare).to.equal(37);w.CheckUI.go('assumptions');});
-  const ends=[];
-  for(const [profile,rate] of [['cautious',2.5],['balanced',4.5],['growth',6]]){
-   cy.get(`#checkApp > .check-profiles [data-profile=${profile}]`).click();cy.get(`#checkApp > .check-profiles [data-profile=${profile}]`).should('have.attr','aria-pressed','true');
-   cy.window().then(w=>{expect(w.planningInput().returns[2]).to.equal(rate);ends.push(w.CheckUI.getResult().capitalAtTargetAge);});
-  }
-  cy.then(()=>{expect(ends[0]).to.be.lessThan(ends[1]);expect(ends[1]).to.be.lessThan(ends[2]);});
+  cy.get('button[data-profile],.profile-comparison').should('not.exist');
+  cy.get('.plan-investment').should('contain','durchschnittlichen Anlagestrategie').and('contain','4,5 %');
+  cy.window().then(w=>{expect(w.planningInput().returns[2]).to.equal(4.5);expect(w.CheckUI.getPlan().assumptions.rates.capitalReturn).to.equal(4.5);});
   for(const width of [360,768,1280]){
    cy.viewport(width,900);
    for(const state of ['situation','basic','plan','income','capital','scenarios','assumptions','pension','edit_overview','edit_personal','edit_income','edit_assets','edit_pension','advice']){
