@@ -111,7 +111,7 @@ Ausgabenjahre laufen von Startalter inklusive bis Zielalter exklusive. Eine zus�
 
 ## 8. Einkommen
 
-Im Kapitalbereich erscheint nur die kompakte Summe «Netto verfügbar» mit Betrag pro Jahr und Bezugsalter; ohne Kanton ausdrücklich vorläufig ohne Steuerabzug. Ein beschrifteter Info-Button öffnet die bestehende Einkommenssicht mit Quellen und Steuerdetails. Kein separater Einkommenseintrag in der Plannavigation.
+Im Kapitalbereich zeigt eine kompakte Finanzierungsübersicht Bedarf → Einkommen netto → Aus Vermögen, jeweils mit «/ Jahr» und «/ Monat» und gemeinsamem Bezugsalter. Jahreswerte stammen unverändert aus der gewählten Engine-Zeile, Monatswerte sind diese Beträge geteilt durch zwölf; ohne Kanton wird Einkommen ausdrücklich vorläufig ohne Steuerabzug bezeichnet. Ein beschrifteter Info-Button öffnet die bestehende Einkommenssicht mit Quellen und Steuerdetails. Kein separater Einkommenseintrag in der Plannavigation.
 
 Quellen: AHV, PK-Rente, weitere Renten und weitere Einnahmen. Die zusätzliche reguläre Einnahme kann als Nettomietertrag markiert werden. Bis zu drei zusätzliche benannte Einnahmen können mit Betrag, Beginn, Ende und Inflationsanpassung erfasst werden. Kein Ansatz sicherer laufender Kapitalerträge.
 
@@ -243,7 +243,7 @@ Jahresdaten enthalten Alter, freies und gebundenes Anfangskapital, Gesamtkapital
 
 ## 14. 3-Töpfe-Modell
 
-Standardansicht: verfügbares Anlagekapital als primärer Betrag, Zeitpunkt (Start heute/bei Pensionierung bzw. Jahresbeginn der gewählten Phase und Alter) und die drei Töpfe mit Namen und Beträgen. Gebundenes Immobilienkapital folgt als kompakte Nebenzeile unter den Finanzierungselementen, ohne eigene grosse Karte, Goldtopf oder umfangreichen Dauertext. Definition über Info-Icon: Immobilienwert minus Hypotheken, nicht für laufende Entnahmen eingeplant; keine modellierten Verkäufe, Teilverkäufe oder zusätzliche Belehnung.
+Reihenfolge: Bedarf → Einkommen netto → Aus Vermögen → verfügbares Anlagekapital → 3-Töpfe-Aufteilung → Simulation anpassen → gebundenes Kapital als Nebeninformation. Desktop zeigt die Simulation daneben. Standardansicht: verfügbares Anlagekapital als primärer Kapitalbetrag, Zeitpunkt (Start heute/bei Pensionierung bzw. Jahresbeginn der gewählten Phase und Alter) und die drei Töpfe mit Namen und Beträgen. Gebundenes Immobilienkapital folgt als kompakte Nebenzeile unter den Finanzierungselementen, ohne eigene grosse Karte, Goldtopf oder umfangreichen Dauertext. Definition über Info-Icon: Immobilienwert minus Hypotheken, nicht für laufende Entnahmen eingeplant; keine modellierten Verkäufe, Teilverkäufe oder zusätzliche Belehnung.
 
 Info-Icons bei Anlagekapital und jedem Topf öffnen einen zugeordneten Hilfebereich im Seitenfluss. Anlagekapital erklärt Zusammensetzung inklusive gewähltem PK-Nettobezug, Ausschluss von Immobilienkapital, tatsächlichen Zeitpunkt und Kaufkraft des Planungsstarts; Vorschauwerte werden kenntlich gemacht. Topfhilfen erklären kurzfristigen Bedarf, mittelfristige Reserve und langfristiges Wachstum samt Risiken. Methodik (Reserven, jährliche Auffüllung und mögliche Verkäufe nach Verlusten) steht hinter «So funktionieren die Töpfe». Keine doppelte Kapitalkennzahl oder permanente Methodik-/Zielkarte. Fehlbeträge und der Hinweis auf fehlenden Kanton bleiben sichtbar.
 
@@ -399,6 +399,8 @@ Gezielte Qualitätssicherung: `tests/navigation.cy.js` für Hauptwege, Rückwege
 ## 21. UI-Komponenten und Darstellungsregeln
 
 Fachliche Zusatzinformationen, Definitionen und methodische Hinweise liegen, soweit für das unmittelbare Verständnis nicht erforderlich, hinter Info-Icons, Aufklappern oder «So rechnen wir». Beträge, Status, Zeitpunkt und wichtigste Hebel haben Vorrang. Im Kapitalbereich sind Hilfen standardmässig geschlossen; höchstens eine neue Info-Erklärung ist gleichzeitig offen. Beschriftete Buttons funktionieren mit Klick, Touch und Tastatur, melden ihren Zustand mit `aria-expanded` und verweisen auf den Hilfebereich. Erneuter Klick, «Hinweis schliessen» oder Escape schliesst ihn. Hilfen erscheinen im Seitenfluss, ohne Hauptnavigation zu überlagern. Gebundenes Kapital bleibt eine kleine ergänzende Zeile unterhalb der Finanzierungselemente.
+
+Mobile Kapitalansicht: kompakte gemeinsame Finanzierungsübersicht, reduzierte Kartenabstände und Polster, niedrigere Töpfe mit direkt zugeordneten Info-Icons und dezenten Pfeilen. Einheiten einheitlich «/ Jahr» und «/ Monat». «Gebundenes Kapital» steht klein mit Info-Icon nach der Simulation; die Erklärung bezeichnet Immobilienwert abzüglich Hypotheken. Desktop behält eine grosszügigere Darstellung.
 
 Header mit statischer Marke und einem Portrait. Basischeck mit klar gegliederten Feldern, sichtbaren Einheiten, Beispielhinweis und aufklappbarem „So rechnen wir“. Plan mit drei Ergebniswerten, Ampel/Erklärung und direkter Detailnavigation.
 

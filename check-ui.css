@@ -163,3 +163,36 @@ body.check-v2{background:#f7f8f5;color:#1b302d;font-family:Inter,system-ui,-appl
 .check-v2 .finance-income-compact strong{display:block;font-size:21px;margin:7px 0}
 .check-v2 .finance-income-compact strong small{display:inline;font-size:13px;font-weight:400}
 .check-v2 .finance-income-compact>div>small{font-size:13px}
+
+/* Financing reads in the same order on every screen size. */
+.check-v2 .finance-layout{grid-template-columns:minmax(0,1.5fr) minmax(230px,1fr);grid-template-areas:'funding controls' 'model controls'}
+.check-v2 .finance-funding{grid-area:funding}
+.check-v2 .finance-funding-age{font-size:13px;margin-bottom:4px}
+.check-v2 .finance-funding-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 0;text-align:left}
+.check-v2 .finance-funding-row+.finance-funding-row{border-top:1px solid #e1e8e2}
+.check-v2 .finance-funding-label{display:flex;align-items:center;font-size:15px;min-width:0}
+.check-v2 .finance-funding-values{text-align:right;flex-shrink:0}
+.check-v2 .finance-funding-values strong,.check-v2 .finance-funding-values>span{display:block;font-size:16px;white-space:nowrap}
+.check-v2 .finance-funding-values>span{font-size:13px;color:#65746b;margin-top:2px}
+.check-v2 .finance-funding-values small{display:inline;font-size:13px;font-weight:400;color:inherit}
+.check-v2 .finance-bound-secondary>span{display:flex;flex-wrap:wrap;gap:0 5px}
+.check-v2 .finance-bound-secondary strong{white-space:nowrap}
+@media(max-width:699px){
+ .check-v2 .finance-layout{display:flex;gap:6px}
+ .check-v2 .finance-funding{order:0}
+ .check-v2 .finance-panel{padding:10px}
+ .check-v2 .finance-funding-row{padding:6px 0;gap:6px}
+ .check-v2 .finance-funding-label{font-size:14px}
+ .check-v2 .finance-funding-values strong{font-size:14px}
+ .check-v2 .finance-capital-header h3{font-size:15px}
+ .check-v2 .finance-capital-header>strong{margin:2px 0;font-size:24px}
+ .check-v2 .finance-pots{gap:12px}
+ .check-v2 .finance-cylinder{height:68px;margin:6px auto 3px;padding:15px 2px 5px}
+ .check-v2 .finance-cylinder>span{font-size:15px;margin-bottom:2px}
+ .check-v2 .finance-pot:not(:last-child)::after{right:-12px;top:29px;width:12px;font-size:16px}
+ .check-v2 .finance-pot>b{font-size:12px}
+ .check-v2 .finance-pot>.finance-help-button{margin:0 auto}
+ .check-v2 .finance-model .finance-payout{width:calc((100% - 24px)/3);margin:0 0 4px auto;padding:3px;font-size:12px}
+ .check-v2 .finance-bound-secondary{margin-top:8px;padding:7px 0;gap:2px 4px}
+ .check-v2 .finance-open{margin:0;padding:10px}
+}
