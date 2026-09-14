@@ -7,7 +7,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
   cy.get('[data-metric=withdrawal]').should('contain',"= CHF 4'070").and('contain',"= CHF 48'840");
   cy.get('#question').submit();fill({free:650000});cy.get('.funding').should('be.visible');if(mode==='pre')cy.screenshot('guided-live-pre',{capture:'fullPage'});cy.get('#question').submit();
  }
- for(const mode of ['pre','post'])for(const width of [360,1280])it(`${mode} ${width}: first answer, grouped refinement, quality, reload and themes`,()=>{
+ for(const mode of ['pre','post'])for(const width of [360,1280])it(`${mode} ${width}: first answer, grouped refinement, quality, reload and system appearance`,()=>{
   cy.viewport(width,900);cy.visit('/v2.html');
   cy.window().then(w=>w.localStorage.setItem('retirement-personal-snapshot-v1','legacy-preserved'));
   core(mode);
@@ -31,11 +31,19 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
    if(mode==='pre')expect(r.incomeGross).to.equal(3430*12+w.RetirementCalculator.calculatePension(p).rent);
   });
   if(mode==='pre'){cy.get('#v2Nav [data-nav=pension]').click();cy.get('[data-open=pension3a]').click();fill({p3:120000,p3Contrib:7000});cy.get('#question').submit();}
-  cy.get('[data-metric=income]').click();
+  cy.get('[data-metric=income]').click();cy.get('[data-open=income]').click();
   fill({canton:'AR',ahv:2350,other:80,additional:0,...(mode==='post'?{pkRent:1000}:{})});
-  cy.get('#question').submit();cy.get('[data-metric=capital]').click();
-  fill({cash:50000,securities:600000,...(mode==='pre'?{saving:10000}:{})});cy.get('#question').submit();
+  cy.get('#question').submit();cy.get('[data-parent=plan]').click();cy.get('[data-metric=capital]').click();cy.get('[data-open=assets]').click();
+  fill({cash:50000,securities:600000,...(mode==='pre'?{saving:10000}:{})});cy.get('#question').submit();cy.get('[data-parent=plan]').click();
   cy.get('.quality-plan strong').should('contain','Gute Basis');
+  cy.get('[data-metric=capital]').click();
+  cy.get('[data-view=asset-funding]').click();cy.get('h1').should('contain','So finanziert dein Vermögen deinen Ruhestand');
+  cy.window().then(w=>{
+   const r=w.CheckV2.getResult(),cash=n=>'CHF '+Math.round(n).toLocaleString('de-CH').replace(/’/g,"'");
+   const texts=[...w.document.querySelectorAll('.bucket-flow strong')].map(el=>el.textContent);
+   expect(texts.slice(0,3)).to.deep.equal([r.bucketAllocation[2],r.bucketAllocation[1],r.bucketAllocation[0]].map(cash));
+  });
+  cy.get('[data-parent=assets-detail]').click();cy.get('[data-parent=plan]').click();
   cy.get('#v2Nav [data-nav=assumptions]').click();fill({reviewed:true});cy.get('#question').submit();
   cy.get('.quality-plan strong').should('contain','Gut abgestützt');
   let before;
@@ -44,13 +52,12 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
    expect(w.document.documentElement.scrollWidth).to.be.at.most(width);
    expect(w.localStorage.getItem('retirement-personal-snapshot-v1')).to.equal('legacy-preserved');
   });
-  cy.get('[name=theme][value=dark]').check();cy.get('html').should('have.attr','data-theme','dark');
-  cy.screenshot(`guided-${mode}-${width}-dark`,{capture:'fullPage'});
-  cy.reload();cy.get('[name=theme][value=dark]').should('be.checked');cy.get('[data-resume]').click();
+  cy.get('[name=theme]').should('not.exist');
+  cy.window().then(w=>w.localStorage.setItem('retirement-v2-theme','dark'));
+  cy.reload();cy.get('html').should('have.attr','data-theme','system');cy.get('[data-resume]').click();
   cy.get('.quality-plan strong').should('contain','Gut abgestützt');
   cy.window().then(w=>expect(JSON.stringify(w.CheckV2.getResult())).to.equal(before));
-  cy.get('[name=theme][value=light]').check();cy.screenshot(`guided-${mode}-${width}-light`,{capture:'fullPage'});
-  cy.get('[name=theme][value=system]').check();
+  cy.screenshot(`guided-${mode}-${width}-system`,{capture:'fullPage'});
   cy.window().then(w=>expect(w.getComputedStyle(w.document.documentElement).colorScheme).to.equal(w.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
   cy.get('[data-metric=need][data-open=need]').click();fill({need:7600});cy.get('#question').submit();
   cy.get('.quality-plan strong').should('contain','Gute Basis');
@@ -70,7 +77,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
  });
  it('keeps unreadable data intact and reports write failures',()=>{
   cy.visit('/v2.html',{onBeforeLoad(w){w.localStorage.setItem('retirement-v2-plan','{broken');}});
-  cy.get('#app').should('contain','nicht lesbar');cy.get('[name=theme][value=dark]').check();
+  cy.get('#app').should('contain','nicht lesbar');cy.get('html').should('have.attr','data-theme','system');
   cy.window().then(w=>{expect(w.localStorage.getItem('retirement-v2-plan')).to.equal('{broken');cy.stub(w,'confirm').returns(true);});
   cy.get('[data-new]').click();cy.get('[data-mode=post]').click();
   cy.window().then(w=>cy.stub(w.Storage.prototype,'setItem').throws(new Error('quota')));
@@ -78,4 +85,10 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
   cy.get('[name=need]').should('be.visible');cy.get('[data-home]').click();cy.get('[data-resume]').click();cy.get('[name=need]').should('be.visible');
   cy.window().then(w=>expect(w.CheckV2.getState().values.age).to.equal(70));
  });
+});
+
+it('ignores an old manual light preference as well',()=>{
+ cy.visit('/v2.html',{onBeforeLoad(w){w.localStorage.setItem('retirement-v2-theme','light');}});
+ cy.get('html').should('have.attr','data-theme','system');cy.get('[name=theme]').should('not.exist');
+ cy.window().then(w=>expect(w.getComputedStyle(w.document.documentElement).colorScheme).to.equal(w.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
 });

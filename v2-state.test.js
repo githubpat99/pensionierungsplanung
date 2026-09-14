@@ -64,3 +64,40 @@ for(const mode of ['pre','post']){
  assert.equal(r.monthlyGap,Math.max(0,r.monthlyNeed-r.monthlyIncomeNet));
 }
 console.log('Passed: separated early income, provisional pension replacement, cautious V2 default, preserved old profile and navigation positions.');
+
+for(const mode of ['pre','post'])for(const canton of ['','SG']){
+ let detailed=core(mode);
+ detailed=M.apply(detailed,'income',{canton,ahv:2500,pkRent:1500,other:100,additional:300});
+ detailed=M.apply(detailed,'assets',{cash:50000,securities:200000,saving:5000,otherAssets:30000,propertyValue:800000,mortgage:300000});
+ if(mode==='pre')detailed=M.apply(M.apply(detailed,'pension',pension),'pension3a',pension3a);
+ const b=M.breakdown(detailed),r=C.evaluatePlan(M.toPlan(detailed));
+ assert.equal(b.income.ahv+b.income.pk+b.income.other,r.incomeGross);
+ assert.ok(Math.abs(['cash','securities','other','p3','pk'].reduce((sum,k)=>sum+(b.assets[k]??0),0)-r.availableCapital)<1e-7);
+ assert.equal(b.assets.bound,500000);
+ assert.equal(b.result.monthlyIncomeNet,r.monthlyIncomeNet);
+ const withoutProperty=M.apply(detailed,'assets',{...detailed.details.assets,propertyValue:0,mortgage:0});
+ assert.deepEqual(C.evaluatePlan(M.toPlan(withoutProperty)).yearlyProjection.map(x=>x.free),r.yearlyProjection.map(x=>x.free));
+ const withDebt=M.apply(detailed,'assets',{...detailed.details.assets,propertyValue:100000,mortgage:200000});
+ assert.equal(M.breakdown(withDebt).assets.bound,-100000);
+ for(const position of ['income-detail','assets-detail','asset-funding','tax']){
+  detailed.position=position;M.save(store,detailed,'system');
+  assert.deepEqual(M.breakdown(M.load(store).state),b);
+ }
+}
+const legacyTotals=legacyCore();
+assert.equal(M.breakdown(legacyTotals).income.ahv,null);
+assert.equal(M.breakdown(legacyTotals).income.unallocated,3430*12);
+assert.equal(M.breakdown(legacyTotals).assets.unallocated,650000);
+assert.equal(M.breakdown(legacyTotals).assets.bound,null);
+const taxedLegacy=M.apply(legacyTotals,'tax',{canton:'SG'});
+assert.equal(taxedLegacy.details.income,undefined);
+assert.equal(M.breakdown(taxedLegacy).result.incomeGross,3430*12);
+assert.ok(M.breakdown(taxedLegacy).result.incomeTax>0);
+let taxState=M.apply(s,'tax',{canton:''});
+assert.equal(M.quality(taxState),1);
+taxState=M.apply(taxState,'assumptions',{...M.defaults,targetAge:taxState.targetAge,reviewed:true});
+assert.equal(M.quality(taxState),1,'missing canton prevents well-supported status even with assumptions checked');
+assert.equal(M.breakdown(taxState).result.incomeTax,null);
+assert.throws(()=>M.apply(core(),'assets',{cash:0,securities:0,saving:0,propertyValue:100000}));
+assert.throws(()=>M.apply(core(),'assets',{cash:0,securities:0,saving:0,otherAssets:-1}));
+console.log('Passed: income/asset detail reconciliation, optional assets, property isolation, tax-only editor, unknown data and detail persistence.');

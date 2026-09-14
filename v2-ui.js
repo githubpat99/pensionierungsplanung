@@ -7,11 +7,14 @@
  const basic=['time','need','regular','free'],names=['Erste Einschätzung','Gute Basis','Gut abgestützt'];
  let state=M.fresh(),route='welcome',draft={},saved=null,resumeRecord=null,loadError='',effect=null;
 let drafts={};
-const editorRoutes=[...basic,'income','assets','pension','pension3a','assumptions'];
+const editorRoutes=[...basic,'income','assets','tax','pension','pension3a','assumptions'];
+const detailRoutes=['income-detail','assets-detail','asset-funding'];
+const parentOf=g=>g==='income'||g==='tax'?'income-detail':g==='assets'?'assets-detail':g==='pension3a'||g==='pension'?'vorsorge':'plan';
 function keepDraft(){if(editorRoutes.includes(route))drafts[route]=structuredClone(draft);}
 function firstOpen(){return basic.find(g=>g==='regular'?state.values.regular===undefined:!!M.error(g,state.values,state))||'time';}
 function focusHeading(){window.scrollTo(0,0);const h=app.querySelector('h1');if(h){h.tabIndex=-1;h.focus({preventScroll:true});}}
-function restorePosition(){if(state.position==='plan')plan();else if(state.position==='vorsorge')renderVorsorge();else if(state.position==='more')renderMore();else showEditor(state.position);}
+function restorePosition(){if(state.position==='plan')plan();else if(state.position==='vorsorge')renderVorsorge();else if(state.position==='more')renderMore();else if(detailRoutes.includes(state.position))showDetail(state.position);else showEditor(state.position);}
+function showParent(g){const parent=parentOf(g);if(parent==='vorsorge'&&state.mode==='pre')renderVorsorge();else if(detailRoutes.includes(parent))showDetail(parent);else plan();}
 function updateNav() {
   let nav = document.getElementById('v2Nav');
   if (!nav) {
@@ -35,7 +38,7 @@ function updateNav() {
   nav.innerHTML = items.map(([k, icon, label]) =>
     `<button data-nav="${k}"${(k === 'pension' || k === 'assumptions') && !complete ? ' disabled' : ''}${k === active ? ' aria-current="page"' : ''}><span aria-hidden="true">${icon}</span>${label}</button>`
   ).join('');
-  const footer=document.querySelector('footer.footer');if(footer)footer.hidden=route==='plan'||route==='pension'||route==='pension3a';
+  const footer=document.querySelector('footer.footer');if(footer)footer.hidden=['plan','pension','pension3a',...detailRoutes].includes(route);
   if (!nav.dataset.bound) {
     nav.dataset.bound = '1';
     nav.addEventListener('click', e => {
@@ -100,7 +103,7 @@ function renderMore() {
  function quality(s){const level=M.quality(s);return `<section class="quality" aria-label="Belastbarkeit deiner Datengrundlage"><span class="quality-caption">Deine Datengrundlage</span><ol>${names.map((n,i)=>`<li ${i===level?'aria-current="step"':''} data-reached="${i<=level}"><span aria-hidden="true">${i<level?'●':i===level?(level===2?'●':level===1?'◐':'○'):'○'}</span>${n}</li>`).join('')}</ol></section>`;}
  function qualityPlan(s){
   const level=M.quality(s),checks=[['Zeitpunkt','time'],['Bedarf','need'],['Einnahmen','income'],['Vermögen','assets'],['Pensionskasse','pension'],...(s.mode==='pre'?[['Säule 3a','pension3a']]:[]),['Annahmen','assumptions']];
-  return `<details class="quality-plan"><summary><span>Datengrundlage</span> <strong>${names[level]}</strong> <span class="quality-info" aria-hidden="true">ⓘ</span></summary><p class="hint">${level===0?'Für eine gute Basis bestätige die noch offenen Angaben.':level===1?'Für «Gut abgestützt» fehlen noch geprüfte Annahmen oder der Wohnkanton.':'Die Angaben und Modellannahmen sind bestätigt. Das ist keine Garantie für die Finanzierung.'}</p><ul>${checks.map(([name,g])=>`<li data-ok="${s.confirmed[g]===true}"><span aria-hidden="true">${s.confirmed[g]?'✓':'○'}</span> ${name}: ${s.confirmed[g]?'bestätigt':'noch offen'}</li>`).join('')}<li data-ok="${!!s.details.income?.canton}">Wohnkanton: ${s.details.income?.canton?esc(TaxModel.canton(s.details.income.canton).name):'noch offen'}</li></ul></details>`;
+  return `<details class="quality-plan"><summary><span>Datengrundlage</span> <strong>${names[level]}</strong> <span class="quality-info" aria-hidden="true">ⓘ</span></summary><p class="hint">${level===0?'Für eine gute Basis bestätige die noch offenen Angaben.':level===1?'Für «Gut abgestützt» fehlen noch geprüfte Annahmen oder der Wohnkanton.':'Die Angaben und Modellannahmen sind bestätigt. Das ist keine Garantie für die Finanzierung.'}</p><ul>${checks.map(([name,g])=>`<li data-ok="${s.confirmed[g]===true}"><span aria-hidden="true">${s.confirmed[g]?'✓':'○'}</span> ${name}: ${s.confirmed[g]?'bestätigt':'noch offen'}</li>`).join('')}<li data-ok="${!!M.canton(s)}">Wohnkanton: ${M.canton(s)?esc(TaxModel.canton(M.canton(s)).name):'noch offen'}</li></ul></details>`;
  }
  function welcome(){
   route='welcome';
@@ -117,7 +120,8 @@ function renderMore() {
    regular:{title:'Welche Einnahmen hast du im Ruhestand?',hint:'Monatsbeträge vor persönlicher Steuer. Erfasse AHV, PK-Rente und weitere Einnahmen einzeln; falls nicht vorhanden: 0. Den Wohnkanton kannst du noch offen lassen.'},
    free:{title:'Wie viel frei verfügbares Vermögen hast du ungefähr?',hint:'Heute frei verfügbares Kapital. Noch gebundene PK-/3a-Guthaben und Immobilien nicht mitzählen.'},
    income:{title:'Dein Einkommen',hint:'Monatsbeträge vor persönlicher Steuer; Nettomiete nach Objektkosten. Alle Einnahmen gelten ab Planungsstart, ohne Indexierung.'},
-   assets:{title:'Dein Vermögen',hint:'Diese Aufteilung ersetzt den groben verfügbaren Betrag. Ohne noch gebundene Vorsorge und Immobilien. Nicht vorhandene Beträge: 0.'},
+   assets:{title:'Vermögen bearbeiten',hint:'Erfasse heutige Beträge. Bereits bezogenes Vorsorgekapital gehört zu deinen verfügbaren Mitteln. Weitere Vermögenswerte und Immobilien sind optional; leere Zusatzfelder bleiben offen.'},
+   tax:{title:'Wohnkanton ergänzen',hint:'Dein Wohnkanton bestimmt die geschätzte Einkommenssteuer und bei künftigem PK-Kapitalbezug die Bezugssteuer.'},
    pension:{title:'Deine Vorsorge',hint:pre?'PK und Säule 3a ergänzen dein bisher erfasstes freies Vermögen. Nicht vorhandene Beträge: 0.':'Keine künftige Ansparung und kein erneuter PK-Bezug. Prüfe die bereits laufenden Leistungen.'},
    pension3a:{title:'Säule 3a',hint:'Säule 3a ergänzt dein bisher erfasstes freies Vermögen. Nicht vorhandene Beträge: 0.'},
    assumptions:{title:'Deine Annahmen',hint:'Bestehende Modellannahmen. Prüfe, ob sie zu deinen Angaben passen; sie sind keine Zusicherung.'}
@@ -126,6 +130,8 @@ function renderMore() {
  function editorValues(g){
   if(g==='assumptions')return {...M.defaults,targetAge:state.targetAge,...state.details.assumptions,reviewed:false,targetAge:state.targetAge};
   if(g==='regular')return editorValues('income');
+  if(g==='tax')return {canton:M.canton(state)};
+  if(g==='income')return {...Object.fromEntries(M.fields(g,state).map(f=>[f.key,''])),...state.details.income,canton:M.canton(state)};
   if(basic.includes(g))return Object.fromEntries(M.fields(g,state).map(f=>[f.key,state.values[f.key]??'']));
   return {...Object.fromEntries(M.fields(g,state).map(f=>[f.key,f.type==='check'?false:''])),...state.details[g]};
  }
@@ -134,7 +140,7 @@ function renderMore() {
   const section=f.section?`<h3 class="field-section">${f.section}</h3>`:'';
   if(f.type==='check')return `${section}<label class="review-check"><input type="checkbox" name="${f.key}" ${v===true?'checked':''}>${f.label}</label>`;
   if(f.type==='canton')return `<div class="field"><label for="${f.key}">${f.label}</label><select id="${f.key}" name="${f.key}"><option value="">Noch offen · keine Steuerschätzung</option>${Object.entries(TaxModel.config.cantons).map(([k,c])=>`<option value="${k}" ${v===k?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`;
-  return `${section}<div class="field"><label for="${f.key}">${f.label}</label><div class="entry"><input id="${f.key}" name="${f.key}" type="number" inputmode="${f.step===1?'numeric':'decimal'}" min="${f.min}" max="${f.max}" step="${f.step}" value="${esc(v)}" aria-describedby="groupHint error" required><span>${f.unit}</span></div></div>`;
+  return `${section}<div class="field"><label for="${f.key}">${f.label}</label><div class="entry"><input id="${f.key}" name="${f.key}" type="number" inputmode="${f.step===1?'numeric':'decimal'}" min="${f.min}" max="${f.max}" step="${f.step}" value="${esc(v)}" aria-describedby="groupHint error" ${f.optional?'':'required'}><span>${f.unit}</span></div></div>`;
  }
  function groupNote(g){
   if(g==='pension'&&state.mode==='pre')return `<p class="hint">PK-Beiträge: Arbeitnehmer und Arbeitgeber zusammen. Zinsen und Umwandlungssatz findest du unter Annahmen.</p>`;
@@ -189,7 +195,7 @@ function renderMore() {
   if(persist)save();
   if(g==='pension'&&state.mode==='pre'){renderPensionEditor();return;}
   const info=groupInfo(g),isBasic=basic.includes(g);
-  app.innerHTML=`<header class="work-heading">${M.complete(state)?'':'<button class="home-link" data-home>← Übersicht</button>'}${!isBasic?`<button class="home-link" data-parent="${g==='pension3a'?'vorsorge':'plan'}">← ${g==='pension3a'?'Vorsorge':'Dein Plan'}</button>`:''}<h1>${isBasic?'Dein Plan entsteht.':info.title}</h1></header><div class="workspace ${isBasic?'':'group-detail'}"><section class="question">${isBasic?`<p class="step-caption">Schritt ${basic.indexOf(g)+1} von 4</p><h2>${info.title}</h2>`:''}<p class="hint" id="groupHint">${info.hint}</p><form id="question" novalidate><div class="question-fields">${M.fields(g,state).map(input).join('')}</div>${groupNote(g)}<p id="timeFeedback" class="context" aria-live="polite"></p><p id="error" class="error" role="alert"></p><div class="actions"><button type="button" class="back" data-cancel>${M.complete(state)?'Abbrechen':'← Zurück'}</button><button class="primary" type="submit">${isBasic&&!M.complete(state)?'Weiter →':'Übernehmen'}</button></div></form></section><section class="live-plan" id="livePlan" aria-label="Dein Live-Plan" aria-live="polite" aria-atomic="true"></section></div>`;
+  app.innerHTML=`<header class="work-heading">${M.complete(state)?'':'<button class="home-link" data-home>← Übersicht</button>'}${!isBasic?`<button class="home-link" data-parent="${parentOf(g)}">← ${g==='pension3a'?'Vorsorge':g==='income'||g==='tax'?'Einkommen':g==='assets'?'Vermögen':'Dein Plan'}</button>`:''}<h1>${isBasic?'Dein Plan entsteht.':info.title}</h1></header><div class="workspace ${isBasic?'':'group-detail'} ${g==='tax'?'single-editor':''}"><section class="question">${isBasic?`<p class="step-caption">Schritt ${basic.indexOf(g)+1} von 4</p><h2>${info.title}</h2>`:''}<p class="hint" id="groupHint">${info.hint}</p><form id="question" novalidate><div class="question-fields">${M.fields(g,state).map(input).join('')}</div>${groupNote(g)}<p id="timeFeedback" class="context" aria-live="polite"></p><p id="error" class="error" role="alert"></p><div class="actions"><button type="button" class="back" data-cancel>${M.complete(state)?'Abbrechen':'← Zurück'}</button><button class="primary" type="submit">${isBasic&&!M.complete(state)?'Weiter →':'Übernehmen'}</button></div></form></section><section class="live-plan" id="livePlan" aria-label="Dein Live-Plan" aria-live="polite" aria-atomic="true"></section></div>`;
   app.querySelectorAll('#question input,#question select').forEach(el=>el.addEventListener('input',()=>{
    draft[el.name]=el.type==='checkbox'?el.checked:el.value;
    el.removeAttribute('aria-invalid');document.getElementById('error').textContent='';renderLive(preview());
@@ -204,28 +210,67 @@ function renderMore() {
   if(route==='regular')delete next.values.regular;else if(basic.includes(route))for(const f of M.fields(route,state))delete next.values[f.key];
   return next;
  }
+ function detailRow(key,label,value,{unit='',hint='',negative=false,total=false,empty='Noch nicht erfasst'}={}){
+  return `<div class="detail-row${total?' detail-total':''}" data-detail="${key}"><dt>${label}${hint?`<small>${hint}</small>`:''}</dt><dd>${value===null?`<span class="unknown">${empty}</span>`:`<strong>${negative?'− ':''}${cash(value)}</strong>${unit?`<span class="detail-unit">${unit}</span>`:''}`}</dd></div>`;
+ }
+ function incomeComposition(s){
+  const b=M.breakdown(s),r=b.result,c=TaxModel.canton(M.canton(s)),monthly={unit:'/ Monat'};
+  return `<p class="hint">${s.mode==='pre'?`Ab Pensionierung mit ${s.values.retirement}`:`Ab Alter ${s.values.age}`} · Einnahmen vor persönlicher Steuer</p><dl class="detail-list income-sources">
+   ${detailRow('ahv','AHV',b.income.ahv===null?null:b.income.ahv/12,monthly)}
+   ${detailRow('pk-income','PK-Rente',b.income.pk===null?null:b.income.pk/12,{...monthly,hint:s.mode==='pre'&&!s.details.pension&&s.details.income?'Vorläufige Angabe':''})}
+   ${detailRow('other-income','Weitere regelmässige Einnahmen',b.income.other===null?null:b.income.other/12,{...monthly,hint:'Weitere Renten und Einnahmen, einschliesslich Nettomiete'})}
+   ${b.income.unallocated===null?'':detailRow('unallocated-income','Noch nicht aufgeteilte Einnahmen',b.income.unallocated/12,monthly)}
+  </dl><section class="tax-summary" aria-label="Einkommen und Steuern"><dl class="detail-list">
+   ${detailRow('income-gross','Bruttoeinkommen',r.incomeGross/12,monthly)}
+   ${detailRow('income-tax','Geschätzte Einkommenssteuer',r.incomeTax===null?null:r.incomeTax/12,{...monthly,negative:true,empty:'Steuern noch offen',hint:r.incomeTax===null?'':`${cash(r.incomeTax)} / Jahr`})}
+  </dl><p class="canton-line">Wohnkanton: <strong>${c?esc(c.name):'Noch offen'}</strong></p>
+  ${c?`<p class="hint">Geschätzter Satz: ${String(TaxModel.getIncomeTaxRate(M.canton(s),r.incomeGross)).replace('.',',')} % · <button class="inline-action" data-open="tax">Wohnkanton ändern</button></p>`:'<p class="hint">Die vorläufige Rechnung enthält noch keinen Steuerabzug. Die Datengrundlage ist deshalb noch nicht gut abgestützt.</p><button data-open="tax">Wohnkanton ergänzen</button>'}
+  <dl class="detail-list">${detailRow('income-net',c?'Netto verfügbar':'Vorläufig verfügbar',r.monthlyIncomeNet,{...monthly,total:true,hint:c?'nach geschätzten Steuern':'Steuern noch offen'})}</dl>
+  </section><p class="hint">Modellrechnung, keine individuelle Steuerberechnung.</p>`;
+ }
+ function assetComposition(s){
+  const b=M.breakdown(s),pre=s.mode==='pre',projection='voraussichtlich zum Pensionierungszeitpunkt';
+  const pkHint=b.assets.pk!==null?`${projection} · ${b.pk.capitalTax===null?'PK-Kapital brutto, Steuer noch offen':'PK-Kapital netto nach Bezugssteuer'}`:projection;
+  return `<p class="hint">${pre?`Verfügbare Mittel ab Pensionierung mit ${s.values.retirement}`:`Verfügbare Mittel ab Alter ${s.values.age}`}</p><dl class="detail-list asset-sources">
+   ${detailRow('cash','Bank / liquide Mittel',b.assets.cash)}
+   ${detailRow('securities','Wertschriften',b.assets.securities,{hint:pre?projection:''})}
+   ${pre?detailRow('p3-assets','Säule 3a',b.assets.p3,{hint:projection})+detailRow('pk-assets','PK-Kapital',b.assets.pk,{hint:pkHint}):''}
+   ${detailRow('other-assets','Weitere verfügbare Vermögenswerte',b.assets.other)}
+   ${b.assets.unallocated===null?'':detailRow('unallocated-assets','Noch nicht aufgeteiltes verfügbares Vermögen',b.assets.unallocated)}
+   ${detailRow('assets-total','Verfügbares Vermögen total',b.result.availableCapital,{total:true})}
+  </dl>${pre?'<p class="hint">Noch nicht erfasste Vorsorgebeträge sind nicht eingerechnet. Eine separate 3a-Bezugssteuer ist noch nicht berücksichtigt.</p>':'<p class="hint">Bereits bezogenes PK- und 3a-Kapital ist in deinen verfügbaren Mitteln enthalten und wird nicht nochmals hinzugezählt.</p>'}
+  <section class="bound-assets" aria-label="Gebundenes Vermögen"><h2>Gebundenes Vermögen</h2><dl class="detail-list">${detailRow('bound-assets','Immobilien netto',b.assets.bound,{hint:b.assets.bound===null?'Immobilienwert und Hypotheken ergänzen':'Immobilienwert abzüglich Hypotheken'})}</dl><p class="hint">Dieses Vermögen ist aktuell nicht für laufende Entnahmen eingeplant.</p></section>`;
+ }
+ function showDetail(view){
+  route=view;state.position=view;effect=null;updateNav();
+  const income=view==='income-detail',mechanics=view==='asset-funding';
+  const title=income?'Deine Einkommen im Ruhestand':mechanics?'So finanziert dein Vermögen deinen Ruhestand':'Dein verfügbares Vermögen';
+  app.innerHTML=`<header class="work-heading"><button class="home-link" data-parent="${mechanics?'assets-detail':'plan'}">← ${mechanics?'Vermögen':'Dein Plan'}</button><h1>${title}</h1></header><div class="detail-screen">${income?incomeComposition(state):mechanics?assetFunding(state,C.evaluatePlan(M.toPlan(state))):assetComposition(state)}${mechanics?'':`<div class="detail-actions"><button data-open="${income?'income':'assets'}">${income?'Einkommen':'Vermögen'} bearbeiten</button>${income?'':'<button class="primary" data-view="asset-funding">So finanziert dein Vermögen deinen Ruhestand →</button>'}</div>`}</div>`;
+  focusHeading();
+ }
  function render3a(s){
   const valid=!M.error('pension3a',draft,state),p=valid?M.toPlan(s):null,value=p?C.calculateRetirementStart(p).p3:null;
   document.getElementById('livePlan').innerHTML=`<section class="p3-projection"><span>Voraussichtlich zum Pensionierungszeitpunkt</span><strong>${value===null?'Noch offen':cash(value)}</strong><p class="hint">Mit Alter ${state.values.retirement} · ergänzt dein verfügbares Vermögen.</p><details class="model-notes"><summary>So wird die Säule 3a berücksichtigt</summary><p>Guthaben und jährliche Beiträge werden mit der 3a-Rendite aus deinen Annahmen bis zur Pensionierung hochgerechnet. Eine separate 3a-Bezugssteuer ist noch nicht berücksichtigt.</p></details></section>`;
  }
  function assetFunding(s,r){
-  const valid=!M.error('assets',draft,state);
   if(!r)return '<p class="hint">Für die Finanzierung fehlen noch Angaben.</p>';
   const buckets=r.bucketAllocation;
-  return `<section class="asset-funding">${!valid?'<p class="hint">Bestätigter Plan · neue Eingaben noch unvollständig.</p>':''}<h2>So finanziert dein Vermögen deinen Ruhestand</h2><p class="hint">${s.mode==='pre'?`Ab Pensionierung mit ${s.values.retirement}`:`Ab Alter ${s.values.age}`} · ${cash(r.availableCapital)} verfügbar${r.incomeTax===null?' · vorläufig ohne Steuerabzug':''}</p><p class="annual-withdrawal">Restbedarf aus Vermögen: <strong>${cash(r.annualGap)} / Jahr</strong></p><ol class="bucket-flow">${[[2,'Langfristiges Wachstum','Verbleibendes verfügbares Kapital'],[1,'Reserve für später','Für die nächsten zwei Entnahmejahre'],[0,'Kurzfristig verfügbar','Für die laufende Jahresentnahme']].map(([i,title,hint])=>`<li><span>${title}</span><strong>${cash(buckets[i])}</strong><small>${hint}</small></li>`).join('')}<li class="bucket-withdrawal"><span>Laufende Entnahmen</span><strong>${cash(r.monthlyGap)} / Monat</strong></li></ol><p class="hint bound-note">Immobilien und anderes gebundenes Vermögen sind hier nicht als verfügbare Mittel berücksichtigt.</p><details class="model-notes"><summary>So funktionieren die Reserven</summary><p>Als Orientierung: ein zusätzlicher Jahresbedarf kurzfristig verfügbar, ungefähr zwei weitere als Reserve, der Rest für langfristiges Wachstum. Die Beträge stammen aus der Planrechnung; sie berücksichtigen die tatsächlichen Entnahmen der jeweiligen Jahre. Bei knappem Kapital hat der kurzfristige Bedarf Vorrang.</p><p>Der Geldfluss führt vom Wachstum über die Reserve zu den laufenden Entnahmen. Die Reserven werden jährlich geprüft und aufgefüllt. Auch nach Verlusten können Verkäufe nötig sein.</p></details></section>`;
+  return `<section class="asset-funding"><p class="hint">${s.mode==='pre'?`Ab Pensionierung mit ${s.values.retirement}`:`Ab Alter ${s.values.age}`} · ${cash(r.availableCapital)} verfügbar${r.incomeTax===null?' · vorläufig ohne Steuerabzug':''}</p><p class="annual-withdrawal">Restbedarf aus Vermögen: <strong>${cash(r.annualGap)} / Jahr</strong></p><ol class="bucket-flow">${[[2,'Langfristiges Wachstum','Verbleibendes verfügbares Kapital'],[1,'Reserve für später','Für die nächsten zwei Entnahmejahre'],[0,'Kurzfristig verfügbar','Für die laufende Jahresentnahme']].map(([i,title,hint])=>`<li><span>${title}</span><strong>${cash(buckets[i])}</strong><small>${hint}</small></li>`).join('')}<li class="bucket-withdrawal"><span>Laufende Entnahmen</span><strong>${cash(r.monthlyGap)} / Monat</strong></li></ol><p class="hint bound-note">Immobilien und anderes gebundenes Vermögen sind hier nicht als verfügbare Mittel berücksichtigt.</p><details class="model-notes"><summary>So funktionieren die Reserven</summary><p>Als Orientierung: ein zusätzlicher Jahresbedarf kurzfristig verfügbar, ungefähr zwei weitere als Reserve, der Rest für langfristiges Wachstum. Die Beträge stammen aus der Planrechnung; sie berücksichtigen die tatsächlichen Entnahmen der jeweiligen Jahre. Bei knappem Kapital hat der kurzfristige Bedarf Vorrang.</p><p>Der Geldfluss führt vom Wachstum über die Reserve zu den laufenden Entnahmen. Die Reserven werden jährlich geprüft und aufgefüllt. Auch nach Verlusten können Verkäufe nötig sein.</p></details></section>`;
  }
  function nextStep(s){
   if(s.mode==='pre'){
    const missing=[!s.confirmed.pension3a&&['pension3a','Säule 3a'],!s.confirmed.pension&&['pension','Pensionskasse']].filter(Boolean);
    if(missing.length)return `<aside class="next-step"><p>${missing.map(([,label])=>label).join(' und ')} ${missing.length===1?'ist':'sind'} noch nicht bestätigt. Deine Einschätzung berücksichtigt bisher nur die erfassten Angaben.</p><button data-open="${missing[0][0]}">${missing[0][1]} prüfen →</button></aside>`;
   }
-  if(!s.details.income?.canton)return '<aside class="next-step"><p>Für die Steuerschätzung fehlt noch dein Wohnkanton.</p><button data-open="income">Wohnkanton ergänzen →</button></aside>';
+  if(!M.canton(s))return '<aside class="next-step"><p>Für die Steuerschätzung fehlt noch dein Wohnkanton.</p><button data-open="tax">Wohnkanton ergänzen →</button></aside>';
   return '';
  }
 function metric(key,label,amount,annual,sign='',edit){
   const arrow=route==='plan'&&edit?'<span class="metric-arrow" aria-hidden="true">→</span>':'';
-  const row = `<span class="label">${label}</span><div>${amount===null?'<span class="unknown">noch offen</span>':`<strong>${sign}${cash(amount)}</strong>${key==='capital'?'':'<span class="unit">/ Monat</span>'}`}</div>${annual===null?'':`<small>${sign}${cash(annual)} / Jahr</small>`}${arrow}`;
-  if(route==='plan'&&edit) return `<button type="button" class="metric secondary" data-metric="${key}" data-open="${edit}">${row}</button>`;
+  if(route==='plan'){annual=null;sign='';}
+  const note=route==='plan'&&key==='income'?`<small class="metric-note">${M.canton(state)?'nach geschätzten Steuern':'Steuern noch offen'}</small>`:'';
+  const row = `<span class="label">${label}${note}</span><div>${amount===null?'<span class="unknown">noch offen</span>':`<strong>${sign}${cash(amount)}</strong>${key==='capital'?'':'<span class="unit">/ Monat</span>'}`}</div>${annual===null?'':`<small>${sign}${cash(annual)} / Jahr</small>`}${arrow}`;
+  if(route==='plan'&&edit) return `<button type="button" class="metric secondary" data-metric="${key}" ${detailRoutes.includes(edit)?'data-view':'data-open'}="${edit}">${row}</button>`;
   return `<div class="metric secondary" data-metric="${key}">${row}</div>`;
 }
 function range(s,r){
@@ -251,13 +296,14 @@ function funding(s,r){
  function renderLive(s){
   const p=M.toPlan(s),r=p?C.evaluatePlan(p):null,has=k=>s.values[k]!==undefined,done=M.complete(s);
   if(route==='pension3a'){render3a(s);return;}
-  if(route==='assets'){document.getElementById('livePlan').innerHTML=assetFunding(s,r);return;}
+  if(route==='tax')return;
+  if(route==='assets'){document.getElementById('livePlan').innerHTML=`<h2>Vorschau zum Planungsstart</h2>${assetComposition(s)}`;return;}
   const feedback=document.getElementById('timeFeedback');
   if(feedback)feedback.textContent=route==='time'&&p?(s.mode==='pre'?`Noch ${p.retirement.age-p.person.currentAge} Jahre bis zu deiner Pensionierung`:'Planungsstart heute.') :'';
   const metrics=metric('need','Bedarf',r&&has('need')?r.monthlyNeed:null,r&&has('need')?r.yearlyProjection[0].need:null,'','need')
-   +metric('income',r&&r.incomeTax!==null?'Einkommen netto':'Einkommen · Steuern offen',r&&has('regular')?r.monthlyIncomeNet:null,r&&has('regular')?r.incomeNet:null,'− ','income')
-   +(()=>{const surplus=r&&has('need')&&has('regular')&&r.monthlyIncomeNet>r.monthlyNeed;return metric('withdrawal',surplus?'Keine Entnahme nötig':'Restbedarf aus Vermögen',r&&has('need')&&has('regular')?r.monthlyGap:null,r&&has('need')&&has('regular')?r.annualGap:null,surplus?'':'= ','assets');})()
-   +metric('capital','Verfügbares Vermögen',r&&has('free')?r.availableCapital:null,null,'','assets');
+   +metric('income',r&&r.incomeTax!==null?'Einkommen netto':'Einkommen · Steuern offen',r&&has('regular')?r.monthlyIncomeNet:null,r&&has('regular')?r.incomeNet:null,'− ','income-detail')
+   +(()=>{const surplus=r&&has('need')&&has('regular')&&r.monthlyIncomeNet>r.monthlyNeed;return metric('withdrawal',surplus?'Keine Entnahme nötig':'Restbedarf aus Vermögen',r&&has('need')&&has('regular')?r.monthlyGap:null,r&&has('need')&&has('regular')?r.annualGap:null,surplus?'':'= ','asset-funding');})()
+   +metric('capital','Verfügbares Vermögen',r&&has('free')?r.availableCapital:null,null,'','assets-detail');
   let html=`<div class="live-title"><span>Dein Plan</span><span>${p?`Ab Alter ${s.mode==='pre'?p.retirement.age:p.person.currentAge}`:'Zeitpunkt noch offen'}</span></div>`;
   if(route==='plan'){html+=metrics;html+=done?funding(s,r):'<p class="open-result">Ergebnis noch offen</p>';html+=qualityPlan(s);html+=nextStep(s);if(effect)html+=`<details class="model-notes pension-effect"><summary>Was deine Vorsorgeangaben verändert haben</summary><p>Reichweite: ${rangeText(effect.before)} → ${rangeText(effect.after)}.</p><p>Verfügbares Vermögen: ${cash(effect.beforeCapital)} → ${cash(effect.afterCapital)}.</p></details>`;}
   else{html+=metrics;html+=done?funding(s,r):'<p class="open-result">Ergebnis noch offen</p>';if(!done&&has('regular'))html+='<p class="context">Zwischenstand · noch nicht alle Angaben bestätigt.</p>';}
@@ -282,11 +328,11 @@ function funding(s,r){
   state=M.apply(state,g,draft);
   delete drafts[g];
   if(g==='time')drafts={};
-  else {delete drafts.assumptions;if(g==='pension') {delete drafts.income;delete drafts.regular;}if(g==='income'||g==='regular'){delete drafts.income;delete drafts.regular;}}
+  else {delete drafts.assumptions;if(g==='pension') {delete drafts.income;delete drafts.regular;}if(['income','regular','tax'].includes(g)){delete drafts.income;delete drafts.regular;delete drafts.tax;}}
   if(['pension','pension3a'].includes(g)&&before){const after=C.evaluatePlan(M.toPlan(state));effect={before:range(old,before),after:range(state,after),beforeCapital:before.availableCapital,afterCapital:after.availableCapital};}
   else effect=null;
   if(!wasComplete&&basic.includes(g)&&g!=='free'){const next=basic[basic.indexOf(g)+1];state.position=next;save();showEditor(next);}
-  else {state.position='plan';save();plan();}
+  else {if(['income','assets','tax'].includes(g))showParent(g);else plan();save();}
  }
  app.addEventListener('submit',e=>{e.preventDefault();submit();});
  app.addEventListener('click',e=>{
@@ -295,12 +341,13 @@ function funding(s,r){
   if(b.dataset.mode){state=M.fresh(b.dataset.mode);showEditor('time');}
   if(b.hasAttribute('data-resume')&&resumeRecord){state=structuredClone(resumeRecord.state);restorePosition();}
   if(b.dataset.open){keepDraft();showEditor(b.dataset.open,{persist:true});}
-  if(b.dataset.parent){keepDraft();b.dataset.parent==='vorsorge'?renderVorsorge():plan();save();}
+  if(b.dataset.view){keepDraft();showDetail(b.dataset.view);save();}
+  if(b.dataset.parent){keepDraft();if(b.dataset.parent==='vorsorge')renderVorsorge();else if(detailRoutes.includes(b.dataset.parent))showDetail(b.dataset.parent);else plan();save();}
   if(b.hasAttribute('data-home')){keepDraft();welcome();}
   if(b.hasAttribute('data-cancel')){
    delete drafts[route];
    effect=null;
-   if(M.complete(state)){['pension','pension3a'].includes(route)&&state.mode==='pre'?renderVorsorge():plan();save();}
+   if(M.complete(state)){showParent(route);save();}
    else {const i=basic.indexOf(route);if(i>0){state.position=basic[i-1];save();showEditor(state.position);}else welcome();}
   }
   if(b.hasAttribute('data-new')){
@@ -309,8 +356,6 @@ function funding(s,r){
    catch(_){status('Der gespeicherte Stand konnte nicht entfernt werden. Er bleibt erhalten.',true);}
   }
  });
- window.addEventListener('v2-theme-changed',()=>{if(saved&&!loadError){const active=route==='welcome'?(resumeRecord?.state||saved.state):state;try{saved=M.save(localStorage,active,document.documentElement.dataset.theme);}catch(_){status('Theme aktiv; der Plan konnte nicht erneut gespeichert werden.',true);}}});
- window.addEventListener('v2-theme-error',()=>status('Das Farbschema konnte nicht gespeichert werden.',true));
  window.CheckV2={getState:()=>structuredClone(state),getPlan:()=>M.toPlan(state),getResult:()=>M.toPlan(state)?C.evaluatePlan(M.toPlan(state)):null};
  read();welcome();
 })();
