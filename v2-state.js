@@ -21,10 +21,10 @@
    case 'need':return [field('need','Lebensbedarf','CHF / Monat')];
    case 'regular':return fields('income',s);
    case 'free':return [field('free','Frei verfügbares Vermögen','CHF')];
-   case 'income':return [{key:'canton',label:'Dein Wohnsitzkanton',type:'canton'},field('ahv','AHV'),...(!pre||!s.details.pension?[field('pkRent',pre?'Erwartete PK-Rente':'Laufende PK-Rente')]:[]),field('other','Weitere Renten'),field('additional','Weitere Einnahmen / Nettomiete')];
+   case 'income':return [{key:'canton',label:'Dein Wohnsitzkanton',type:'canton'},field('ahv','AHV'),field('other','Weitere Renten'),field('additional','Weitere Einnahmen / Nettomiete')];
    case 'tax':return [{key:'canton',label:'Dein Wohnsitzkanton',type:'canton'}];
    case 'assets':return [field('cash','Bank / liquide Mittel','CHF'),field('securities','Wertschriften','CHF'),...(pre?[field('saving','Zusätzliche Anlage pro Jahr','CHF / Jahr')]:[]),{...field('otherAssets','Weitere verfügbare Vermögenswerte','CHF'),optional:true},{...field('propertyValue','Immobilienwert','CHF'),optional:true,section:'Gebundenes Vermögen (optional)'},{...field('mortgage','Hypotheken','CHF'),optional:true}];
-   case 'pension':return pre?[{...field('pk','PK-Guthaben heute','CHF'),section:'Pensionskasse'},field('pkContrib','Sparbeiträge zusammen','CHF / Jahr'),field('pkShare','Kapitalanteil','%',0,100)]:[{key:'reviewed',label:'Bestehende PK-Rente und bezogenes Vorsorgekapital sind in meinen Einnahmen bzw. meinem Vermögen berücksichtigt.',type:'check'}];
+   case 'pension':return pre?[{...field('pk','PK-Guthaben heute','CHF'),section:'Pensionskasse'},field('pkContrib','Sparbeiträge zusammen','CHF / Jahr'),field('pkShare','Kapitalanteil','%',0,100)]:[field('pkRent','Laufende PK-Rente')];
    case 'pension3a':return pre?[field('p3','3a-Guthaben heute','CHF'),field('p3Contrib','Beiträge pro Jahr','CHF / Jahr')]:[];
    case 'assumptions':return [field('targetAge','Planung bis Alter','Jahre',19,110,1),field('inflation','Inflation','%',0,20),...(pre?[{...field('pkInterest','PK-Verzinsung','%',0,100),section:'Aufbau bis Pensionierung'},field('uws','PK-Umwandlungssatz','%',0,20),field('p3Return','3a-Rendite','%',0,100),field('secReturn','Wertschriftenrendite','%',0,100)]:[]),{key:'reviewed',label:'Ich habe die wichtigen Angaben und die dargestellten Modellannahmen geprüft.',type:'check'}];
    default:return [];
@@ -54,13 +54,34 @@
   const base=complete(s)&&confirmedGroups.every(g=>s.confirmed[g]===true);
   return base?(s.confirmed.assumptions===true&&tax.canton(canton(s))?2:1):0;
  }
+ const assetParts={cash:['cash'],securities:['securities','saving'],otherAssets:['otherAssets'],property:['propertyValue','mortgage'],unallocated:['unallocated']};
+ function assetFields(part,s){
+  if(part==='unallocated')return [field('unallocated','Noch nicht aufgeteiltes Vermögen','CHF')];
+  return fields('assets',s).filter(f=>assetParts[part]?.includes(f.key)).map(f=>({...f,optional:false,section:undefined}));
+ }
+ function assetError(part,values,s){
+  if(!assetParts[part])return {message:'Unbekannte Vermögenszeile.'};
+  const bad=assetFields(part,s).find(f=>!validField(f,values[f.key]));
+  return bad?{key:bad.key,message:`Bitte «${bad.label}» als gültigen Betrag ab 0 erfassen.`}:null;
+ }
+ function applyAsset(s,part,values){
+  const problem=assetError(part,values,s);if(problem)throw Error(problem.message);
+  const next=clone(s),a=next.details.assets??{partial:true,unallocated:num(s.values.free)};
+  // Allocate newly identified sources from an existing aggregate; known sources change by delta.
+  if(['cash','securities','otherAssets'].includes(part)&&!entered(a[part]))a.unallocated=Math.max(0,num(a.unallocated)-num(values[part]));
+  for(const f of assetFields(part,s))a[f.key]=num(values[f.key]);
+  next.details.assets=a;
+  next.confirmed.assets=!error('assets',a,next)&&num(a.unallocated)===0;
+  next.confirmed.assumptions=false;
+  return next;
+ }
  function apply(s,group,values){
   const problem=error(group,values,s);if(problem)throw Error(problem.message);
   const next=clone(s),changed=JSON.stringify(detailGroups.includes(group)?s.details[group]:Object.fromEntries(fields(group,s).map(f=>[f.key,s.values[f.key]])))!==JSON.stringify(Object.fromEntries(fields(group,s).map(f=>[f.key,values[f.key]])));
   if(group==='regular'||group==='income'){
-   next.details.income=clone(values);
+   next.details.income=clone(values);delete next.details.income.pkRent;
    next.canton=values.canton;
-   next.values.regular=num(values.ahv)+num(values.pkRent)+num(values.other)+num(values.additional);
+   next.values.regular=num(values.ahv)+num(values.other)+num(values.additional);
    next.confirmed.regular=true;next.confirmed.income=true;
   }else if(group==='tax')next.canton=values.canton;
   else if(detailGroups.includes(group))next.details[group]=clone(values);else fields(group,s).forEach(f=>next.values[f.key]=num(values[f.key]));
@@ -77,10 +98,10 @@
   if(!timing(s))return null;
   const v=s.values,d=s.details,pre=s.mode==='pre',p=d.pension||{},p3=d.pension3a||{},a=d.assets,i=d.income;
   const profile=profiles.getRiskProfile(s.riskProfile??'balanced'),rates={...defaults,...d.assumptions},need=num(v.need)*12;
-  const grossOther=i?num(i.other)+(pre&&!d.pension?num(i.pkRent):0):num(v.regular);
+  const grossOther=i?num(i.other):num(v.regular);
   const state={mode:s.mode,currentAge:num(v.age),retirementAge:pre?num(v.retirement):num(v.age),planningAge:s.targetAge??life.defaultTargetAge(num(v.age),pre?num(v.retirement):num(v.age)),horizonMode:s.horizonMode,horizonReference:life.reference,need,canton:canton(s)||null,
-   assets:{pk:num(p.pk),p3:num(p3.p3),sec:a?num(a.securities):0,cash:a?num(a.cash)+num(a.otherAssets):num(v.free),re:num(a?.propertyValue),mort:num(a?.mortgage)},
-   post:{ahv:i?num(i.ahv)*12:0,pkRent:i?num(i.pkRent)*12:0,other:grossOther*12,otherIncome:i?num(i.additional)*12:0,free:a?num(a.cash)+num(a.securities)+num(a.otherAssets):num(v.free),re:num(a?.propertyValue),mort:num(a?.mortgage)},
+   assets:{pk:num(p.pk),p3:num(p3.p3),sec:a?num(a.securities):0,cash:a?num(a.cash)+num(a.otherAssets)+num(a.unallocated):num(v.free),re:num(a?.propertyValue),mort:num(a?.mortgage)},
+   post:{ahv:i?num(i.ahv)*12:0,pkRent:num(p.pkRent)*12,other:grossOther*12,otherIncome:i?num(i.additional)*12:0,free:a?num(a.cash)+num(a.securities)+num(a.otherAssets)+num(a.unallocated):num(v.free),re:num(a?.propertyValue),mort:num(a?.mortgage)},
    income:{ahv:i?num(i.ahv)*12:0,other:grossOther*12,rent:i?num(i.additional)*12:0},
    build:{pkContrib:num(p.pkContrib),p3Contrib:num(p3.p3Contrib),otherSave:a?num(a.saving):0},pkShare:num(p.pkShare),risk:profile.key,riskProfile:profile.key,
    ass:{pkInterest:num(rates.pkInterest),p3Return:num(rates.p3Return),secReturn:num(rates.secReturn),uws:num(rates.uws),inflation:num(rates.inflation),capitalReturn:profile.expectedRealReturn*100},
@@ -92,14 +113,29 @@
   const p=toPlan(s),result=calc.evaluatePlan(p),projected=calc.calculateRetirementStart(p),capital=calc.calculateAvailableCapital(p),pk=calc.calculatePension(p);
   const sources=Object.fromEntries(calc.incomeSourcesAtStart(p).map(source=>[source.id,source.annualIncome]));
   const i=s.details.income,a=s.details.assets,pre=s.mode==='pre';
-  const provisional=pre&&!s.details.pension&&i?num(i.pkRent)*12:0;
   return {result,pk,projected,
-   income:{ahv:i?sources.ahv:null,pk:i||s.details.pension?sources.pk+provisional:null,other:i?sources.other+sources.additional-provisional:null,unallocated:i?null:num(s.values.regular)*12},
-   assets:{cash:a?num(a.cash):null,securities:a?(pre?projected.sec:num(a.securities)):null,other:a&&entered(a.otherAssets)?num(a.otherAssets):null,p3:pre&&s.details.pension3a?projected.p3:null,pk:pre&&s.details.pension?capital.netPkCapitalWithdrawal:null,unallocated:a?null:num(s.values.free),bound:a&&entered(a.propertyValue)&&entered(a.mortgage)?capital.boundCapital:null}
+   income:{ahv:i?sources.ahv:null,pk:s.details.pension?sources.pk:null,other:i?sources.other+sources.additional:null,unallocated:i?null:num(s.values.regular)*12},
+   assets:{cash:a&&entered(a.cash)?num(a.cash):null,securities:a&&entered(a.securities)?(pre?projected.sec:num(a.securities)):null,other:a&&entered(a.otherAssets)?num(a.otherAssets):null,p3:pre&&s.details.pension3a?projected.p3:null,pk:pre&&s.details.pension?capital.netPkCapitalWithdrawal:null,unallocated:a?(num(a.unallocated)>0?num(a.unallocated):null):num(s.values.free),bound:a&&entered(a.propertyValue)&&entered(a.mortgage)?capital.boundCapital:null}
   };
  }
  function validate(s){
   if(!s||!['pre','post'].includes(s.mode)||!routes.includes(s.position)||!s.values||!s.details||!s.confirmed||!['automatic','manual'].includes(s.horizonMode))throw Error('Ungültiger V2-Stand.');
+  // Preserve the actual pension of retired users at its new sole source.
+  if(s.mode==='post'&&s.details.income?.pkRent!==undefined){
+   const rent=s.details.income.pkRent;
+   if(!validField(field('pkRent','PK-Rente'),rent))throw Error('Ungültige PK-Rente.');
+   if(s.details.pension?.pkRent===undefined)s.details.pension={pkRent:rent};
+   delete s.details.income.pkRent;
+  }
+  if(s.mode==='post'&&s.details.pension?.pkRent===undefined){delete s.details.pension;s.confirmed.pension=false;}
+  // Old pre-entered amounts are retained for data recovery, but never finance the new plan.
+  if(s.mode==='pre'&&s.details.income?.pkRent!==undefined){
+   const rent=s.details.income.pkRent;
+   if(!validField(field('pkRent','PK-Rente'),rent))throw Error('Ungültige PK-Rente.');
+   if(num(rent)>0){s.archivedPkRent=rent;if(!s.details.pension)s.confirmed.assumptions=false;}
+   delete s.details.income.pkRent;
+  }
+  if(s.details.income)s.values.regular=num(s.details.income.ahv)+num(s.details.income.other)+num(s.details.income.additional);
   // Existing version-1 plans used balanced. Preserve their complete projections.
   s.riskProfile??='balanced';profiles.getRiskProfile(s.riskProfile);
   if(s.canton!==undefined&&!validField({type:'canton'},s.canton))throw Error('Ungültiger Wohnkanton.');
@@ -110,7 +146,15 @@
   if(s.values.regular!==undefined&&!validField(field('regular','Einnahmen'),s.values.regular))throw Error('Ungültige Einnahmen.');
   for(const g of ['time','need','free'])if(s.confirmed[g]&&error(g,s.values,s))throw Error('Unvollständiger V2-Stand.');
   if(s.confirmed.regular&&s.values.regular===undefined)throw Error('Unvollständige Einnahmen.');
-  for(const g of detailGroups){if(s.details[g]&&error(g,s.details[g],s))throw Error('Ungültige Datengruppe.');if(s.confirmed[g]&&!s.details[g])throw Error('Bestätigung ohne Angaben.');}
+  for(const g of detailGroups){
+   const data=s.details[g];
+   if(g==='assets'&&data?.partial){
+    for(const f of [...fields('assets',s),...assetFields('unallocated',s)])if(entered(data[f.key])&&!validField(f,data[f.key]))throw Error('Ungültiger Vermögenswert.');
+    if(entered(data.propertyValue)!==entered(data.mortgage))throw Error('Unvollständige Immobilienangaben.');
+    if(s.confirmed.assets&&(error('assets',data,s)||num(data.unallocated)!==0))throw Error('Unvollständiges Vermögen.');
+   }else if(data&&error(g,data,s))throw Error('Ungültige Datengruppe.');
+   if(s.confirmed[g]&&!data)throw Error('Bestätigung ohne Angaben.');
+  }
   if(timing(s)&&(!Number.isInteger(s.targetAge)||s.targetAge>110||s.targetAge<=(s.mode==='pre'?s.values.retirement:s.values.age)))throw Error('Ungültiger Planungshorizont.');
   if((detailGroups.includes(s.position)||['plan','vorsorge','tax','income-detail','assets-detail','asset-funding'].includes(s.position))&&!complete(s))throw Error('Unvollständiger Einstieg.');
   return s;
@@ -124,6 +168,6 @@
   const record=JSON.parse(raw);if(record.version!==version)throw Error('Diese V2-Speicherversion kann noch nicht geladen werden.');
   validate(record.state);if(!Number.isFinite(Date.parse(record.savedAt)))throw Error('Ungültiges Speicherdatum.');return record;
  }
- const api={key,version,defaults,fresh,fields,error,timing,complete,quality,apply,toPlan,breakdown,canton,validate,save,load};
+ const api={key,version,defaults,fresh,fields,error,timing,complete,quality,apply,assetFields,assetError,applyAsset,toPlan,breakdown,canton,validate,save,load};
  root.CheckV2State=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

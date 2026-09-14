@@ -12,7 +12,7 @@ it('v2 pre mode flow at 360 and 1280', () => {
     cy.get('input[name="need"]').type('7500')
     cy.get('#question').submit()
     cy.get('[name=ahv]').type('3430')
-    for(const name of ['pkRent','other','additional'])cy.get(`[name=${name}]`).type('0')
+    for(const name of ['other','additional'])cy.get(`[name=${name}]`).type('0')
     cy.get('#question').submit()
     cy.get('input[name="free"]').type('650000')
     cy.get('#question').submit()

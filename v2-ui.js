@@ -7,6 +7,7 @@
  const basic=['time','need','regular','free'],names=['Erste Einschätzung','Gute Basis','Gut abgestützt'];
  let state=M.fresh(),route='welcome',draft={},saved=null,resumeRecord=null,loadError='',effect=null;
 let drafts={};
+let assetOpen=null,assetDrafts={};
 const editorRoutes=[...basic,'income','assets','tax','pension','pension3a','assumptions'];
 const detailRoutes=['income-detail','assets-detail','asset-funding'];
 const parentOf=g=>g==='income'||g==='tax'?'income-detail':g==='assets'?'assets-detail':g==='pension3a'||g==='pension'?'vorsorge':'plan';
@@ -14,7 +15,7 @@ function keepDraft(){if(editorRoutes.includes(route))drafts[route]=structuredClo
 function firstOpen(){return basic.find(g=>g==='regular'?state.values.regular===undefined:!!M.error(g,state.values,state))||'time';}
 function focusHeading(){window.scrollTo(0,0);const h=app.querySelector('h1');if(h){h.tabIndex=-1;h.focus({preventScroll:true});}}
 function restorePosition(){if(state.position==='plan')plan();else if(state.position==='vorsorge')renderVorsorge();else if(state.position==='more')renderMore();else if(detailRoutes.includes(state.position))showDetail(state.position);else showEditor(state.position);}
-function showParent(g){const parent=parentOf(g);if(parent==='vorsorge'&&state.mode==='pre')renderVorsorge();else if(detailRoutes.includes(parent))showDetail(parent);else plan();}
+function showParent(g){const parent=parentOf(g);if(parent==='vorsorge')renderVorsorge();else if(detailRoutes.includes(parent))showDetail(parent);else plan();}
 function updateNav() {
   let nav = document.getElementById('v2Nav');
   if (!nav) {
@@ -38,7 +39,7 @@ function updateNav() {
   nav.innerHTML = items.map(([k, icon, label]) =>
     `<button data-nav="${k}"${(k === 'pension' || k === 'assumptions') && !complete ? ' disabled' : ''}${k === active ? ' aria-current="page"' : ''}><span aria-hidden="true">${icon}</span>${label}</button>`
   ).join('');
-  const footer=document.querySelector('footer.footer');if(footer)footer.hidden=['plan','pension','pension3a',...detailRoutes].includes(route);
+  const footer=document.querySelector('footer.footer');if(footer)footer.hidden=route!=='more';
   if (!nav.dataset.bound) {
     nav.dataset.bound = '1';
     nav.addEventListener('click', e => {
@@ -53,7 +54,7 @@ function updateNav() {
           showEditor(g);
         }
       } else if (n === 'pension') {
-        if (state.mode === 'pre') renderVorsorge(); else showEditor('pension');
+        renderVorsorge();
       } else if (n === 'assumptions') {
         showEditor(n);
       } else if (n === 'more') {
@@ -69,7 +70,7 @@ function renderVorsorge() {
   route = 'vorsorge';
   state.position = 'vorsorge';
   updateNav();
-  app.innerHTML = `<header class="work-heading"><h1>Vorsorge</h1></header><div class="vorsorge-menu"><button data-open="pension"><span>Pensionskasse<small>Rente oder Kapital</small></span><span aria-hidden="true">→</span></button><button data-open="pension3a"><span>Säule 3a<small>Guthaben und Beiträge</small></span><span aria-hidden="true">→</span></button></div>`;
+  app.innerHTML = `<header class="work-heading"><h1>Vorsorge</h1></header><div class="vorsorge-menu">${state.mode==='pre'?'<button data-open="pension3a"><span>Säule 3a<small>Guthaben und Beiträge</small></span><span aria-hidden="true">→</span></button>':''}<button data-open="pension"><span>Pensionskasse<small>${state.mode==='pre'?'Rente oder Kapital':'Laufende PK-Rente'}</small></span><span aria-hidden="true">→</span></button></div>`;
   focusHeading();
 }
 
@@ -117,12 +118,12 @@ function renderMore() {
   return {
    time:{title:pre?'Wann beginnt dein Ruhestand?':'Dein Zeitpunkt',hint:'Alter heute'+(pre?' und gewünschter Pensionierungsstart.':'. Die Planung beginnt heute.')},
    need:{title:'Wie viel möchtest du monatlich zur Verfügung haben?',hint:'Dein Lebensbedarf zu Beginn deiner '+(pre?'Pensionierung.':'Planung.')},
-   regular:{title:'Welche Einnahmen hast du im Ruhestand?',hint:'Monatsbeträge vor persönlicher Steuer. Erfasse AHV, PK-Rente und weitere Einnahmen einzeln; falls nicht vorhanden: 0. Den Wohnkanton kannst du noch offen lassen.'},
+   regular:{title:'Welche Einnahmen hast du im Ruhestand?',hint:'Monatsbeträge vor persönlicher Steuer. Erfasse AHV und weitere regelmässige Einnahmen; falls nicht vorhanden: 0. Den Wohnkanton kannst du noch offen lassen.'},
    free:{title:'Wie viel frei verfügbares Vermögen hast du ungefähr?',hint:'Heute frei verfügbares Kapital. Noch gebundene PK-/3a-Guthaben und Immobilien nicht mitzählen.'},
    income:{title:'Dein Einkommen',hint:'Monatsbeträge vor persönlicher Steuer; Nettomiete nach Objektkosten. Alle Einnahmen gelten ab Planungsstart, ohne Indexierung.'},
-   assets:{title:'Vermögen bearbeiten',hint:'Erfasse heutige Beträge. Bereits bezogenes Vorsorgekapital gehört zu deinen verfügbaren Mitteln. Weitere Vermögenswerte und Immobilien sind optional; leere Zusatzfelder bleiben offen.'},
+   assets:{title:'Dein verfügbares Vermögen',hint:'Erfasse heutige Beträge. Bereits bezogenes Vorsorgekapital gehört zu deinen verfügbaren Mitteln. Weitere Vermögenswerte und Immobilien sind optional; leere Zusatzfelder bleiben offen.'},
    tax:{title:'Wohnkanton ergänzen',hint:'Dein Wohnkanton bestimmt die geschätzte Einkommenssteuer und bei künftigem PK-Kapitalbezug die Bezugssteuer.'},
-   pension:{title:'Deine Vorsorge',hint:pre?'PK und Säule 3a ergänzen dein bisher erfasstes freies Vermögen. Nicht vorhandene Beträge: 0.':'Keine künftige Ansparung und kein erneuter PK-Bezug. Prüfe die bereits laufenden Leistungen.'},
+   pension:{title:'Pensionskasse',hint:pre?'PK und Säule 3a ergänzen dein bisher erfasstes freies Vermögen. Nicht vorhandene Beträge: 0.':'Erfasse deine tatsächlich laufende PK-Rente vor persönlicher Steuer. Bereits bezogenes Kapital gehört zum verfügbaren Vermögen.'},
    pension3a:{title:'Säule 3a',hint:'Säule 3a ergänzt dein bisher erfasstes freies Vermögen. Nicht vorhandene Beträge: 0.'},
    assumptions:{title:'Deine Annahmen',hint:'Bestehende Modellannahmen. Prüfe, ob sie zu deinen Angaben passen; sie sind keine Zusicherung.'}
   }[g];
@@ -146,7 +147,7 @@ function renderMore() {
   if(g==='pension'&&state.mode==='pre')return `<p class="hint">PK-Beiträge: Arbeitnehmer und Arbeitgeber zusammen. Zinsen und Umwandlungssatz findest du unter Annahmen.</p>`;
   if(['income','regular'].includes(g)){
    const previous=!state.details.income&&state.values.regular!==undefined?`<p class="hint">Bisher als Gesamtsumme erfasst: ${cash(state.values.regular)} / Monat. Bitte auf die einzelnen Quellen aufteilen.</p>`:'';
-   return previous+(state.mode==='pre'?state.details.pension?`<p class="hint">PK-Rente aus deiner Vorsorge: ${cash(C.calculatePension(M.toPlan(state)).rent/12)} / Monat vor Steuer.</p>`:'<p class="hint">Die erwartete PK-Rente ist vorläufig. Sobald du deine Pensionskasse erfasst, verwenden wir die daraus berechnete Rente.</p>':'');
+   return previous+`<p class="hint">${state.details.pension?`PK-Rente aus deiner Vorsorge: ${cash(M.breakdown(state).income.pk/12)} / Monat vor Steuer.`:'Deine PK-Rente ergänzen wir im Bereich Vorsorge → Pensionskasse.'}</p>`;
   }
   if(g==='assumptions')return `<p class="hint">Horizont ${state.horizonMode==='automatic'?'automatisch aus der Schweizer Restlebenserwartung abgeleitet':'manuell festgelegt'}. Eine Änderung des Zielalters schaltet auf manuell. ${state.riskProfile==='cautious'?'Vorsichtige Standardannahme':'Gespeicherte Anlageannahme'}: Wachstum ${String(C.getRiskProfile(M.toPlan(state)).expectedRealReturn*100).replace('.',',')} % real, Anleihen 1 %, Geldmarkt 0 %.</p><details class="model-notes"><summary>Grundlage und Grenzen</summary><p>BFS-Periodensterbetafeln 2023: mittlere Restlebenserwartung Frauen/Männer im heutigen Alter, aufgerundet; mindestens ein Ruhestandsjahr. Keine individuelle Lebensdauerprognose.</p><p>Ab Start konstante Kaufkraft; laufende Einnahmen ohne Indexierung. Vor Pensionierung keine Inflationierung des Bedarfs. Noch nicht aufgeteiltes verfügbares Kapital wird bis zum Start unverändert angesetzt. Bei Aufteilung projiziert der gemeinsame Rechenkern die Anlagen und Beiträge.</p><p>Die Steuerrechnung ist eine Modellrechnung, keine individuelle Steuerberechnung. Vermögenssteuer und allfällige 3a-Bezugssteuern fehlen; Zinsen und Dividenden werden nicht separat besteuert.</p></details>`;
   return '';
@@ -190,12 +191,13 @@ function renderMore() {
   refreshPension();window.scrollTo(0,0);focusHeading();
  }
  function showEditor(g,{persist=false}={}){
+  if(g==='assets'){showDetail('assets-detail');if(persist)save();return;}
   route=g;state.position=g;draft=structuredClone(drafts[g]??editorValues(g));effect=null;
   updateNav();
   if(persist)save();
   if(g==='pension'&&state.mode==='pre'){renderPensionEditor();return;}
   const info=groupInfo(g),isBasic=basic.includes(g);
-  app.innerHTML=`<header class="work-heading">${M.complete(state)?'':'<button class="home-link" data-home>← Übersicht</button>'}${!isBasic?`<button class="home-link" data-parent="${parentOf(g)}">← ${g==='pension3a'?'Vorsorge':g==='income'||g==='tax'?'Einkommen':g==='assets'?'Vermögen':'Dein Plan'}</button>`:''}<h1>${isBasic?'Dein Plan entsteht.':info.title}</h1></header><div class="workspace ${isBasic?'':'group-detail'} ${g==='tax'?'single-editor':''}"><section class="question">${isBasic?`<p class="step-caption">Schritt ${basic.indexOf(g)+1} von 4</p><h2>${info.title}</h2>`:''}<p class="hint" id="groupHint">${info.hint}</p><form id="question" novalidate><div class="question-fields">${M.fields(g,state).map(input).join('')}</div>${groupNote(g)}<p id="timeFeedback" class="context" aria-live="polite"></p><p id="error" class="error" role="alert"></p><div class="actions"><button type="button" class="back" data-cancel>${M.complete(state)?'Abbrechen':'← Zurück'}</button><button class="primary" type="submit">${isBasic&&!M.complete(state)?'Weiter →':'Übernehmen'}</button></div></form></section><section class="live-plan" id="livePlan" aria-label="Dein Live-Plan" aria-live="polite" aria-atomic="true"></section></div>`;
+  app.innerHTML=`<header class="work-heading">${M.complete(state)?'':'<button class="home-link" data-home>← Übersicht</button>'}${!isBasic?`<button class="home-link" data-parent="${parentOf(g)}">← ${['pension3a','pension'].includes(g)?'Vorsorge':g==='income'||g==='tax'?'Einkommen':g==='assets'?'Vermögen':'Dein Plan'}</button>`:''}<h1>${isBasic?'Dein Plan entsteht.':info.title}</h1></header><div class="workspace ${isBasic?'':'group-detail'} ${g==='tax'?'single-editor':''}"><section class="question">${isBasic?`<h2>${info.title}</h2>`:''}<p class="hint" id="groupHint">${info.hint}</p><form id="question" novalidate><div class="question-fields">${M.fields(g,state).map(input).join('')}</div>${groupNote(g)}<p id="timeFeedback" class="context" aria-live="polite"></p><p id="error" class="error" role="alert"></p><div class="actions"><button type="button" class="back" data-cancel>${M.complete(state)?'Abbrechen':'← Zurück'}</button><button class="primary" type="submit">${isBasic&&!M.complete(state)?'Weiter →':'Übernehmen'}</button></div></form></section><section class="live-plan" id="livePlan" aria-label="Dein Live-Plan" aria-live="polite" aria-atomic="true"></section></div>`;
   app.querySelectorAll('#question input,#question select').forEach(el=>el.addEventListener('input',()=>{
    draft[el.name]=el.type==='checkbox'?el.checked:el.value;
    el.removeAttribute('aria-invalid');document.getElementById('error').textContent='';renderLive(preview());
@@ -217,7 +219,7 @@ function renderMore() {
   const b=M.breakdown(s),r=b.result,c=TaxModel.canton(M.canton(s)),monthly={unit:'/ Monat'};
   return `<p class="hint">${s.mode==='pre'?`Ab Pensionierung mit ${s.values.retirement}`:`Ab Alter ${s.values.age}`} · Einnahmen vor persönlicher Steuer</p><dl class="detail-list income-sources">
    ${detailRow('ahv','AHV',b.income.ahv===null?null:b.income.ahv/12,monthly)}
-   ${detailRow('pk-income','PK-Rente',b.income.pk===null?null:b.income.pk/12,{...monthly,hint:s.mode==='pre'&&!s.details.pension&&s.details.income?'Vorläufige Angabe':''})}
+   ${detailRow('pk-income','PK-Rente',b.income.pk===null?null:b.income.pk/12,{...monthly,hint:s.details.pension?'aus Vorsorge':'Unter Vorsorge → Pensionskasse ergänzen'})}
    ${detailRow('other-income','Weitere regelmässige Einnahmen',b.income.other===null?null:b.income.other/12,{...monthly,hint:'Weitere Renten und Einnahmen, einschliesslich Nettomiete'})}
    ${b.income.unallocated===null?'':detailRow('unallocated-income','Noch nicht aufgeteilte Einnahmen',b.income.unallocated/12,monthly)}
   </dl><section class="tax-summary" aria-label="Einkommen und Steuern"><dl class="detail-list">
@@ -226,26 +228,32 @@ function renderMore() {
   </dl><p class="canton-line">Wohnkanton: <strong>${c?esc(c.name):'Noch offen'}</strong></p>
   ${c?`<p class="hint">Geschätzter Satz: ${String(TaxModel.getIncomeTaxRate(M.canton(s),r.incomeGross)).replace('.',',')} % · <button class="inline-action" data-open="tax">Wohnkanton ändern</button></p>`:'<p class="hint">Die vorläufige Rechnung enthält noch keinen Steuerabzug. Die Datengrundlage ist deshalb noch nicht gut abgestützt.</p><button data-open="tax">Wohnkanton ergänzen</button>'}
   <dl class="detail-list">${detailRow('income-net',c?'Netto verfügbar':'Vorläufig verfügbar',r.monthlyIncomeNet,{...monthly,total:true,hint:c?'nach geschätzten Steuern':'Steuern noch offen'})}</dl>
-  </section><p class="hint">Modellrechnung, keine individuelle Steuerberechnung.</p>`;
+  </section><p class="hint">Beträge auf ganze Franken gerundet. Modellrechnung, keine individuelle Steuerberechnung.</p>`;
+ }
+ function assetRow(s,key,label,value,{part,hint='',source}={}){
+  const expanded=part&&assetOpen===part;
+  const action=source?`data-open="${source}"`:`data-asset="${part}" aria-expanded="${!!expanded}" aria-controls="asset-${part}"`;
+  const values=assetDrafts[part]??s.details.assets??{};
+  const form=expanded?`<form class="asset-inline" id="asset-${part}" data-asset-form="${part}" novalidate>${M.assetFields(part,s).map(f=>`<div class="field"><label for="asset-input-${f.key}">${f.label}${f.key==='securities'?' heute':''}</label><div class="entry"><input id="asset-input-${f.key}" name="${f.key}" type="number" inputmode="decimal" min="${f.min}" max="${f.max}" step="any" value="${esc(values[f.key]??(f.key==='unallocated'?M.breakdown(s).assets.unallocated??0:''))}" aria-describedby="asset-error" required><span>${f.unit}</span></div></div>`).join('')}${['cash','securities','otherAssets'].includes(part)&&!s.details.assets?.[part]&&M.breakdown(s).assets.unallocated!==null?'<p class="hint">Neu erfasste Bestände teilen zuerst deine bisherige Gesamtsumme auf. Der verbleibende Rest bleibt separat sichtbar und kann angepasst werden.</p>':''}<p class="error" id="asset-error" role="alert"></p><div class="actions"><button type="button" data-asset-cancel="${part}">Abbrechen</button><button class="primary" type="submit">Übernehmen</button></div></form>`:'';
+  return `<div class="asset-item" data-detail="${key}"><button class="asset-row" ${action}><span>${label}${hint?`<small>${hint}</small>`:''}</span><span class="asset-amount">${value===null?'<span class="unknown">Noch nicht erfasst</span>':`<strong>${cash(value)}</strong>`}${source?'<small>aus Vorsorge</small>':''}</span><span class="asset-chevron">${value===null&&!source?'Erfassen':'›'}</span></button>${form}</div>`;
  }
  function assetComposition(s){
   const b=M.breakdown(s),pre=s.mode==='pre',projection='voraussichtlich zum Pensionierungszeitpunkt';
-  const pkHint=b.assets.pk!==null?`${projection} · ${b.pk.capitalTax===null?'PK-Kapital brutto, Steuer noch offen':'PK-Kapital netto nach Bezugssteuer'}`:projection;
-  return `<p class="hint">${pre?`Verfügbare Mittel ab Pensionierung mit ${s.values.retirement}`:`Verfügbare Mittel ab Alter ${s.values.age}`}</p><dl class="detail-list asset-sources">
-   ${detailRow('cash','Bank / liquide Mittel',b.assets.cash)}
-   ${detailRow('securities','Wertschriften',b.assets.securities,{hint:pre?projection:''})}
-   ${pre?detailRow('p3-assets','Säule 3a',b.assets.p3,{hint:projection})+detailRow('pk-assets','PK-Kapital',b.assets.pk,{hint:pkHint}):''}
-   ${detailRow('other-assets','Weitere verfügbare Vermögenswerte',b.assets.other)}
-   ${b.assets.unallocated===null?'':detailRow('unallocated-assets','Noch nicht aufgeteiltes verfügbares Vermögen',b.assets.unallocated)}
-   ${detailRow('assets-total','Verfügbares Vermögen total',b.result.availableCapital,{total:true})}
-  </dl>${pre?'<p class="hint">Noch nicht erfasste Vorsorgebeträge sind nicht eingerechnet. Eine separate 3a-Bezugssteuer ist noch nicht berücksichtigt.</p>':'<p class="hint">Bereits bezogenes PK- und 3a-Kapital ist in deinen verfügbaren Mitteln enthalten und wird nicht nochmals hinzugezählt.</p>'}
-  <section class="bound-assets" aria-label="Gebundenes Vermögen"><h2>Gebundenes Vermögen</h2><dl class="detail-list">${detailRow('bound-assets','Immobilien netto',b.assets.bound,{hint:b.assets.bound===null?'Immobilienwert und Hypotheken ergänzen':'Immobilienwert abzüglich Hypotheken'})}</dl><p class="hint">Dieses Vermögen ist aktuell nicht für laufende Entnahmen eingeplant.</p></section>`;
+  const pkHint=`gemäss deiner PK-Entscheidung${b.assets.pk===null?'':` · ${b.pk.capitalTax===null?'PK-Kapital brutto, Steuer noch offen':'PK-Kapital netto nach Bezugssteuer'}`}`;
+  return `<p class="hint">${pre?`Verfügbare Mittel ab Pensionierung mit ${s.values.retirement}`:`Verfügbare Mittel ab Alter ${s.values.age}`}</p><div class="asset-sources">
+   ${assetRow(s,'cash','Bank / liquide Mittel',b.assets.cash,{part:'cash'})}
+   ${assetRow(s,'securities','Wertschriften',b.assets.securities,{part:'securities',hint:pre?projection:''})}
+   ${pre?assetRow(s,'p3-assets','Säule 3a',b.assets.p3,{source:'pension3a',hint:projection})+assetRow(s,'pk-assets','PK-Kapital',b.assets.pk,{source:'pension',hint:pkHint}):''}
+   ${assetRow(s,'other-assets','Weitere verfügbare Vermögenswerte',b.assets.other,{part:'otherAssets'})}
+   ${b.assets.unallocated===null?'':assetRow(s,'unallocated-assets','Noch nicht aufgeteiltes verfügbares Vermögen',b.assets.unallocated,{part:'unallocated'})}
+  </div><dl class="detail-list" aria-live="polite">${detailRow('assets-total','Verfügbares Vermögen total',b.result.availableCapital,{total:true})}</dl>${pre?'<p class="hint">Noch nicht erfasste Vorsorgebeträge sind nicht eingerechnet. Eine separate 3a-Bezugssteuer ist noch nicht berücksichtigt.</p>':'<p class="hint">Bereits bezogenes PK- und 3a-Kapital ist in deinen verfügbaren Mitteln enthalten und wird nicht nochmals hinzugezählt.</p>'}
+  <section class="bound-assets" aria-label="Gebundenes Vermögen"><h2>Gebundenes Vermögen</h2>${assetRow(s,'bound-assets','Immobilien netto',b.assets.bound,{part:'property',hint:'Immobilienwert abzüglich Hypotheken'})}<p class="hint">Dieses Vermögen ist aktuell nicht für laufende Entnahmen eingeplant.</p></section>`;
  }
  function showDetail(view){
   route=view;state.position=view;effect=null;updateNav();
   const income=view==='income-detail',mechanics=view==='asset-funding';
   const title=income?'Deine Einkommen im Ruhestand':mechanics?'So finanziert dein Vermögen deinen Ruhestand':'Dein verfügbares Vermögen';
-  app.innerHTML=`<header class="work-heading"><button class="home-link" data-parent="${mechanics?'assets-detail':'plan'}">← ${mechanics?'Vermögen':'Dein Plan'}</button><h1>${title}</h1></header><div class="detail-screen">${income?incomeComposition(state):mechanics?assetFunding(state,C.evaluatePlan(M.toPlan(state))):assetComposition(state)}${mechanics?'':`<div class="detail-actions"><button data-open="${income?'income':'assets'}">${income?'Einkommen':'Vermögen'} bearbeiten</button>${income?'':'<button class="primary" data-view="asset-funding">So finanziert dein Vermögen deinen Ruhestand →</button>'}</div>`}</div>`;
+  app.innerHTML=`<header class="work-heading"><button class="home-link" data-parent="${mechanics?'assets-detail':'plan'}">← ${mechanics?'Vermögen':'Dein Plan'}</button><h1>${title}</h1></header><div class="detail-screen">${income?incomeComposition(state):mechanics?assetFunding(state,C.evaluatePlan(M.toPlan(state))):assetComposition(state)}${mechanics?'':`<div class="detail-actions">${income?'<button data-open="income">Einkommen bearbeiten</button>':'<button class="primary" data-view="asset-funding">So finanziert dein Vermögen deinen Ruhestand →</button>'}</div>`}</div>`;
   focusHeading();
  }
  function render3a(s){
@@ -262,12 +270,12 @@ function renderMore() {
    const missing=[!s.confirmed.pension3a&&['pension3a','Säule 3a'],!s.confirmed.pension&&['pension','Pensionskasse']].filter(Boolean);
    if(missing.length)return `<aside class="next-step"><p>${missing.map(([,label])=>label).join(' und ')} ${missing.length===1?'ist':'sind'} noch nicht bestätigt. Deine Einschätzung berücksichtigt bisher nur die erfassten Angaben.</p><button data-open="${missing[0][0]}">${missing[0][1]} prüfen →</button></aside>`;
   }
+  if(s.mode==='post'&&!s.confirmed.pension)return '<aside class="next-step"><p>Deine laufende PK-Rente ist noch offen.</p><button data-open="pension">Pensionskasse ergänzen →</button></aside>';
   if(!M.canton(s))return '<aside class="next-step"><p>Für die Steuerschätzung fehlt noch dein Wohnkanton.</p><button data-open="tax">Wohnkanton ergänzen →</button></aside>';
   return '';
  }
 function metric(key,label,amount,annual,sign='',edit){
   const arrow=route==='plan'&&edit?'<span class="metric-arrow" aria-hidden="true">→</span>':'';
-  if(route==='plan'){annual=null;sign='';}
   const note=route==='plan'&&key==='income'?`<small class="metric-note">${M.canton(state)?'nach geschätzten Steuern':'Steuern noch offen'}</small>`:'';
   const row = `<span class="label">${label}${note}</span><div>${amount===null?'<span class="unknown">noch offen</span>':`<strong>${sign}${cash(amount)}</strong>${key==='capital'?'':'<span class="unit">/ Monat</span>'}`}</div>${annual===null?'':`<small>${sign}${cash(annual)} / Jahr</small>`}${arrow}`;
   if(route==='plan'&&edit) return `<button type="button" class="metric secondary" data-metric="${key}" ${detailRoutes.includes(edit)?'data-view':'data-open'}="${edit}">${row}</button>`;
@@ -283,15 +291,17 @@ function range(s,r){
   };
 }
 function rangeText(x){
-  return `${x.pending?'ohne Steuerabzug: ':''}bis Alter ${x.until}${x.until===x.end?' (Ziel erreicht)':''}`;
+  return `${x.pending?'ohne Steuerabzug: ':''}bis Alter ${x.until}`;
 }
 function funding(s,r){
   const x=range(s,r),gap=r.capitalExhaustionAge!==undefined;
+  const endLabel=s.horizonMode==='automatic'?`Planungshorizont ${x.end}`:`Ziel ${x.end}`;
+  const startLabel=s.mode==='pre'?`Pensionierung ${x.start}`:`Start ${x.start}`;
   const title=x.pending?(gap?`Vorläufig bis Alter ${x.until}`:`Reichweite bis Alter ${x.end} · Steuern offen`):gap?`Aktuell reicht dein Plan bis Alter ${x.until}`:'✓ Deine erste Planung geht voraussichtlich auf.';
   const statusLabel=gap?`bis ${x.until}`:`bis ${x.end}${x.pending?'':' ✓'}`;
   const funded=Math.max(0,Math.min(100,(x.until-x.start)/(x.end-x.start)*100));
   const stress=r.assessment==='amber'?`<p class="stress-note">Stress-Test: Bei fünf schwachen Jahren entsteht ab Alter ${r.stressGapAge} eine Lücke. <span aria-hidden="true">ⓘ</span></p>`:'';
-  return `<section class="funding" data-status="${r.assessment}"><span class="quality-caption">Deine Finanzierung · Modellrechnung</span><h2>${title}</h2><div class="funding-static" role="img" aria-label="Finanzierter Zeitraum bis zum Planungshorizont${x.pending?', vorläufig ohne Steuern':''}: Start ${x.start}, finanziert bis ${x.until}, Ziel ${x.end}"><div class="funding-static-track" aria-hidden="true"><span style="width:${funded}%"></span></div><div class="funding-static-labels"><span>Start ${x.start}</span><span>${x.pending?'vorläufig':'finanziert'} ${statusLabel}</span><span>Ziel ${x.end}</span></div></div><p>${gap?`Ziel: Alter ${x.end}. Es fehlen noch ${x.end-x.until} ${x.end-x.until===1?'Jahr':'Jahre'}.`:x.pending?'Noch keine abschliessende Finanzierbarkeitsaussage.':`Unter den aktuellen Annahmen ist dein Lebensstandard bis Alter ${x.end} finanziert.`}</p>${x.pending?'<p>Vorläufig ohne Steuerabzug · Wohnkanton noch offen.</p>':''}${stress}</section>`;
+  return `<section class="funding" data-status="${r.assessment}"><span class="quality-caption">Deine Finanzierung · Modellrechnung</span><h2>${title}</h2><div class="funding-static" role="img" aria-label="Finanzierter Zeitraum bis zum Planungshorizont${x.pending?', vorläufig ohne Steuern':''}: ${startLabel}, finanziert bis ${x.until}, ${endLabel}"><div class="funding-static-track" aria-hidden="true"><span style="width:${funded}%"></span></div><div class="funding-static-labels"><span>${startLabel}</span><span>${x.pending?'vorläufig':'finanziert'} ${statusLabel}</span><span>${endLabel}</span></div></div><p>${gap?`${s.horizonMode==='automatic'?`Planung bis Alter ${x.end}`:`Ziel: Alter ${x.end}`}. Es fehlen noch ${x.end-x.until} ${x.end-x.until===1?'Jahr':'Jahre'}.`:x.pending?'Noch keine abschliessende Finanzierbarkeitsaussage.':`Unter den aktuellen Annahmen ist dein Lebensstandard bis Alter ${x.end} finanziert.`}</p>${x.pending?'<p>Vorläufig ohne Steuerabzug · Wohnkanton noch offen.</p>':''}${stress}</section>`;
 }
  function renderLive(s){
   const p=M.toPlan(s),r=p?C.evaluatePlan(p):null,has=k=>s.values[k]!==undefined,done=M.complete(s);
@@ -309,10 +319,11 @@ function funding(s,r){
   else{html+=metrics;html+=done?funding(s,r):'<p class="open-result">Ergebnis noch offen</p>';if(!done&&has('regular'))html+='<p class="context">Zwischenstand · noch nicht alle Angaben bestätigt.</p>';}
   document.getElementById('livePlan').innerHTML=html;
  }
- function modelNotes(){
+function modelNotes(){
   const p=M.toPlan(state),r=C.evaluatePlan(p),c=TaxModel.canton(p.person.canton),pk=C.calculatePension(p);
-  return `<details class="model-notes"><summary>So rechnen wir</summary><p>Planung von Alter ${state.mode==='pre'?p.retirement.age:p.person.currentAge} bis ${p.retirement.targetAge}. Verfügbares Restkapital am Ziel: ${cash(r.capitalAtTargetAge)}. Keine Aussage über weitere Jahre ausserhalb des berechneten Horizonts.</p><p>${c?`Geschätzte Einkommenssteuer: ${cash(r.incomeTax)} / Jahr auf ${cash(r.incomeGross)} in ${esc(c.name)} (${String(TaxModel.getIncomeTaxRate(p.person.canton,r.incomeGross)).replace('.',',')} %).`:'Ohne Wohnkanton ist keine Steuerschätzung berücksichtigt.'} Modellrechnung, keine individuelle Steuerberechnung.</p>${state.mode==='pre'&&state.details.pension?`<p>PK-Kapital brutto ${cash(pk.cap)}, Bezugssteuer ${pk.capitalTax===null?'noch offen':cash(pk.capitalTax)}, netto ${cash(pk.netCap)}${pk.capitalTax===null?' (vorläufig ohne Steuerabzug)':''}. Nur die gewählte Kapitalquote wird besteuert. PK-Rente ${cash(pk.rent/12)} / Monat, vor persönlicher Steuer.</p>`:''}<p>Monatseinnahmen gelten ab Planungsstart ohne Indexierung. Gebundenes Immobilienkapital ist nicht enthalten. ${!state.details.assets&&state.mode==='pre'?'Unaufgeteiltes freies Kapital bleibt bis zur Pensionierung unverändert. ':''}Anlage-, Inflations- und Horizontannahmen unter «Annahmen» prüfen.</p></details>`;
- }
+  const horizonLabel=state.horizonMode==='automatic'?'Planungshorizont':'Ziel';
+  return `<details class="model-notes"><summary>So rechnen wir</summary><p>Planung von Alter ${state.mode==='pre'?p.retirement.age:p.person.currentAge} bis ${p.retirement.targetAge}. Verfügbares Restkapital am ${horizonLabel}: ${cash(r.capitalAtTargetAge)}. Keine Aussage über weitere Jahre ausserhalb des berechneten Horizonts.</p><p>${c?`Geschätzte Einkommenssteuer: ${cash(r.incomeTax)} / Jahr auf ${cash(r.incomeGross)} in ${esc(c.name)} (${String(TaxModel.getIncomeTaxRate(p.person.canton,r.incomeGross)).replace('.',',')} %).`:'Ohne Wohnkanton ist keine Steuerschätzung berücksichtigt.'} Modellrechnung, keine individuelle Steuerberechnung.</p>${state.mode==='pre'&&state.details.pension?`<p>PK-Kapital brutto ${cash(pk.cap)}, Bezugssteuer ${pk.capitalTax===null?'noch offen':cash(pk.capitalTax)}, netto ${cash(pk.netCap)}${pk.capitalTax===null?' (vorläufig ohne Steuerabzug)':''}. Nur die gewählte Kapitalquote wird besteuert. PK-Rente ${cash(pk.rent/12)} / Monat, vor persönlicher Steuer.</p>`:''}<p>Monatseinnahmen gelten ab Planungsstart ohne Indexierung. Gebundenes Immobilienkapital ist nicht enthalten. ${!state.details.assets&&state.mode==='pre'?'Unaufgeteiltes freies Kapital bleibt bis zur Pensionierung unverändert. ':''}Anlage-, Inflations- und Horizontannahmen unter «Annahmen» prüfen.</p></details>`;
+}
  function plan(){
   route='plan';state.position='plan';
   updateNav();
@@ -327,16 +338,32 @@ function funding(s,r){
   const wasComplete=M.complete(state),before=wasComplete?C.evaluatePlan(M.toPlan(state)):null,old=state,g=route;
   state=M.apply(state,g,draft);
   delete drafts[g];
-  if(g==='time')drafts={};
+  if(g==='time'){drafts={};assetDrafts={};assetOpen=null;}
   else {delete drafts.assumptions;if(g==='pension') {delete drafts.income;delete drafts.regular;}if(['income','regular','tax'].includes(g)){delete drafts.income;delete drafts.regular;delete drafts.tax;}}
   if(['pension','pension3a'].includes(g)&&before){const after=C.evaluatePlan(M.toPlan(state));effect={before:range(old,before),after:range(state,after),beforeCapital:before.availableCapital,afterCapital:after.availableCapital};}
   else effect=null;
   if(!wasComplete&&basic.includes(g)&&g!=='free'){const next=basic[basic.indexOf(g)+1];state.position=next;save();showEditor(next);}
   else {if(['income','assets','tax'].includes(g))showParent(g);else plan();save();}
  }
- app.addEventListener('submit',e=>{e.preventDefault();submit();});
+ function refreshAssets(focus){
+  const y=window.scrollY;showDetail('assets-detail');window.scrollTo(0,y);app.querySelector(focus)?.focus({preventScroll:true});
+ }
+ app.addEventListener('input',e=>{
+  const form=e.target.closest('[data-asset-form]');if(!form)return;
+  assetDrafts[form.dataset.assetForm]=Object.fromEntries(new FormData(form));
+  e.target.removeAttribute('aria-invalid');form.querySelector('.error').textContent='';
+ });
+ app.addEventListener('submit',e=>{
+  e.preventDefault();const part=e.target.dataset.assetForm;if(!part){submit();return;}
+  const values=Object.fromEntries(new FormData(e.target)),problem=M.assetError(part,values,state);
+  if(problem){e.target.querySelector('.error').textContent=problem.message;const input=e.target.elements[problem.key];input?.setAttribute('aria-invalid','true');input?.focus();return;}
+  state=M.applyAsset(state,part,values);delete assetDrafts[part];delete drafts.assumptions;assetOpen=null;
+  refreshAssets(`[data-asset="${part}"]`);save();
+ });
  app.addEventListener('click',e=>{
   const b=e.target.closest('button');if(!b)return;
+  if(b.dataset.asset){assetOpen=assetOpen===b.dataset.asset?null:b.dataset.asset;refreshAssets(assetOpen?'[data-asset-form] input':`[data-asset="${b.dataset.asset}"]`);return;}
+  if(b.dataset.assetCancel){delete assetDrafts[b.dataset.assetCancel];assetOpen=null;refreshAssets(`[data-asset="${b.dataset.assetCancel}"]`);return;}
   if(b.hasAttribute('data-save')){save();renderMore();}
   if(b.dataset.mode){state=M.fresh(b.dataset.mode);showEditor('time');}
   if(b.hasAttribute('data-resume')&&resumeRecord){state=structuredClone(resumeRecord.state);restorePosition();}
@@ -352,7 +379,7 @@ function funding(s,r){
   }
   if(b.hasAttribute('data-new')){
    if(!window.confirm('Neue Planung beginnen? Dein gespeicherter V2-Stand wird ersetzt.'))return;
-   try{localStorage.removeItem(M.key);saved=null;loadError='';state=M.fresh();drafts={};effect=null;status('Neue Planung · bestätigte Angaben werden lokal gespeichert.');welcome();}
+   try{localStorage.removeItem(M.key);saved=null;loadError='';state=M.fresh();drafts={};assetDrafts={};assetOpen=null;effect=null;status('Neue Planung · bestätigte Angaben werden lokal gespeichert.');welcome();}
    catch(_){status('Der gespeicherte Stand konnte nicht entfernt werden. Er bleibt erhalten.',true);}
   }
  });

@@ -2,7 +2,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
  const fill=(values)=>Object.entries(values).forEach(([name,value])=>{if(name==='canton')cy.get(`[name=${name}]`).select(value);else if(typeof value==='boolean')cy.get(`[name=${name}]`).check();else if(name==='pkShare')cy.get(`[name=${name}]`).invoke('val',value).trigger('input');else cy.get(`[name=${name}]`).clear().type(String(value));});
  function core(mode){
   cy.get(`[data-mode=${mode}]`).click();fill(mode==='pre'?{age:60,retirement:65}:{age:70});cy.get('#question').submit();
-  fill({need:7500});cy.get('#question').submit();fill({canton:'',ahv:3430,pkRent:0,other:0,additional:0});
+  fill({need:7500});cy.get('#question').submit();cy.get('[name=pkRent]').should('not.exist');fill({canton:'',ahv:3430,other:0,additional:0});
   cy.get('[data-metric=income]').should('contain',"− CHF 3'430").and('contain',"− CHF 41'160");
   cy.get('[data-metric=withdrawal]').should('contain',"= CHF 4'070").and('contain',"= CHF 48'840");
   cy.get('#question').submit();fill({free:650000});cy.get('.funding').should('be.visible');if(mode==='pre')cy.screenshot('guided-live-pre',{capture:'fullPage'});cy.get('#question').submit();
@@ -15,7 +15,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
   cy.get('.funding').should('have.attr','data-status','pending');
   cy.get('#app select').should('not.exist');
   cy.get('#v2Nav [data-nav=pension]').click();
-  if(mode==='pre')cy.get('[data-open=pension]').click();
+  cy.get('[data-open=pension]').click();
   if(mode==='pre'){
    cy.get('.segmented').should('not.exist');cy.get('.pension-impact').should('not.exist');
    cy.get('[name=pk]').should('be.visible');cy.get('[name=p3]').should('not.exist');
@@ -23,7 +23,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
    cy.get('[data-readout=capital] strong').invoke('text').should('not.equal','CHF 0');
    cy.get('[data-readout=rent] strong').invoke('text').should('not.equal','CHF 0');
    if(width===360)cy.screenshot('guided-pension-mobile',{capture:'fullPage'});
-  }else{cy.get('[name=pk],[name=pkContrib],[name=p3]').should('not.exist');fill({reviewed:true});}
+  }else{cy.get('[name=pk],[name=pkContrib],[name=p3]').should('not.exist');fill({pkRent:1000});}
   cy.get('#question').submit();
   cy.window().then(w=>{
    const p=w.CheckV2.getPlan(),r=w.CheckV2.getResult();
@@ -32,9 +32,9 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
   });
   if(mode==='pre'){cy.get('#v2Nav [data-nav=pension]').click();cy.get('[data-open=pension3a]').click();fill({p3:120000,p3Contrib:7000});cy.get('#question').submit();}
   cy.get('[data-metric=income]').click();cy.get('[data-open=income]').click();
-  fill({canton:'AR',ahv:2350,other:80,additional:0,...(mode==='post'?{pkRent:1000}:{})});
-  cy.get('#question').submit();cy.get('[data-parent=plan]').click();cy.get('[data-metric=capital]').click();cy.get('[data-open=assets]').click();
-  fill({cash:50000,securities:600000,...(mode==='pre'?{saving:10000}:{})});cy.get('#question').submit();cy.get('[data-parent=plan]').click();
+  fill({canton:'AR',ahv:2350,other:80,additional:0});
+  cy.get('#question').submit();cy.get('[data-parent=plan]').click();cy.get('[data-metric=capital]').click();
+  cy.get('[data-asset=cash]').click();fill({cash:50000});cy.get('[data-asset-form]').submit();cy.get('[data-asset=securities]').click();fill({securities:600000,...(mode==='pre'?{saving:10000}:{})});cy.get('[data-asset-form]').submit();cy.get('[data-parent=plan]').click();
   cy.get('.quality-plan strong').should('contain','Gute Basis');
   cy.get('[data-metric=capital]').click();
   cy.get('[data-view=asset-funding]').click();cy.get('h1').should('contain','So finanziert dein Vermögen deinen Ruhestand');
@@ -67,7 +67,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
   fill({age:70,retirement:65});cy.get('#question').submit();cy.get('[name=retirement]').should('have.attr','aria-invalid','true');
   fill({retirement:70});cy.get('#question').submit();fill({need:9999});cy.reload();
   cy.get('[data-resume]').click();cy.get('[name=need]').should('have.value','');
-  fill({need:5000});cy.get('#question').submit();fill({canton:'',ahv:0,pkRent:0,other:0,additional:0});cy.get('#question').submit();fill({free:0});cy.get('#question').submit();
+  fill({need:5000});cy.get('#question').submit();fill({canton:'',ahv:0,other:0,additional:0});cy.get('#question').submit();fill({free:0});cy.get('#question').submit();
   cy.get('.funding').should('contain','bis Alter 70').and('contain','Es fehlen noch');
   cy.window().then(w=>cy.stub(w,'confirm').returns(false).as('confirmation'));
   cy.get('[data-nav=more]').click();cy.get('[data-new]').click();cy.get('h1').should('contain','Mehr');
