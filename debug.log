@@ -1,0 +1,4 @@
+[0914/140313.002:ERROR:registration_protocol_win.cc(108)] CreateFile: Zugriff verweigert (0x5)
+[0914/143718.239:ERROR:registration_protocol_win.cc(108)] CreateFile: Zugriff verweigert (0x5)
+[0914/143727.594:ERROR:registration_protocol_win.cc(108)] CreateFile: Zugriff verweigert (0x5)
+[0914/164307.146:ERROR:registration_protocol_win.cc(108)] CreateFile: Zugriff verweigert (0x5)

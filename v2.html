@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="de-CH" data-theme="system">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <title>Ruhestands-Check · V2</title>
+  <script src="v2-theme.js"></script>
+  <link rel="stylesheet" href="v2-ui.css">
+</head>
+<body>
+  <header class="shell masthead"><span class="brand">Ruhestands-Check <small>V2</small></span><fieldset class="theme-options"><legend class="sr-only">Farbschema</legend><label><input type="radio" name="theme" value="system">System</label><label><input type="radio" name="theme" value="light">Hell</label><label><input type="radio" name="theme" value="dark">Dunkel</label></fieldset></header>
+  <main id="app" class="shell"></main>
+  <p id="saveError" class="save-error shell" role="alert" hidden></p>
+  <footer class="shell footer"><a href="index.html">Bisherige Version</a><span id="saveStatus" role="status">Bestätigte Angaben werden auf diesem Gerät gespeichert.</span></footer>
+  <noscript>Bitte JavaScript aktivieren, um deinen Plan zu berechnen.</noscript>
+  <script src="tax-config.js"></script>
+  <script src="tax-model.js"></script>
+  <script src="historical-returns.js"></script>
+  <script src="risk-profiles.js"></script>
+  <script src="life-expectancy.js"></script>
+  <script src="retirement-engine.js"></script>
+  <script src="retirement-calculator.js"></script>
+  <script src="v2-state.js"></script>
+  <script src="v2-ui.js"></script>
+</body>
+</html>

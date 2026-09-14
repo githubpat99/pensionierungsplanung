@@ -23,6 +23,9 @@ Zwei Wege: Menschen vor Pensionierung (`pre`) und bereits Pensionierte (`post`).
 
 ## 3. UX-Grundsätze
 
+**V2 – geführter Ruhestandsplan:** Separater Finanz-Simulator unter `v2.html`; `index.html` bleibt vollständig erhalten. Der Benutzer erhält früh eine erste Einschätzung. Mit jeder bestätigten Datengruppe wird die Planung vollständiger und belastbarer. Finanzierungsstatus und Belastbarkeit werden getrennt dargestellt. Ruhige Gestaltung mit Weissraum, feinen Linien, klaren Kennzahlen und wenig Kartenoptik; keine Punkte, Trophäen oder Erfolgswahrscheinlichkeiten. Die nachstehenden bisherigen Oberflächenregeln gelten weiterhin für `index.html`.
+
+
 Einfach beginnen, Zusammenhänge im Plan erklären und fachliche Vertiefung freiwillig öffnen. Der Hauptfluss erfasst persönliche und finanzielle Fakten. Keine Anlageprofilwahl und keine Zielalterfrage im Basischeck; neue Planungen verwenden zentrale Anlageannahmen und einen automatisch abgeleiteten Planungshorizont. Modellannahmen werden offengelegt und später unter «Lebensphasen & Annahmen» bearbeitet; eine erweiterte Profilwahl ist nicht Bestandteil des Produkts. Monatliche Beträge sind die primäre Sprache von Basischeck, Plan und Einkommenseditor; intern werden Jahresbeträge verwendet. Vorsorgebeiträge ausdrücklich pro Jahr erfassen.
 
 Bestehende Farbwelt, Typografie, Karten und Visualisierungen erhalten. Mobile ohne horizontales Seitenscrollen. Jede Seite hat einen verständlichen Titel, jede Unterseite genau einen logisch übergeordneten Rückweg. Keine konkurrierende Wizard-Navigation. Eine klare primäre Aktion, soweit die Seite eine benötigt; Detailseiten brauchen keine künstliche Weiter-Aktion.
@@ -30,6 +33,8 @@ Bestehende Farbwelt, Typografie, Karten und Visualisierungen erhalten. Mobile oh
 Beispielwerte sichtbar kennzeichnen. Kein Portrait in Ergebnisboxen; Patrick erscheint einmal im Header. Fehler bei Validierung oder Speicherung verständlich anzeigen.
 
 ## 4. Informationsarchitektur
+
+**V2 – IMPLEMENTIERT:** Permanente Bottom Navigation «Dein Plan», «Vorsorge», «Annahmen», «Mehr» auf Arbeitsscreens; auf Start verborgen. Einkommen, Bedarf, Zeitpunkt und Vermögen gehören zu «Dein Plan», der Vorsorgeeditor zu «Vorsorge». Der aktive Bereich bleibt beim Öffnen eines Details markiert. Vor vollständigen Kerndaten sind Vorsorge und Annahmen deaktiviert; «Dein Plan» führt zur ersten offenen Kerngruppe. «Mehr» bietet Speichern, bestätigten Neustart, Modellhinweise und Hilfe. Die folgende Architektur gilt für `index.html`.
 
 ```text
 START
@@ -53,6 +58,11 @@ START
 Die drei Hauptbereiche sind Start, Deine Angaben und Dein Plan. Es gibt keine Zwischenübersicht „Meine Planung verstehen“, keinen zweiten Eingang „Was kann sich verändern?“ und keine getrennte Hauptfunktion „Meine Angaben im Detail“.
 
 ## 5. Navigation und Benutzerfluss
+
+**V2 – Navigationsvertrag:** `v2-ui.js` besitzt die Bereichsnavigation. Bei vollständiger Planung entfallen globale Übersicht-Rücklinks. Unbestätigte Editorentwürfe bleiben beim Bereichswechsel in der Sitzung erhalten, werden jedoch nicht gespeichert; Abbrechen verwirft den betreffenden Entwurf, Übernehmen verwirft nur den übernommenen und fachlich abhängige Entwürfe; unabhängige PK-/3a-Entwürfe bleiben erhalten. Die Vorsorgeübersicht (`vorsorge`) und der PK-Editor (`pension`) sind getrennte Routen und teilen keinen Editorentwurf. Die Rückkehr auf den Plan zeigt bestätigte Rechendaten. Wiedereinstieg stellt auch «Mehr» und die Vorsorgeübersicht wieder her. Die Zielposition wird nach dem Bereichswechsel gespeichert. Unteransichten haben einen beschrifteten Rückweg zu ihrem Hauptbereich; der PK-/3a-Abbruch führt zur Vorsorgeübersicht.
+
+**V2 – Benutzerfluss:** Situationswahl → Zeitpunkt (Alter und Pensionierungsalter gemeinsam; post nur heutiges Alter) → monatlicher Bedarf → monatliche Einnahmequellen (AHV, vorläufige bzw. laufende PK-Rente, weitere Renten und Einnahmen; Wohnkanton optional) → frei verfügbares Gesamtvermögen. Vier kurze Eingabegruppen mit Live-Plan, unbekannte Werte «noch offen», unfertiges Ergebnis neutral. Jede bestätigte Gruppe speichert Daten und nächste Position. Früh folgt die erste Reichweite; danach gezielt Vorsorge prüfen und vier Gruppenzugänge Einkommen, Vermögen, Vorsorge, Annahmen. Keine lange Angabenliste. Zeitpunkt und Bedarf bleiben am Plan änderbar. Gruppenentwürfe wirken als ungespeicherte Vorschau; Abbrechen stellt bestätigte Werte wieder dar. V2 hat einen eigenen Navigation Owner `v2-ui.js`; der folgende Routenvertrag bleibt ausschliesslich für den bestehenden Einstieg gültig.
+
 
 `check-ui.js` ist alleiniger Navigation Owner. Eine explizite Routentabelle enthält Titel, Parent und optional den Rendering-Zielbereich einer erhaltenen Detailkomponente.
 
@@ -98,6 +108,15 @@ Der Basischeck fasst AHV und Renten zusammen (pre ohne PK), weitere Einnahmen se
 Basischeck und persönlicher Editor validieren Alter 18–100 und Pensionierung pre 50–100. Der Horizont wird ausschliesslich unter «Lebensphasen & Annahmen» bearbeitet: ganzzahlig, höchstens 110 und strikt nach Planungsstart. Pre-Pensionierung darf nicht vor dem aktuellen Alter liegen. Post startet heute; ein bislang späteres Pensionierungsalter wird beim Übernehmen auf das aktuelle Alter begrenzt.
 
 Basischeck: Frage nach behaltenen Immobilien blendet Marktwert/Hypotheken ein; bei Nein werden beide auf null gesetzt. Ein dadurch ungültiger Renditeobjektanteil wird deaktiviert. Direkte Gruppeneditoren zeigen nur vorhandene modellierte Felder; sie führen keine neue Vermögenskategorie ein.
+
+**V2 – Eingabeumfang:** Keine persönlichen Beispielbeträge. Alter 18–100, Pensionierung pre 50–100 und nicht vor heute; leere oder ungültige Beträge blockieren die Übernahme, null wird ausdrücklich erfasst. Einnahmen werden bereits im Einstieg getrennt nach AHV, PK-Rente, weiteren Renten und weiteren Einnahmen/Nettomiete erfasst, monatlich vor persönlicher Steuer. Der optionale Wohnkanton steht in derselben Gruppe. Pre ist die eingegebene PK-Rente vorläufig und wird durch die spätere Vorsorgeentscheidung ersetzt. Post bleibt sie die laufende PK-Rente. Diese bestätigte Eingabe bestätigt zugleich die Einkommensgruppe. Heutiges verfügbares Gesamtvermögen wird ohne noch gebundene PK-/3a-Guthaben und Immobilien erfasst. Alte V2-Gesamteinnahmen bleiben bis zur expliziten Aufteilung wirksam; keine Quellen aus dem Gesamtbetrag erfinden. Ohne Vermögensstruktur bleibt dieses Kapital bis Ruhestandsstart unverändert; keine zusätzliche Vorsorge oder Ansparung erfinden.
+
+Die Vertiefungen ersetzen bzw. ergänzen gezielt die groben Angaben:
+- Einkommen: Wohnkanton, AHV, weitere Renten, weitere Einnahmen/Nettomiete; post laufende PK-Rente, pre erwartete PK-Rente solange die Vorsorge noch nicht modelliert ist. Quellen gelten ab Start ohne Indexierung. Die Quellen sind aus dem Einstieg vorausgefüllt; bei alten V2-Ständen ersetzt die explizite Aufteilung die bisherige grobe Summe.
+- Vermögen: Bank und Wertschriften, pre zusätzliche jährliche Anlage. Die Struktur ersetzt das grobe freie Kapital; vorhandene Aufbauprojektion wiederverwenden.
+- Vorsorge pre: PK-Guthaben und jährliche Sparbeiträge Arbeitnehmer/Arbeitgeber zusammen, dazu eine prominente Rente/Kapital-Entscheidung mit interaktivem Slider. Der PK-Screen zeigt nur PK-Eingaben und live berechnete PK-Ergebnisse; eine separate `Auswirkung auf deinen Plan`-Ansicht entfällt. Säule 3a ist ein eigener Vorsorge-Screen mit Guthaben heute, jährlichem Beitrag und «Voraussichtlich zum Pensionierungszeitpunkt». Der Betrag stammt aus `calculateRetirementStart().p3`; die Hauptfläche zeigt keine Kaufkraft-Zusatzzeile. Die fehlende separate 3a-Bezugssteuer steht in der aufklappbaren Erklärung. Die im Einkommensschritt separat erfasste PK-Rente ist vorläufig; sobald die PK-Entscheidung berechnet ist, ersetzt die berechnete Rente diesen vorläufigen Wert automatisch. Keine zusätzliche Doppelzählungs-Eingabe und kein technischer Doppelzählungstext. Vorsorgekapital ergänzt ausschliesslich bisher frei verfügbares Kapital; PK-Bezugssteuer unverändert vor Topfaufteilung.
+- Vorsorge post: bestätigen, dass laufende Rente und bereits bezogenes Kapital in Einkommen/Vermögen berücksichtigt sind; keine künftigen PK-/3a-Beiträge oder erneute Bezugsbesteuerung.
+- Annahmen: Planungshorizont, Inflation und pre PK-Zins, Umwandlungssatz, 3a-/Wertschriftenrendite gemeinsam prüfen. Bestehende Defaults, keine Risikowahl. Unverändertes Zielalter erhält den Automatikmodus; eine Änderung macht es manuell. Persönliche Daten nicht aus den Annahmen ableiten.
 
 ## 7. Berechnungsmodell
 
@@ -224,7 +243,9 @@ Profile bestimmen Rendite und Schwankung des langfristigen Wachstumstopfs, keine
 
 Im normalen Benutzerfluss gibt es keine Auswahl des Anlagerisikos: weder Basischeck, Plan, Kapitaldetail, PK-Detail, Szenarien noch Annahmen zeigen Profilbuttons oder Profilvergleichskarten. Die technischen Profile bleiben für kompatible Speicherstände, Regressionen und spätere Erweiterungen erhalten. Eine künftige Profilwahl gehört in erweiterte Annahmen und ist nicht implementiert.
 
-Neue Planungen verwenden `RiskProfiles.defaultProfile = balanced`: reale Topfrenditen 0 / 1 / 4,5 %, Schwankungsfaktor 0,70 und PK-Vergleichsrendite 4,5 %. Alle Ansichten verwenden denselben Rechenkern und dieselben hinterlegten Anlageannahmen. Bestehende gespeicherte Profile, individuelle Renditen und Schwankungsfaktoren bleiben unverändert; sie werden als gespeicherte Anlageannahmen kenntlich gemacht. Alter Schlüssel `bold` wird als `growth` gelesen. Keine Zwangsmigration persönlicher Werte.
+Neue Planungen unter `index.html` verwenden `RiskProfiles.defaultProfile = balanced`: reale Topfrenditen 0 / 1 / 4,5 %, Schwankungsfaktor 0,70 und PK-Vergleichsrendite 4,5 %. Alle Ansichten verwenden denselben Rechenkern und dieselben hinterlegten Anlageannahmen. Bestehende gespeicherte Profile, individuelle Renditen und Schwankungsfaktoren bleiben unverändert; sie werden als gespeicherte Anlageannahmen kenntlich gemacht. Alter Schlüssel `bold` wird als `growth` gelesen. Keine Zwangsmigration persönlicher Werte.
+
+**V2 – IMPLEMENTIERT:** Neue V2-Planungen verwenden explizit das zentrale Profil `cautious` (Wachstum 2,5 % real, Faktor 0,45; Geldmarkt 0 %, Anleihen 1 %). Keine Benutzerwahl. Das V2-Profil wird gespeichert. Bestehende Version-1-Stände ohne Profil erhalten `balanced`, damit ihre Jahresverläufe unverändert bleiben. Aufbauannahmen für PK/3a/Wertschriften bleiben separat und unverändert. Dies ersetzt für V2 die bisherige Balanced-Standardregel.
 
 ## 13. Kapitalentwicklung und Simulation
 
@@ -242,6 +263,8 @@ Ungedeckte Lücke = max(0, Entnahmebedarf − verfügbares Anfangskapital). Ein 
 Jahresdaten enthalten Alter, freies und gebundenes Anfangskapital, Gesamtkapital, Bedarf, Brutto-/Nettoeinkommen, Steuer, Sonderausgabe, Entnahme, Finanzierungslücke, Anfangs-/Endbestände je Topf, Veränderung der Zielbestände, Renditebetrag und Endkapital. Das Diagramm darf diese Werte nicht selbst neu berechnen.
 
 ## 14. 3-Töpfe-Modell
+
+**V2 – IMPLEMENTIERT:** Der Vermögenseditor zeigt «So finanziert dein Vermögen deinen Ruhestand» mit verfügbarem Kapital und zusätzlichem Jahresbedarf am Ruhestandsstart. Die Beträge und Reihenfolge Wachstum → Reserve → kurzfristig verfügbar → laufende Entnahmen stammen ausschliesslich aus `evaluatePlan().bucketAllocation`, `annualGap` und `monthlyGap`. Orientierung: 1 × laufender Jahresbedarf, ungefähr 2 × für spätere Reserve, Rest Wachstum; tatsächlich gelten die folgenden zwei Entnahmejahre der Engine. Kein pauschales 2×-Nebenmodell. Immobilien werden als nicht berücksichtigte gebundene Mittel sekundär erklärt; es werden keine nicht erfassten Immobilienwerte als null bestätigt.
 
 Reihenfolge: Bedarf → Einkommen netto → Aus Vermögen → verfügbares Anlagekapital → 3-Töpfe-Aufteilung → Simulation anpassen → gebundenes Kapital als Nebeninformation. Desktop zeigt die Simulation daneben. Standardansicht: verfügbares Anlagekapital als primärer Kapitalbetrag, Zeitpunkt (Start heute/bei Pensionierung bzw. Jahresbeginn der gewählten Phase und Alter) und die drei Töpfe mit Namen und Beträgen. Gebundenes Immobilienkapital folgt als kompakte Nebenzeile unter den Finanzierungselementen, ohne eigene grosse Karte, Goldtopf oder umfangreichen Dauertext. Definition über Info-Icon: Immobilienwert minus Hypotheken, nicht für laufende Entnahmen eingeplant; keine modellierten Verkäufe, Teilverkäufe oder zusätzliche Belehnung.
 
@@ -274,6 +297,15 @@ Basischeck und Einkommenseditor übernehmen eine Änderung des Anfangsbedarfs in
 Laufzeiten sind ab Alter inklusive, bis Alter exklusiv; Ende muss nach Beginn liegen. Zusatzeinnahmen mit positivem Betrag benötigen Name und gültige Laufzeit. Leere Nullzeilen zählen nicht. In „Lebensphasen & Annahmen“ sind Phasen, Laufzeiten, zusätzliche Einnahmen, Immobilienaufteilung und Modellannahmen gemeinsam erreichbar.
 
 ## 16. Ergebnisdarstellung
+
+**V2 – Planbedienung (IMPLEMENTIERT):** Die Finanzierungskette lautet Bedarf → Einkommen (netto bzw. Steuern offen) → Restbedarf aus Vermögen → verfügbares Vermögen → Reichweite. Monatsbeträge stehen vor Jahresbeträgen. Die vier Kennzahlen sind als ganze Zeilen direkt bedienbar: Bedarf, Einkommen, Restbedarf und verfügbares Vermögen. Einkommen und Vermögen werden nicht zusätzlich unter «Plan genauer machen» wiederholt; Vorsorge und Annahmen sind über die sticky Bottom-Navigation erreichbar. Die Finanzierung erscheint als statische Timeline ohne Regler, der Stress-Test klein und sekundär. Die Datengrundlage wird kompakt und visuell getrennt von der Finanzierung dargestellt; aufgeklappt mit einzeln bestätigtem Zeitpunkt, Bedarf, Einkommen, Vermögen, PK, 3a und Annahmen sowie dem Wohnkanton. Bei fehlendem Kanton kein Erfolgs-Häkchen in der Finanzierungslinie. Deren gefülltes Segment endet proportional beim ersten Lückenalter. Der Zeitpunkt bleibt direkt am Plan editierbar. Verwaltungsfunktionen liegen unter «Annahmen» bzw. «Mehr».
+
+**V2 – Ergebnis und Datenstand:** Monatlicher Bedarf − laufende Einnahmen = Ergänzung aus Vermögen; Jahreswerte sekundär, Entnahme bei Einkommensüberschuss weiterhin mindestens null gemäss Engine. Dazu verfügbares Anlagekapital und eine eigene Finanzierungslinie vom Ruhestandsstart bis zum Ziel. Die Linie endet beim ersten ungedeckten Jahr oder am berechneten Planungshorizont; niemals zusätzliche finanzierte Jahre ausserhalb dieses Horizonts behaupten. Lücke: finanziert bis zum Lückenalter, Zielalter und fehlende Jahre nennen. Bei Deckung und vorhandenem Kanton positive erste Antwort, unter den aktuellen Annahmen. Ohne Kanton neutral/vorläufig ohne Steuerabzug; noch keine bestätigte positive Finanzierbarkeitsaussage. Fehlende Vorsorge sichtbar erklären und ihre Prüfung als nächsten Schritt anbieten. Die bestehende Ampel/Schwachjahresbewertung bleibt erhalten, einschliesslich Erklärung bei empfindlicher Finanzierung.
+
+**V2 – Belastbarkeit:** Drei qualitative Datenstufen, getrennt von der Finanzierung: «Erste Einschätzung», «Gute Basis», «Gut abgestützt». **IMPLEMENTIERT:** Gute Basis benötigt bestätigte Kerngruppen plus Einkommen, Vermögen und Vorsorge; Gut abgestützt zusätzlich geprüfte Annahmen und vorhandenen Wohnkanton. Ein offenes Formular oder blosse Vorschau erhöht die Stufe nicht. Änderungen an anderen Gruppen entwerten die Annahmenprüfung, geänderte Zeitpunkte zusätzlich die Bestätigungen von Einkommen/Vermögen/Vorsorge; erfasste Daten bleiben erhalten. Unverändert erneute Bestätigung ist möglich. Die Stufen sind UX-Status, keine statistische Sicherheit.
+
+Nach Übernahme der Vorsorge zeigt V2 den tatsächlichen Vorher-/Nachher-Effekt (Reichweite, verfügbares Kapital), auch wenn er neutral oder ungünstig ausfällt. Beide Ergebnisse stammen aus demselben Calculator und Horizont. Keine Vorannahme einer Verbesserung. `LifeExpectancy.defaultTargetAge`, Inflation und Steuer-/Kapitalberechnung bleiben fachlich unverändert. Die V2-Standardanlage und Bestandserhaltung folgen Kapitel 12.
+
 
 Gebundenes Kapital ist keine Hauptkennzahl von «Dein Plan». Ergänzende Vermögensangaben stehen nach den zentralen Finanzierungswerten und werden visuell zurückgestuft. Kapital-/Entnahmegrafiken und Topfdarstellungen umfassen weiterhin ausschliesslich verfügbares Anlagekapital; gebundene Beträge bleiben getrennt.
 
@@ -332,7 +364,7 @@ Erläuterungen zeigen tatsächlich verwendete profilspezifische Verluste. Steuer
 
 ## 18. Annahmen
 
-Unter «Lebensphasen & Annahmen» werden Kapitalanlage, tatsächlich verwendete langfristige reale Wachstumsrendite und der veränderbare Planungshorizont erklärt. Keine Profilwahl. Neue Planungen verwenden die zentrale durchschnittliche Anlageannahme und reale Topfrenditen 0 / 1 / 4,5 % (Geldmarkt/Anleihen/Wachstum). Vorhandene individuelle Werte bleiben beim Laden erhalten.
+Unter «Lebensphasen & Annahmen» werden Kapitalanlage, tatsächlich verwendete langfristige reale Wachstumsrendite und der veränderbare Planungshorizont erklärt. Keine Profilwahl. Neue Planungen unter `index.html` verwenden die zentrale durchschnittliche Anlageannahme und reale Topfrenditen 0 / 1 / 4,5 % (Geldmarkt/Anleihen/Wachstum); V2 verwendet 0 / 1 / 2,5 % gemäss Kapitel 12. Vorhandene individuelle Werte bleiben beim Laden erhalten.
 
 **IMPLEMENTIERT – vorausgefüllte Modell-/Beispielwerte:** Alter 56, Pensionierung 65, Zielalter automatisch gemäss Kapitel 15; Lebensbedarf CHF 90’000/Jahr; Inflation 0,6 %; PK-Zins 4,33 %; 3a-/Wertschriftenrendite 4,5 %; PK-Vergleichsrendite 4,5 %; Umwandlungssatz 5,2 %; PK-Bezug 50 %.
 
@@ -345,6 +377,8 @@ Reale Ruhestandsrenditen gelten nach Inflation und Anlagekosten; Zinsen/Dividend
 **ZU VERIFIZIEREN:** Fachliche Angemessenheit der langfristigen Inflations-, Aufbau- und Renditeannahmen, insbesondere die Verwendung einer kurzfristigen Prognose als langfristige Annahme. Dokumentieren, nicht im Navigationsauftrag verändern.
 
 ## 19. Datenzustand und State Management
+
+**V2 separat:** `retirement-v2-plan`, Hülle `{version:1, savedAt, state, theme, quality}`. `state` enthält Modus, bestätigte Kernwerte, Detailgruppen, Bestätigungen, aktuelle Position, `riskProfile` und Horizont samt Automatikstatus. Vorsorgeübersicht und Mehr sind eigene gespeicherte Positionen. Alte Version-1-Stände ohne Profil behalten Balanced; Gesamteinnahmen bleiben bis zur expliziten Quellenaufteilung unverändert. Speichern nach Weiter/Übernehmen, ausserdem bestätigten Zustand mit aktueller Position beim Gruppenöffnen; keine Tastatureingaben speichern. Zielalter wird geladen, nicht beim Wiedereinstieg neu abgeleitet. Qualität wird aus validierten Bestätigungen abgeleitet. Theme separat unter `retirement-v2-theme` und im gespeicherten Stand. Start bietet bei vorhandenem Stand «Weiterplanen» und «Neue Planung», letztere nur nach Bestätigung. Logo, Zurück und Theme löschen keine Daten. Ungültige/zukünftige Speicherstände bleiben unangetastet und werden sichtbar gemeldet; erst ein bestätigter Neustart entfernt den V2-Stand. Schreibfehler in einem sichtbaren Alert oberhalb der Bottom Navigation anzeigen, auch wenn der Footer verborgen ist; aktuelle Werte in der geöffneten Seite erhalten. Keine Legacy-Schlüssel lesen, überschreiben oder löschen.
 
 Kanonischer Plan, verbunden mit dem bestehenden Arbeitsstate durch `fromState`/`toState`:
 
@@ -373,7 +407,7 @@ Der vorhandene Beratungsbereich ist eine lokale Testeingabe: Thema, optionaler N
 
 ## 20. Technische Architektur
 
-Statische Browseranwendung ohne Framework-Migration. `index.html` ist produktiver Einstieg und enthält erhaltene Detailmarkups, Arbeitsstate und Legacy-Fachadapter. `index_save.html` ist die unveränderte Nutzersicherung, kein zweiter produktiver Einstieg.
+Statische Browseranwendung ohne Framework-Migration. V2 ist ein unabhängiger Einstieg über `v2.html` mit `v2-ui.js` / `v2-ui.css`, dem reinen Eingabeadapter `v2-state.js` und `v2-theme.js`. V2 lädt dieselben Berechnungsbibliotheken, aber keine bisherigen UI-/Speicherskripte. Bestätigte V2-Gruppen liegen getrennt unter `retirement-v2-plan`, das Farbschema unter `retirement-v2-theme`; persönliche Legacy-Schlüssel bleiben unberührt. Der V2-Adapter enthält Eingabevalidierung, Gruppenzustand und Speicherung, keine zweite Finanzengine. Gezielt prüfen: `tests/v2-check.cy.js` für Live-Werte, Gruppeneffekte, Datenstatus, Speicherung/Wiedereinstieg, beide Wege, Mobile/Desktop und Themes; `v2-state.test.js` für Summenersatz ohne Doppelzählung, Engine-Gleichheit, Horizont und Speicherfehler; `tests/new-check.cy.js` für den erhaltenen bisherigen Ablauf. `index.html` ist produktiver Einstieg und enthält erhaltene Detailmarkups, Arbeitsstate und Legacy-Fachadapter. `index_save.html` ist die unveränderte Nutzersicherung, kein zweiter produktiver Einstieg.
 
 | Verantwortung | Komponenten |
 |---|---|
@@ -398,6 +432,9 @@ Gezielte Qualitätssicherung: `tests/navigation.cy.js` für Hauptwege, Rückwege
 
 ## 21. UI-Komponenten und Darstellungsregeln
 
+**V2 – Darstellung:** Mobile First, kurze Fragegruppe mit kompaktem Live-Plan ohne wiederholte Datenstufen in jedem Editor; am Desktop nebeneinander. Alter/Pensionierung zusammen, PK-Guthaben und Beiträge zusammen, danach ein prominenter Rente/Kapital-Slider; Säule 3a als eigener Vorsorge-Screen. Unfertige Ergebnisse neutral. Datenstatus als drei dezente Kreise mit feiner Linie, Finanzierung als separate Zeitlinie mit Start und Ziel. Monatliche Kennzahlen primär, Jahreswerte sekundär. Kompakte Radio-Gruppe «System / Hell / Dunkel», Standard System, unmittelbare Wirkung und lokale Speicherung; Anthrazit im Dark Mode, keine grellen Controls oder Fokusflächen. Farben ausschliesslich über die zentralen Tokens `background`, `surface`, `text-primary`, `text-secondary`, `border`, `accent`, `success`, `warning`, `danger`. Nur subtile Zahlen-/Linienübergänge, reduzierte Bewegung respektieren. Keine Änderung an der bisherigen Oberfläche.
+
+
 Fachliche Zusatzinformationen, Definitionen und methodische Hinweise liegen, soweit für das unmittelbare Verständnis nicht erforderlich, hinter Info-Icons, Aufklappern oder «So rechnen wir». Beträge, Status, Zeitpunkt und wichtigste Hebel haben Vorrang. Im Kapitalbereich sind Hilfen standardmässig geschlossen; höchstens eine neue Info-Erklärung ist gleichzeitig offen. Beschriftete Buttons funktionieren mit Klick, Touch und Tastatur, melden ihren Zustand mit `aria-expanded` und verweisen auf den Hilfebereich. Erneuter Klick, «Hinweis schliessen» oder Escape schliesst ihn. Hilfen erscheinen im Seitenfluss, ohne Hauptnavigation zu überlagern. Gebundenes Kapital bleibt eine kleine ergänzende Zeile unterhalb der Finanzierungselemente.
 
 Mobile Kapitalansicht: kompakte gemeinsame Finanzierungsübersicht, reduzierte Kartenabstände und Polster, niedrigere Töpfe mit direkt zugeordneten Info-Icons und dezenten Pfeilen. Einheiten einheitlich «/ Jahr» und «/ Monat». «Gebundenes Kapital» steht klein mit Info-Icon nach der Simulation; die Erklärung bezeichnet Immobilienwert abzüglich Hypotheken. Desktop behält eine grosszügigere Darstellung.
@@ -413,6 +450,9 @@ Jedes Feld hat sichtbaren Kontext/Label und zugänglichen Namen. Interaktive Ele
 Diagrammwerte und Karten müssen lesbar bleiben, Tabellen auf Mobile umbrechen; kein horizontales Seitenscrollen. Wichtige Erklärungen mindestens 13 px, normale Texte etwa 15–16 px. Kompakter Kantonsselect ohne redundante Labelblöcke in Details. Keine rein dekorativen Zwischenansichten.
 
 ## 22. Offene Punkte / noch nicht spezifizierte Bereiche
+
+- **V2 später:** Komplexe/historische Szenarien, interaktive Hebelvergleiche, Lebensphasen/Laufzeiten, Immobilienerweiterungen und Beratung bleiben ausserhalb des aktuellen Umfangs. Keine Risikowahl, kein neues Steuermodell, kein Monte Carlo, keine Legacy-Bereinigung. Übernahme bestehender Legacy-Pläne ist nicht implementiert.
+
 
 - Fachliche Verifikation und Aktualisierungsprozess der gelieferten Steuerparameter sowie langfristigen Modellannahmen aus Kapitel 11/18 stehen aus. Der vorhandene Rechenstand gilt bis zu einem ausdrücklichen fachlichen Änderungsauftrag.
 - Individuelle AHV-Ansprüche, Haushalts-/Gemeinde-/Zivilstandstarife, Vermögenssteuer, separate Dividenden-/Zinssteuer und 3a-Bezugssteuer sind nicht vollständig modelliert. Keine entsprechenden Ergebnisse suggerieren.
