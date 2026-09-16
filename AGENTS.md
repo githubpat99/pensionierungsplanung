@@ -1,30 +1,89 @@
-# Arbeitsanweisungen
+# AGENTS.md
 
-## Ruhestands-Check
+## Project
 
-Vor jeder Änderung an der App muss `docs/PRODUCT_RULES.md` vollständig gelesen werden.
+This repository contains the pension planning application.
 
-Die dort dokumentierten Berechnungs-, Steuer-, UX-, Text- und Darstellungsregeln sind verbindlich. Bestehende Regeln dürfen nicht stillschweigend verändert, entfernt oder durch neue Annahmen ersetzt werden.
+Before making substantial changes, first understand the existing project context and current implementation.
 
-Wenn eine neue Anforderung einer bestehenden Produktregel widerspricht, muss der Widerspruch vor der Umsetzung ausdrücklich genannt werden.
+## Read project documentation
 
-Nach jeder fachlichen Änderung ist zu prüfen, ob `docs/PRODUCT_RULES.md` aktualisiert werden muss.
+Read the relevant documentation before changing behavior, UX, calculations, or architecture:
 
-## Master-Spezifikation
+- `README.md` – general project overview
+- `USE_CASES.md` – user and business use cases
+- `DIALOG_FLOW.md` – dialog and user flow
+- `FEATURE_LAYOUT.md` – feature and screen structure
+- `PROTOTYPE_FLOW.md` – prototype flow and current UX concept
+- `docs/PRODUCT_RULES.md` – verbindliche Berechnungs-, Steuer-, UX-, Text- und Darstellungsregeln
+- `docs/MASTER_SPEC.md` – zentrale fachliche und funktionale Spezifikation des Sollzustands
+
+Do not duplicate this documentation in this file.
+
+## Working principles
+
+- Preserve existing behavior unless the task explicitly requires a change.
+- Do not redesign UX or business logic implicitly.
+- Prefer small, focused and reviewable changes.
+- Reuse existing code before introducing new abstractions.
+- Do not add libraries or frameworks unless there is a clear benefit.
+- Keep the application mobile-first.
+- Keep user-facing language understandable for non-experts.
+- Do not expose secrets, API keys or credentials in source code or commits.
+- Neue Anforderungen, die einer bestehenden Produktregel widersprechen, vor der Umsetzung ausdrücklich nennen.
+
+## Before implementation
+
+For significant changes:
+
+1. Inspect the relevant existing code and documentation.
+2. Explain important assumptions or ambiguities.
+3. Determine the smallest coherent implementation.
+4. Avoid changing unrelated files.
+5. `docs/PRODUCT_RULES.md` vollständig lesen.
+6. Betroffene Kapitel in `docs/MASTER_SPEC.md` lesen; Konflikte mit dem dokumentierten Sollzustand vor der Umsetzung nennen.
+
+## Master specification
 
 - `docs/MASTER_SPEC.md` ist die zentrale fachliche und funktionale Spezifikation des aktuellen Sollzustands, keine Historie und kein Changelog.
-- Vor jeder Änderung zusätzlich die betroffenen Kapitel in `docs/MASTER_SPEC.md` lesen. Konflikte mit dem dokumentierten Sollzustand vor der Umsetzung ausdrücklich nennen.
-- Nach jeder erfolgreich implementierten fachlichen oder funktionalen Änderung die betroffenen bestehenden Kapitel aktualisieren. Ersetzte Konzepte dort ersetzen, keine widersprüchlichen Änderungswünsche am Ende anhängen. Den ergänzenden Regelkatalog `docs/PRODUCT_RULES.md` konsistent halten.
-- Eindeutig vorhandene, aber fachlich nicht abschliessend dokumentierte Logik als `IMPLEMENTIERT` beschreiben und offene Grundlagen mit `ZU VERIFIZIEREN` kennzeichnen. Keine neuen Berechnungsregeln aus Dokumentationslücken ableiten.
+- Nach jeder erfolgreich implementierten fachlichen oder funktionalen Änderung die betroffenen Kapitel aktualisieren. Ersetzte Konzepte dort ersetzen, keine widersprüchlichen Änderungswünsche am Ende anhängen.
+- `docs/PRODUCT_RULES.md` konsistent halten.
+- Eindeutig vorhandene, aber fachlich nicht abschliessend dokumentierte Logik als `IMPLEMENTIERT` beschreiben; offene Grundlagen mit `ZU VERIFIZIEREN` kennzeichnen.
+- Keine neuen Berechnungsregeln aus Dokumentationslücken ableiten.
 
-## Umsetzung und Prüfung
+## Implementation and verification
 
-- Navigation: Start → Deine Angaben → Dein Plan. Details direkt vom Plan öffnen, keine Zwischenübersicht „Meine Planung verstehen“. Eine Angabenübersicht mit Gruppeneditoren; eindeutige Parents gemäss Master-Spezifikation Kapitel 4/5.
-- Neue Oberfläche in `check-ui.js`/`check-ui.css`, unabhängiges Planungsmodell in `retirement-calculator.js`. Vorhandene Detailansichten werden schrittweise übernommen; alle Prognosen verwenden denselben Rechenkern, keine unabhängigen Nebenrechnungen.
-- Bei Änderungen am gemeinsamen Rechenkern zusätzlich `node retirement-calculator.test.js` ausführen; dieser vergleicht Eingaben und vollständige Jahresverläufe mit dem bisherigen Berechnungsadapter. Neue Bedienabläufe mit `tests/new-check.cy.js` prüfen.
-- `check-ui.js` ist alleiniger Navigation Owner. Erhaltene Fachkomponenten dürfen keine zweite Wizard-Navigation zeigen. Navigationsänderungen mit `tests/navigation.cy.js` prüfen; gezielte Checks statt unnötiger kompletter Testläufe. Der Navigationsauftrag verändert keine Berechnungsregeln.
-- Berechnungsänderungen mit passenden Regressionstests absichern. Beide Wege (vor/nach Pensionierung), Persistenz, Desktop und Mobile prüfen.
-- Risikoprofile zentral in `risk-profiles.js` pflegen. Renditereihen und Profilvergleich ausschliesslich über den gemeinsamen Rechenkern; keine eigenen Renditerechnungen in UI-Komponenten. Bei Profiländerungen zusätzlich `node risk-profiles.test.js` und `tests/risk-profiles.cy.js` ausführen. Produktregeln Abschnitt 10 ist verbindlich.
-- Persönliche Browserdaten, Sicherungsdateien und erzeugte Screenshots nicht ungefragt committen.
+- Navigation: Start → Deine Angaben → Dein Plan. Details direkt vom Plan öffnen. Eine Angabenübersicht mit Gruppeneditoren; eindeutige Parents gemäss Master-Spezifikation Kapitel 4/5.
+- Neue Oberfläche in `check-ui.js`/`check-ui.css`, unabhängiges Planungsmodell in `retirement-calculator.js`. Alle Prognosen verwenden denselben Rechenkern, keine unabhängigen Nebenrechnungen.
+- `check-ui.js` ist alleiniger Navigation Owner. Erhaltene Fachkomponenten dürfen keine zweite Wizard-Navigation zeigen.
+- Risikoprofile zentral in `risk-profiles.js` pflegen. Renditereihen und Profilvergleich ausschliesslich über den gemeinsamen Rechenkern.
+
+## Tests
+
+- Bei Änderungen am gemeinsamen Rechenkern: `node retirement-calculator.test.js`.
+- Neue Bedienabläufe: `tests/new-check.cy.js`.
+- Navigationsänderungen: `tests/navigation.cy.js`.
+- Profiländerungen: `node risk-profiles.test.js` und `tests/risk-profiles.cy.js`.
+- Berechnungsänderungen mit Regressionstests absichern. Beide Wege (vor/nach Pensionierung), Persistenz, Desktop und Mobile prüfen.
+- Gezielte Checks statt unnötiger kompletter Testläufe.
+
+## After implementation
+
+- Verify the affected user flow.
+- Check for regressions in related screens or calculations.
+- Update existing documentation when the implementation changes documented behavior.
+- Do not create additional documentation files unless they add information that does not already belong in an existing document.
 - Dokumentation und zugehörige Codeänderungen gemeinsam committen, wenn ein Commit beauftragt ist.
 - Historische Entwürfe erhalten; neue verbindliche Regeln und Abweichungen ausdrücklich dokumentieren.
+- Persönliche Browserdaten, Sicherungsdateien und erzeugte Screenshots nicht ungefragt committen.
+
+## Reviews
+
+When asked for a code or architecture review:
+
+- Look for functional errors and regressions first.
+- Check architecture and unnecessary complexity.
+- Check maintainability and duplication.
+- Check security and handling of sensitive data.
+- Check mobile usability where UI is affected.
+- Clearly separate critical issues from optional improvements.
