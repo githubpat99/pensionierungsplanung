@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ruhestands-Check · V3</title>
+  <link rel="stylesheet" href="css/v2-ui.css">
+  <link rel="stylesheet" href="css/v3.css">
+  <link rel="stylesheet" href="css/v3-reference.css">
+  <link rel="stylesheet" href="css/v3-plan-reference.css?v=3">
+  <link rel="stylesheet" href="css/v3-chart-reference.css?v=2">
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand"><span class="brand-leaf" aria-hidden="true"></span><span>Ruhestands-Check</span></div>
+    <button class="menu-button" type="button" aria-label="Menü öffnen" aria-expanded="false"><span></span><span></span><span></span></button>
+  </header>
+  <nav id="v3Menu" class="v3-menu" hidden aria-label="Menü">
+    <button type="button" data-menu-page="personal">Persönliche Angaben</button>
+    <button type="button" data-menu-page="ahv">AHV-Renten</button>
+    <button type="button" data-menu-page="pension">Pensionskasse</button>
+    <button type="button" data-menu-page="extra">Weitere Einnahmen</button>
+    <button type="button" data-menu-page="need">Bedarf</button>
+    <button type="button" data-menu-page="assets">Vermögen</button>
+    <button type="button" data-menu-page="assumptions">Annahmen</button>
+  </nav>
+  <main id="app" class="shell"></main>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script src="js/tax-config.js"></script>
+  <script src="js/tax-model.js"></script>
+  <script src="js/historical-returns.js"></script>
+  <script src="js/risk-profiles.js"></script>
+  <script src="js/life-expectancy.js"></script>
+  <script src="js/retirement-engine.js"></script>
+  <script src="js/retirement-calculator.js"></script>
+  <script src="js/v2-state.js"></script>
+  <script src="js/v3-ui.js?v=3"></script>
+</body>
+</html>

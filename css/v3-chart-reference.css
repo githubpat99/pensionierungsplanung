@@ -1,0 +1,5 @@
+.v3-chart-container{min-width:0}
+.v3-chart text{font-size:14px;fill:var(--v3-ink);font-variant-numeric:tabular-nums}
+.v3-chart{overflow:visible}
+.v3-marker.marker-1{display:inline-flex;align-items:center;font-size:0}
+.v3-marker.marker-1::before{content:"";display:block;width:7px;height:7px;background:currentColor;flex-shrink:0}
