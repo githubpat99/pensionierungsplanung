@@ -26,7 +26,7 @@
    case 'assets':return [field('cash','Bank / liquide Mittel','CHF'),field('securities','Wertschriften','CHF'),...(pre?[field('saving','Zusätzliche Anlage pro Jahr','CHF / Jahr')]:[]),{...field('otherAssets','Weitere verfügbare Vermögenswerte','CHF'),optional:true},{...field('propertyValue','Immobilienwert','CHF'),optional:true,section:'Gebundenes Vermögen (optional)'},{...field('mortgage','Hypotheken','CHF'),optional:true}];
    case 'pension':return pre?[{...field('pk','PK-Guthaben heute','CHF'),section:'Pensionskasse'},field('pkContrib','Sparbeiträge zusammen','CHF / Jahr'),field('pkShare','Kapitalanteil','%',0,100)]:[field('pkRent','Laufende PK-Rente')];
    case 'pension3a':return pre?[field('p3','3a-Guthaben heute','CHF'),field('p3Contrib','Beiträge pro Jahr','CHF / Jahr')]:[];
-   case 'assumptions':return [field('targetAge','Planung bis Alter','Jahre',19,110,1),field('inflation','Inflation','%',0,20),...(pre?[{...field('pkInterest','PK-Verzinsung','%',0,100),section:'Aufbau bis Pensionierung'},field('uws','PK-Umwandlungssatz','%',0,20),field('p3Return','3a-Rendite','%',0,100),field('secReturn','Wertschriftenrendite','%',0,100)]:[]),{key:'reviewed',label:'Ich habe die wichtigen Angaben und die dargestellten Modellannahmen geprüft.',type:'check'}];
+   case 'assumptions':return [field('targetAge','Planung bis Alter','Jahre',19,110,1),field('inflation','Inflation','%',0,20),...(pre?[{...field('pkInterest','PK-Verzinsung','%',0,100),section:'Aufbau bis Pensionierung'},field('uws','PK-Umwandlungssatz','%',0,20),field('p3Return','3a-Rendite','%',0,100),field('secReturn','Wertschriftenrendite','%',0,100)]:[])];
    default:return [];
   }
  }
@@ -38,7 +38,7 @@
  }
  function error(group,v,s){
   const bad=fields(group,s).find(f=>!validField(f,v[f.key]));
-  if(bad)return {key:bad.key,message:bad.type==='check'?'Bitte bestätige die geprüften Angaben.':`Bitte «${bad.label}» prüfen${bad.min!==undefined?` (${bad.min} bis ${bad.max.toLocaleString('de-CH')})`:''}.`};
+  if(bad)return {key:bad.key,message:`Bitte «${bad.label}» prüfen${bad.min!==undefined?` (${bad.min} bis ${bad.max.toLocaleString('de-CH')})`:''}.`};
   const start=s.mode==='pre'?num(group==='time'?v.retirement:s.values.retirement):num(group==='time'?v.age:s.values.age);
   if(group==='time'&&s.mode==='pre'&&num(v.retirement)<num(v.age))return {key:'retirement',message:'Die Pensionierung darf nicht vor deinem heutigen Alter liegen.'};
   if(group==='time'&&s.horizonMode==='manual'&&s.targetAge<=start)return {key:s.mode==='pre'?'retirement':'age',message:'Bitte zuerst unter Annahmen den Planungshorizont über den neuen Start hinaus verlängern.'};
@@ -84,7 +84,7 @@
    next.values.regular=num(values.ahv)+num(values.other)+num(values.additional);
    next.confirmed.regular=true;next.confirmed.income=true;
   }else if(group==='tax')next.canton=values.canton;
-  else if(detailGroups.includes(group))next.details[group]=clone(values);else fields(group,s).forEach(f=>next.values[f.key]=num(values[f.key]));
+  else if(detailGroups.includes(group)){next.details[group]=clone(values);if(group==='assumptions')delete next.details[group].reviewed;}else fields(group,s).forEach(f=>next.values[f.key]=num(values[f.key]));
   if(group==='time'&&next.horizonMode==='automatic'){next.targetAge=life.defaultTargetAge(num(values.age),s.mode==='pre'?num(values.retirement):num(values.age));if(next.details.assumptions)next.details.assumptions.targetAge=next.targetAge;}
   if(group==='assumptions'){
    next.horizonMode=num(values.targetAge)===s.targetAge?s.horizonMode:'manual';next.targetAge=num(values.targetAge);

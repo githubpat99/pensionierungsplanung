@@ -43,3 +43,30 @@
 .v3-bound-assets .v3-asset-trigger{color:var(--v3-muted)}
 .v3-bound-assets .v3-asset-value strong{font-size:17px}
 @media(max-width:699px){.v3-asset-trigger{gap:7px;font-size:14px}.v3-asset-value strong{font-size:17px}.v3-asset-form{padding-left:10px}.v3-asset-total dd{font-size:20px}}
+/* PK-Detail: Rente, Kapital und aktuelle Aufteilung gemeinsam; kontextgenaue Sprungziele */
+.v3-pk-split{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:4px 12px;margin:14px 0 0;padding:10px 12px;border:1px solid var(--v3-line);border-radius:6px;background:var(--v3-soft)}
+.v3-pk-split span{color:var(--v3-muted);font-size:13px}
+.v3-pk-split strong{font-size:15px;font-weight:600}
+.v3-pk-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.v3-pk-card{border:1px solid var(--v3-line);border-radius:6px;padding:12px;background:var(--v3-surface);min-width:0}
+.v3-pk-card h3{font-size:15px;font-weight:600;margin:0 0 8px;color:var(--v3-muted)}
+.v3-pk-value{margin:0;display:flex;align-items:baseline;flex-wrap:wrap;gap:4px}
+.v3-pk-value strong{font-size:23px;font-weight:600;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.v3-pk-value span{color:var(--v3-muted);font-size:13px}
+.v3-pk-card small{display:block;color:var(--v3-muted);font-size:12px;margin-top:4px}
+.v3-pk-card dl{margin:0}
+.v3-pk-card dl>div{border-bottom:0;padding:3px 0}
+.v3-pk-card dt{font-size:12px;color:var(--v3-muted)}
+.v3-pk-card dd{font-size:16px;font-weight:550;font-variant-numeric:tabular-nums}
+#pkRente,#pkKapital,#pkBreakdown{scroll-margin-top:24px}
+/* Detail-Screens: «← Mein Plan» bleibt beim Scrollen oben erreichbar (Variante A) */
+.v3-heading-detail{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:10px;max-width:780px;margin:0 auto;padding:10px 0;background:var(--v3-bg)}
+.v3-heading-detail h1{margin:0;font-size:clamp(19px,3.4vw,25px);line-height:1.25}
+.v3-heading-detail .home-link{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 8px 0 0;font-size:14px;white-space:nowrap}
+.v3-focus-target{animation:v3-focus-flash 1.5s ease-out 1}
+.v3-focus-target:focus-visible{outline:2px solid var(--v3-green);outline-offset:4px}
+@keyframes v3-focus-flash{0%{box-shadow:0 0 0 3px var(--v3-green)}100%{box-shadow:0 0 0 3px transparent}}
+@media(max-width:699px){.v3-pk-cards{grid-template-columns:1fr;gap:10px}.v3-pk-card{padding:10px}.v3-pk-value strong{font-size:21px}.v3-heading-detail{padding:8px 0;gap:8px}.v3-heading-detail h1{font-size:18px}}
+@media(prefers-reduced-motion:reduce){.v3-focus-target{animation:none}}
+button.v3-plan-meta{display:block;border:0;background:transparent;text-align:left;padding:0;color:var(--v3-muted);font-size:14px;font-family:inherit}
+button.v3-plan-meta:hover,button.v3-plan-meta:focus-visible{color:var(--v3-green)}

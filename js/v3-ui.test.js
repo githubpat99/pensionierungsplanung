@@ -10,9 +10,9 @@ const context = vm.createContext({CheckV2State:M, RetirementCalculator:C, TaxMod
   document:{getElementById:()=>node, querySelector:()=>node, addEventListener(){}}, window:{scrollTo(){}}});
 let source = fs.readFileSync(require.resolve('./v3-ui.js'), 'utf8');
 source = source.replace('window.V3 = {save, load, planFor};', `window.test = {
-  seed(value) { state = structuredClone(value); currentShare = 45; previewShare = selectedShare = 90; selectedVariantIndex = 2; variants = [10,45,90]; },
+  seed(value) { state = structuredClone(value); },
   edit(values) { draft = values; state = pensionDraft(); },
-  snapshot() { return {state,currentShare,previewShare,selectedVariantIndex,variants}; },
+  snapshot() { return {state,share:chosenShare()}; },
   planFor, currentVariants, readout, pensionBreakdown, editorFields, renderAssets,
   assets() { return assetComposition(state); },
   assetForm(part) { assetPart = part; const markup = assetComposition(state); assetPart = null; return markup; },
@@ -22,6 +22,7 @@ source = source.replace("  setDraft('time'); renderForm('rents');\n})();", '})()
 vm.runInContext(source, context);
 const UI = context.window.test;
 const plain = value => JSON.parse(JSON.stringify(value));
+const money = value => `CHF ${Math.round(value || 0).toLocaleString('de-CH').replace(/’/g, "'")}`;
 function seed(mode, canton) {
   let s = M.fresh(mode); s.riskProfile = 'growth';
   for (const [group, values] of [
@@ -39,7 +40,7 @@ for (const canton of ['', 'ZH']) {
   const years = plain(UI.currentVariants()).map(item => item.result.yearlyProjection);
   UI.edit({pk:600000,pkContrib:25000,pkInterest:2,uws:6});
   const after = plain(UI.snapshot());
-  for (const key of ['currentShare','previewShare','selectedVariantIndex','variants']) assert.deepEqual(after[key], before[key]);
+  assert.equal(after.share, before.share);
   assert.equal(after.state.details.pension.pkShare,45);
   assert.equal(after.state.confirmed.assumptions,false);
   assert.equal(after.state.riskProfile,'growth');
@@ -60,8 +61,30 @@ for (const canton of ['', 'ZH']) {
   assert.ok(!UI.editorFields('assumptions').some(f=>['pkInterest','uws'].includes(f.key)));
   assert.throws(()=>UI.edit({pk:-1,pkContrib:25000,pkInterest:2,uws:6}));
   assert.deepEqual(plain(UI.snapshot()),after,'invalid edits must not change committed data');
-  assert.match(UI.pensionBreakdown(),canton ? /PK-Kapital netto/ : /Steuern offen/);
+  // PK-Detail zeigt Rente, Kapital und die aktuelle Aufteilung aus demselben Rechner.
+  const breakdown = UI.pensionBreakdown();
+  assert.match(breakdown,/PK-Rente/);
+  assert.match(breakdown,/Deine aktuelle Aufteilung/);
+  assert.match(breakdown,/55 % Rente \/ 45 % Kapital/);
+  assert.match(breakdown,/id="pkRente"/);
+  assert.match(breakdown,/id="pkKapital"/);
+  assert.ok(breakdown.includes(`data-pk-rent>${money(C.calculatePension(UI.planFor(45)).rent / 12)}`),'PK-Rente im Detail stimmt mit dem gemeinsamen Rechner überein');
+  assert.ok(breakdown.includes(`data-pk-rent-year>${money(C.calculatePension(UI.planFor(45)).rent)}`),'Jahresrente stammt aus demselben Wert');
+  assert.match(breakdown,canton ? /data-pk-net>CHF/ : /Steuern offen/);
 }
+// 100 % bzw. 0 % Kapital: Aufteilung, PK-Rente und PK-Kapital bleiben konsistent.
+const allCapital = M.apply(seed('pre','ZH'),'pension',{pk:600000,pkContrib:20000,pkShare:100});
+UI.seed(allCapital);
+let variant = UI.pensionBreakdown();
+assert.match(variant,/0 % Rente \/ 100 % Kapital/);
+assert.ok(variant.includes(`data-pk-rent>${money(0)}`),'ohne Rentenbasis ist die PK-Rente CHF 0');
+assert.ok(variant.includes(`data-pk-gross>${money(C.calculatePension(UI.planFor(100)).cap)}`),'das PK-Kapital bleibt der gemeinsame Rechenwert');
+const allRent = M.apply(seed('pre','ZH'),'pension',{pk:600000,pkContrib:20000,pkShare:0});
+UI.seed(allRent);
+variant = UI.pensionBreakdown();
+assert.match(variant,/100 % Rente \/ 0 % Kapital/);
+assert.ok(variant.includes(`data-pk-gross>${money(0)}`),'ohne Kapitalanteil entsteht kein Kapitalbezug');
+assert.ok(variant.includes(`data-pk-rent>${money(C.calculatePension(UI.planFor(0)).rent / 12)}`),'die volle PK-Rente stammt aus demselben Rechner');
 UI.seed(seed('post','ZH'));
 UI.edit({pkRent:2500});
 const post = UI.planFor(90), capital = C.calculateAvailableCapital(post);

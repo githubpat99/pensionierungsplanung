@@ -1,5 +1,50 @@
 .v3-chart-container{min-width:0}
 .v3-chart text{font-size:14px;fill:var(--v3-ink);font-variant-numeric:tabular-nums}
 .v3-chart{overflow:visible}
+.v3-chart-target{cursor:pointer}
+.v3-chart-target:focus{stroke:var(--v3-green);stroke-width:2}
+.v3-chart-readout{font-size:14px;font-variant-numeric:tabular-nums;color:var(--v3-ink);min-height:22px;margin:10px 0}
+.v3-compare-toggle{display:flex;align-items:center;gap:9px;min-height:44px;font-size:14px}
+.v3-compare-toggle input{width:18px;height:18px}
+.v3-comparison-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+.v3-comparison-card{border:1px solid var(--v3-line);border-radius:6px;padding:12px;min-width:0}
+.v3-comparison-card.chosen{border-color:var(--v3-green);background:var(--v3-soft)}
+.v3-comparison-card>strong{font-size:15px}
+.v3-comparison-card>strong small{display:block;margin-top:3px;color:var(--v3-green);font-size:12px;font-weight:500}
+.v3-chosen-note{font-size:13px;color:var(--v3-green);line-height:1.45}
+.v3-comparison-card dl{margin:8px 0 0}
+.v3-comparison-card dl>div{display:grid;gap:2px;padding:7px 0;border-top:1px solid var(--v3-line)}
+.v3-comparison-card dt{font-size:12px;color:var(--v3-muted)}
+.v3-comparison-card dd{margin:0;font-size:15px;font-weight:600;overflow-wrap:anywhere}
+@media(max-width:699px){.v3-comparison-cards{grid-template-columns:1fr}.v3-comparison-card dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.v3-comparison-card dl>div{align-content:start}.v3-comparison-card dd{font-size:14px}}
+.v3-plan-link{border:0;background:transparent;text-align:left;color:var(--v3-ink);padding:8px 0;min-height:48px}
+.v3-variant{display:block;grid-template-columns:none}
+.v3-variant.selected{border-color:var(--v3-green);background:var(--v3-soft)}
+.v3-variant-select{width:100%;grid-template-columns:28px minmax(0,1fr) 18px}
+.v3-variant-chevron{color:var(--v3-green);font-size:22px}
+.v3-plan-link small{display:block;color:var(--v3-green);font-size:13px;margin-top:4px}
+.v3-plan-link:hover strong,.v3-plan-link:focus-visible strong{text-decoration:underline}
+.v3-plan-link:focus-visible,.v3-summary-row:focus-visible,.v3-source-detail summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-income-sources h2{font-size:17px;margin:12px 0 4px}
+.v3-summary-row,.v3-source-detail summary,.v3-source-line{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:10px 0;min-height:44px;border:0;border-bottom:1px solid var(--v3-line);background:transparent;color:var(--v3-ink);text-align:left;font-size:14px}
+.v3-summary-row strong,.v3-source-detail strong,.v3-source-line strong{font-size:15px;font-weight:550;white-space:nowrap}
+.v3-summary-row small,.v3-source-detail small{color:var(--v3-green);font-size:16px}
+.v3-summary-row:hover{color:var(--v3-green)}
+.v3-source-detail summary{cursor:pointer}
+.v3-rent-row{display:grid;grid-template-columns:minmax(0,1fr) 44px;position:relative}
+.v3-rent-row .v3-summary-row{min-width:0}
+.v3-rent-row .v3-source-detail{position:relative;border-bottom:1px solid var(--v3-line)}
+.v3-rent-row .v3-source-detail summary{display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0;border:0;color:var(--v3-green);list-style:none;font-size:17px}
+.v3-rent-row .v3-source-detail summary::-webkit-details-marker{display:none}
+.v3-rent-row .v3-source-detail>div{position:absolute;right:0;top:44px;z-index:2;width:max-content;max-width:min(280px,80vw);padding:10px;background:var(--v3-surface);border:1px solid var(--v3-line);box-shadow:0 4px 12px #142b3420}
+.v3-source-detail>div{font-size:13px;color:var(--v3-muted);padding:8px 0}
+.v3-source-detail>button{border:0;background:transparent;color:var(--v3-green);padding:8px 0;min-height:44px}
+.v3-income-total{display:flex;justify-content:space-between;gap:8px;padding:11px 0;font-size:14px;font-weight:600}
+.v3-pension-total{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--v3-line);font-size:13px;font-weight:600}
+.v3-pension-total strong{text-align:right;white-space:nowrap}
+.v3-income-total strong{text-align:right;white-space:nowrap}
+.v3-compact-summary:has(.v3-summary-row){display:block}
+.v3-compact-summary .v3-summary-row{padding-inline:0}
+.v3-compact-summary .v3-gap-value{padding:10px 8px}
 .v3-marker.marker-1{display:inline-flex;align-items:center;font-size:0}
 .v3-marker.marker-1::before{content:"";display:block;width:7px;height:7px;background:currentColor;flex-shrink:0}

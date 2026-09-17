@@ -1,5 +1,5 @@
 describe('Guided V2: confirmed data and financing are separate',()=>{
- const fill=(values)=>Object.entries(values).forEach(([name,value])=>{if(name==='canton')cy.get(`[name=${name}]`).select(value);else if(typeof value==='boolean')cy.get(`[name=${name}]`).check();else if(name==='pkShare')cy.get(`[name=${name}]`).invoke('val',value).trigger('input');else cy.get(`[name=${name}]`).clear().type(String(value));});
+ const fill=(values)=>Object.entries(values).forEach(([name,value])=>{if(name==='canton'){cy.get('.canton-trigger').click();cy.get(`.canton-option[data-code="${value}"]`).click();}else if(typeof value==='boolean')cy.get(`[name=${name}]`).check();else if(name==='pkShare')cy.get(`[name=${name}]`).invoke('val',value).trigger('input');else cy.get(`[name=${name}]`).clear().type(String(value));});
  function core(mode){
   cy.get(`[data-mode=${mode}]`).click();fill(mode==='pre'?{age:60,retirement:65}:{age:70});cy.get('#question').submit();
   fill({need:7500});cy.get('#question').submit();cy.get('[name=pkRent]').should('not.exist');fill({canton:'',ahv:3430,other:0,additional:0});
@@ -44,7 +44,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
    expect(texts.slice(0,3)).to.deep.equal([r.bucketAllocation[2],r.bucketAllocation[1],r.bucketAllocation[0]].map(cash));
   });
   cy.get('[data-parent=assets-detail]').click();cy.get('[data-parent=plan]').click();
-  cy.get('#v2Nav [data-nav=assumptions]').click();fill({reviewed:true});cy.get('#question').submit();
+  cy.get('#v2Nav [data-nav=assumptions]').click();cy.get('[name=reviewed]').should('not.exist');cy.get('#question').submit();
   cy.get('.quality-plan strong').should('contain','Gut abgestützt');
   let before;
   cy.window().then(w=>{

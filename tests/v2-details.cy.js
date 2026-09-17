@@ -26,12 +26,12 @@ describe('V2: composition one tap from the compact plan',()=>{
   });
   cy.screenshot(`income-${mode}-${width}`,{capture:'fullPage'});
   cy.reload();cy.get('[data-resume]').click();cy.get('h1').should('have.text','Deine Einkommen im Ruhestand');
-  cy.get('[data-open=tax]').click();cy.get('[name=canton]').select('');cy.get('#question').submit();
+  cy.get('[data-open=tax]').click();cy.get('.canton-trigger').click();cy.get('.canton-option[data-code=""]').click();cy.get('#question').submit();
   cy.get('[data-detail=income-tax]').should('contain','Steuern noch offen').and('not.contain','CHF 0');
   cy.get('[data-detail=income-net]').should('contain','Vorläufig verfügbar');
   cy.get('[data-parent=plan]').click();cy.get('.quality-plan strong').should('not.contain','Gut abgestützt');
   cy.get('[data-metric=income]').should('contain','Steuern noch offen');
-  cy.get('[data-metric=income]').click();cy.get('[data-open=tax]').click();cy.get('[name=canton]').select('SG');cy.get('#question').submit();
+  cy.get('[data-metric=income]').click();cy.get('[data-open=tax]').click();cy.get('.canton-trigger').click();cy.get('.canton-option[data-code="SG"]').click();cy.get('#question').submit();
   cy.get('[data-detail=income-net] strong').should(el=>expect(el.text()).to.equal(net));
   cy.get('[data-parent=plan]').click();cy.get('[data-metric=capital]').click();
   cy.get('h1').should('have.text','Dein verfügbares Vermögen');

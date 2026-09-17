@@ -129,7 +129,7 @@ function renderMore() {
   }[g];
  }
  function editorValues(g){
-  if(g==='assumptions')return {...M.defaults,targetAge:state.targetAge,...state.details.assumptions,reviewed:false,targetAge:state.targetAge};
+  if(g==='assumptions')return {...M.defaults,targetAge:state.targetAge,...state.details.assumptions,targetAge:state.targetAge};
   if(g==='regular')return editorValues('income');
   if(g==='tax')return {canton:M.canton(state)};
   if(g==='income')return {...Object.fromEntries(M.fields(g,state).map(f=>[f.key,''])),...state.details.income,canton:M.canton(state)};
@@ -139,8 +139,7 @@ function renderMore() {
  function input(f){
   const v=draft[f.key]??'';
   const section=f.section?`<h3 class="field-section">${f.section}</h3>`:'';
-  if(f.type==='check')return `${section}<label class="review-check"><input type="checkbox" name="${f.key}" ${v===true?'checked':''}>${f.label}</label>`;
-  if(f.type==='canton')return `<div class="field"><label for="${f.key}">${f.label}</label><select id="${f.key}" name="${f.key}"><option value="">Noch offen · keine Steuerschätzung</option>${Object.entries(TaxModel.config.cantons).map(([k,c])=>`<option value="${k}" ${v===k?'selected':''}>${esc(c.name)}</option>`).join('')}</select></div>`;
+  if(f.type==='canton')return `<div class="field"><label for="${f.key}">${f.label}</label><select id="${f.key}" name="${f.key}"><option value="">Noch offen · keine Steuerschätzung</option>${Object.entries(TaxModel.config.cantons).map(([k,c])=>`<option value="${k}" ${v===k?'selected':''}>${k} · ${esc(c.name)}</option>`).join('')}</select></div>`;
   return `${section}<div class="field"><label for="${f.key}">${f.label}</label><div class="entry"><input id="${f.key}" name="${f.key}" type="number" inputmode="${f.step===1?'numeric':'decimal'}" min="${f.min}" max="${f.max}" step="${f.step}" value="${esc(v)}" aria-describedby="groupHint error" ${f.optional?'':'required'}><span>${f.unit}</span></div></div>`;
  }
  function groupNote(g){
@@ -198,6 +197,7 @@ function renderMore() {
   if(g==='pension'&&state.mode==='pre'){renderPensionEditor();return;}
   const info=groupInfo(g),isBasic=basic.includes(g);
   app.innerHTML=`<header class="work-heading">${M.complete(state)?'':'<button class="home-link" data-home>← Übersicht</button>'}${!isBasic?`<button class="home-link" data-parent="${parentOf(g)}">← ${['pension3a','pension'].includes(g)?'Vorsorge':g==='income'||g==='tax'?'Einkommen':g==='assets'?'Vermögen':'Dein Plan'}</button>`:''}<h1>${isBasic?'Dein Plan entsteht.':info.title}</h1></header><div class="workspace ${isBasic?'':'group-detail'} ${g==='tax'?'single-editor':''}"><section class="question">${isBasic?`<h2>${info.title}</h2>`:''}<p class="hint" id="groupHint">${info.hint}</p><form id="question" novalidate><div class="question-fields">${M.fields(g,state).map(input).join('')}</div>${groupNote(g)}<p id="timeFeedback" class="context" aria-live="polite"></p><p id="error" class="error" role="alert"></p><div class="actions"><button type="button" class="back" data-cancel>${M.complete(state)?'Abbrechen':'← Zurück'}</button><button class="primary" type="submit">${isBasic&&!M.complete(state)?'Weiter →':'Übernehmen'}</button></div></form></section><section class="live-plan" id="livePlan" aria-label="Dein Live-Plan" aria-live="polite" aria-atomic="true"></section></div>`;
+  window.CantonPicker?.enhanceAll(app);
   app.querySelectorAll('#question input,#question select').forEach(el=>el.addEventListener('input',()=>{
    draft[el.name]=el.type==='checkbox'?el.checked:el.value;
    el.removeAttribute('aria-invalid');document.getElementById('error').textContent='';renderLive(preview());
