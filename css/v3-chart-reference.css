@@ -1,22 +1,35 @@
 .v3-chart-container{min-width:0}
 .v3-chart text{font-size:14px;fill:var(--v3-ink);font-variant-numeric:tabular-nums}
-.v3-chart{overflow:visible}
-.v3-chart-target{cursor:pointer}
-.v3-chart-target:focus{stroke:var(--v3-green);stroke-width:2}
-.v3-chart-readout{font-size:14px;font-variant-numeric:tabular-nums;color:var(--v3-ink);min-height:22px;margin:10px 0}
-.v3-compare-toggle{display:flex;align-items:center;gap:9px;min-height:44px;font-size:14px}
-.v3-compare-toggle input{width:18px;height:18px}
-.v3-comparison-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
-.v3-comparison-card{border:1px solid var(--v3-line);border-radius:6px;padding:12px;min-width:0}
+.v3-chart{overflow:visible;margin-top:6px}
+.v3-chart-value{font-size:12px;font-weight:600}
+/* Legende kompakt direkt unter der Grafik statt in einer eigenen Karte */
+.v3-chart-legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin:6px 0 0;padding:0;list-style:none;font-size:13px;color:var(--v3-ink)}
+.v3-chart-legend li{display:flex;align-items:center;gap:6px}
+.v3-legend-dot{width:9px;height:9px;border-radius:50%;display:block}
+/* Umschalter sitzt im Kopf der Grafik-Karte */
+.v3-compare-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.v3-compare-head h2{margin:0}
+.v3-compare-toggle{display:inline-flex;align-items:center;gap:8px;min-height:40px;font-size:13px;color:var(--v3-muted)}
+.v3-compare-toggle input{appearance:none;-webkit-appearance:none;width:38px;height:22px;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-bg);position:relative;padding:0;min-height:0;flex:none;cursor:pointer}
+.v3-compare-toggle input:after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--v3-muted);transition:transform .15s ease}
+.v3-compare-toggle input:checked{border-color:var(--v3-green);background:var(--v3-soft)}
+.v3-compare-toggle input:checked:after{background:var(--v3-green);transform:translateX(16px)}
+.v3-compare-toggle input:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-compare-sub{margin:0 0 10px;color:var(--v3-muted);font-size:14px;line-height:1.4}
+.v3-chosen-line{margin:2px 0 0;font-size:14px;color:var(--v3-muted)}
+.v3-chosen-line strong{color:var(--v3-green);font-weight:600}
+.v3-subline{margin:0;color:var(--v3-muted);font-size:13px;line-height:1.4}
+.v3-comparison-cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.v3-comparison-card{border:1px solid var(--v3-line);border-radius:6px;padding:10px;min-width:0}
 .v3-comparison-card.chosen{border-color:var(--v3-green);background:var(--v3-soft)}
-.v3-comparison-card>strong{font-size:15px}
-.v3-comparison-card>strong small{display:block;margin-top:3px;color:var(--v3-green);font-size:12px;font-weight:500}
-.v3-chosen-note{font-size:13px;color:var(--v3-green);line-height:1.45}
-.v3-comparison-card dl{margin:8px 0 0}
-.v3-comparison-card dl>div{display:grid;gap:2px;padding:7px 0;border-top:1px solid var(--v3-line)}
+.v3-comparison-head{display:flex;align-items:baseline;justify-content:space-between;gap:6px;flex-wrap:wrap}
+.v3-comparison-head strong{font-size:15px}
+.v3-comparison-head small{color:var(--v3-green);font-size:12px;font-weight:500;white-space:nowrap}
+.v3-comparison-card dl{margin:6px 0 0}
+.v3-comparison-card dl>div{display:grid;gap:2px;padding:6px 0;border-top:1px solid var(--v3-line)}
 .v3-comparison-card dt{font-size:12px;color:var(--v3-muted)}
-.v3-comparison-card dd{margin:0;font-size:15px;font-weight:600;overflow-wrap:anywhere}
-@media(max-width:699px){.v3-comparison-cards{grid-template-columns:1fr}.v3-comparison-card dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.v3-comparison-card dl>div{align-content:start}.v3-comparison-card dd{font-size:14px}}
+.v3-comparison-card dd{margin:0;font-size:15px;font-weight:600;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
+@media(max-width:699px){.v3-comparison-cards{grid-template-columns:1fr;gap:6px}.v3-comparison-card{padding:9px 10px}.v3-comparison-card dl{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}.v3-comparison-card dl>div{align-content:start;padding:4px 0 0}.v3-comparison-card dd{font-size:14px}}
 .v3-plan-link{border:0;background:transparent;text-align:left;color:var(--v3-ink);padding:8px 0;min-height:48px}
 .v3-variant{display:block;grid-template-columns:none}
 .v3-variant.selected{border-color:var(--v3-green);background:var(--v3-soft)}
@@ -44,7 +57,7 @@
 .v3-tax-details>summary::-webkit-details-marker{display:none}
 .v3-tax-details>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
 .v3-tax-label{color:var(--v3-muted);font-weight:400}
-.v3-tax-icon{color:var(--v3-green);font-size:15px}
+.v3-tax-icon{color:var(--v3-green);font-size:14px;opacity:.85;margin-left:5px;vertical-align:middle}
 .v3-tax-amount{text-align:right;white-space:nowrap}
 .v3-tax-panel{padding:2px 0 12px;font-size:13px;line-height:1.5;color:var(--v3-muted)}
 .v3-tax-panel h3{margin:0 0 4px;font-size:14px;color:var(--v3-ink)}
@@ -59,10 +72,12 @@
 /* Einheitliches Info-Muster für alle Screens: Wert zuerst, Erklärung hinter dem ⓘ,
    technische Annahme hinter dem zweiten ⓘ (v3-info-sub) */
 .v3-info{display:block}
-.v3-info>summary{display:inline-flex;align-items:center;gap:7px;min-height:44px;color:var(--v3-green);font-size:14px;cursor:pointer;list-style:none}
+.v3-info>summary{display:inline-flex;align-items:center;gap:5px;min-height:44px;color:var(--v3-green);font-size:14px;cursor:pointer;list-style:none;vertical-align:middle}
 .v3-info>summary::-webkit-details-marker{display:none}
 .v3-info>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
-.v3-info-icon{font-size:16px}
+/* Einheitliche, dezente Grösse; der sichtbare Punkt bleibt klein, die Fläche bleibt antippbar. */
+.v3-info-icon{display:inline-block;font-size:14px;line-height:1;color:var(--v3-green);opacity:.85;vertical-align:middle}
+.v3-info>summary:hover .v3-info-icon,.v3-info>summary:focus-visible .v3-info-icon{opacity:1}
 .v3-info-panel{padding:2px 0 12px;font-size:13px;line-height:1.5;color:var(--v3-muted);max-width:66ch}
 .v3-info-panel p{margin:6px 0}
 .v3-info-panel h3{margin:0 0 4px;font-size:14px;color:var(--v3-ink)}
@@ -72,10 +87,11 @@
 .v3-info-panel dt{min-width:0}
 .v3-info-panel dd{margin:0;color:var(--v3-ink);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
 .v3-info-panel dd small{display:block;color:var(--v3-muted);font-size:12px;font-weight:400}
-.v3-info-sub{display:inline-block}
-.v3-info-sub>summary{display:inline-flex;align-items:center;min-height:36px;color:var(--v3-green);cursor:pointer;list-style:none}
+/* Zweite Ebene: nur das Symbol. Die Trefferfläche bleibt 44 px hoch, ohne die Zeile zu vergrössern. */
+.v3-info-sub{display:inline-block;margin-left:3px}
+.v3-info-sub>summary{display:inline-flex;align-items:center;justify-content:center;min-height:40px;margin:-11px 0;padding:0 2px;color:var(--v3-green);cursor:pointer;list-style:none;vertical-align:middle}
 .v3-info-sub>summary::-webkit-details-marker{display:none}
-.v3-info-sub>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-info-sub>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:-2px}
 .v3-info-sub>div{padding:4px 0 0}
 .v3-asset-item .v3-info{margin:0 0 10px 12px}
 .v3-asset-item .v3-info>summary{font-size:13px;min-height:40px}

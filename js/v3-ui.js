@@ -4,6 +4,21 @@
   const Calculator = RetirementCalculator;
   const storageKey = 'retirement-v3-plan';
   const money = value => `CHF ${Math.round(value || 0).toLocaleString('de-CH').replace(/’/g, "'")}`;
+  // Tausendertrennzeichen sind reine Darstellung: intern bleiben die Werte numerisch,
+  // beim Lesen werden Apostroph und Leerzeichen entfernt.
+  const amountRaw = value => String(value ?? '').replace(/['\s\u00a0]/g, '');
+  const amountValue = value => { const raw = amountRaw(value).replace(',', '.'); return raw === '' ? '' : raw; };
+  const formatAmount = value => {
+    const raw = amountValue(value);
+    if (raw === '' || !/^-?\d*\.?\d*$/.test(raw)) return String(value ?? '');
+    const [whole = '', decimals] = raw.split('.');
+    const sign = whole.startsWith('-') ? '-' : '', digits = whole.replace('-', '');
+    const grouped = digits ? Number(digits).toLocaleString('de-CH').replace(/’/g, "'") : '';
+    return `${sign}${grouped}${decimals === undefined ? '' : `.${decimals}`}`;
+  };
+  const isAmountField = field => String(field?.unit ?? '').startsWith('CHF');
+  // Pflichtfelder werden konsistent mit «*» gekennzeichnet, optionale Felder ohne Stern.
+  const requiredMark = field => field.optional === true ? '' : ' <span class="v3-required" aria-hidden="true">*</span>';
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
   const numeric = value => Number(value || 0);
   const entered = value => value !== undefined && value !== null && String(value).trim() !== '';
@@ -66,7 +81,7 @@
     const capital = !pre
       ? '<p>Nach der Pensionierung wird kein PK-Kapitalbezug und keine Bezugssteuer mehr gerechnet. Bereits bezogenes Kapital bleibt in deinem verfügbaren Vermögen und wird nicht erneut besteuert.</p>'
       : capacityPanel(item, code);
-    return `<div class="v3-tax-panel"><h3>So rechnen wir mit Steuern</h3>${income}${capital}<p>${taxLimitNotice}</p></div>`;
+    return `<div class="v3-tax-panel"><h3>So rechnen wir mit Steuern</h3>${income}${capital}<p>${taxLimitNotice}</p><button type="button" class="v3-year-link" data-v3-next="years">So funktioniert deine Planung Jahr für Jahr <span aria-hidden="true">→</span></button></div>`;
   }
   // Kapitalbezüge chronologisch: pro Bezugsjahr eine gemeinsame Steuerbasis aus PK und Säule 3a.
   function capacityPanel(item, code) {
@@ -96,15 +111,70 @@
   let chartObserver;
   let p3ChartObserver;
   let p3Draft = null;
+  // Speicherstatus: letzter erfolgreicher Speicherzeitpunkt und eine kurze Nachfrist für automatisches Speichern.
+  let lastSavedAt = null;
+  let saveTimer = null;
+  let storageFailed = false;
+  const autoSaveDelay = 600;
+  const savedAtLabel = iso => {
+    const date = new Date(iso);
+    if (!iso || Number.isNaN(date.getTime())) return '';
+    return `${date.toLocaleDateString('de-CH', {day:'numeric', month:'short', year:'numeric'})}, ${date.toLocaleTimeString('de-CH', {hour:'2-digit', minute:'2-digit'})}`;
+  };
+  function saveRow() { return '<div class="v3-save"><span id="saveLabel">Noch nicht gespeichert</span><button type="button" data-save>Jetzt speichern</button></div>'; }
+  function renderSaveState() {
+    const node = document.getElementById('saveLabel');
+    if (!node) return;
+    const row = node.closest?.('.v3-save');
+    const state = storageFailed ? 'error' : saveTimer ? 'pending' : lastSavedAt ? 'saved' : 'empty';
+    row?.setAttribute('data-state', state);
+    if (storageFailed) { node.textContent = 'Speichern nicht möglich.'; return; }
+    if (saveTimer) { node.textContent = 'Änderungen noch nicht gespeichert'; return; }
+    const stamp = savedAtLabel(lastSavedAt);
+    node.textContent = stamp ? `✓ Automatisch gespeichert | ${stamp}` : 'Noch nicht gespeichert';
+  }
+  // Schreiben in den lokalen Speicher; ohne technische Begriffe in der Oberfläche.
+  function persist() {
+    try {
+      const stamp = new Date().toISOString();
+      localStorage.setItem(storageKey, JSON.stringify({version:1, savedAt:stamp, state}));
+      lastSavedAt = stamp; storageFailed = false;
+    } catch (error) { storageFailed = true; }
+    renderSaveState();
+  }
+  // Änderungen speichern automatisch; «Jetzt speichern» schreibt sofort.
+  // Ohne Timer (z. B. in einer Testumgebung) wird direkt gespeichert.
+  const canDefer = typeof setTimeout === 'function' && typeof clearTimeout === 'function';
+  function markDirty() {
+    if (saveTimer && canDefer) clearTimeout(saveTimer);
+    saveTimer = canDefer ? setTimeout(() => { saveTimer = null; persist(); }, autoSaveDelay) : null;
+    if (!saveTimer) { persist(); return; }
+    renderSaveState();
+  }
+  function save() { if (saveTimer && canDefer) { clearTimeout(saveTimer); saveTimer = null; } persist(); }
 
   function fieldMarkup(field) {
     const value = draft[field.key] ?? '';
     // Pflichtfeld in V3: kein «noch offen»-Modus, der Picker listet nur die 26 Kantone.
     // Die Steuerannahmen des gewählten Kantons liegen hinter dem ⓘ am Feld.
-    if (field.type === 'canton') return `<div class="v3-field"><label for="${field.key}">${field.label}<span class="v3-required">Pflichtangabe</span></label><select id="${field.key}" name="${field.key}" data-empty-label="Kanton wählen" aria-required="true" required><option value="" disabled ${entered(value) ? '' : 'selected'}>Kanton wählen</option>${Object.entries(TaxModel.config.cantons).map(([key, canton]) => `<option value="${key}" ${value === key ? 'selected' : ''}>${key} · ${esc(canton.name)}</option>`).join('')}</select><div data-canton-tax>${taxAssumptionHint(value || State.canton(state))}</div></div>`;
-    return `<div class="v3-field"><label for="${field.key}">${field.label}</label><div class="v3-entry"><input id="${field.key}" name="${field.key}" type="number" inputmode="decimal" min="${field.min ?? 0}" max="${field.max ?? 1e10}" step="${field.step ?? 'any'}" value="${esc(value)}"><span>${field.unit}</span></div></div>`;
+    if (field.type === 'canton') return `<div class="v3-field"><label for="${field.key}">${field.label}${requiredMark(field)}</label><select id="${field.key}" name="${field.key}" data-empty-label="Kanton wählen" aria-required="true" required><option value="" disabled ${entered(value) ? '' : 'selected'}>Kanton wählen</option>${Object.entries(TaxModel.config.cantons).map(([key, canton]) => `<option value="${key}" ${value === key ? 'selected' : ''}>${key} · ${esc(canton.name)}</option>`).join('')}</select><div data-canton-tax>${taxAssumptionHint(value || State.canton(state))}</div></div>`;
+    // Beträge zeigen Schweizer Tausendertrennzeichen; die Eingabe bleibt auf Mobile unkompliziert.
+    const amount = isAmountField(field);
+    const entry = amount
+      ? `<input id="${field.key}" name="${field.key}" type="text" inputmode="decimal" autocomplete="off" data-amount value="${esc(formatAmount(value))}">`
+      : `<input id="${field.key}" name="${field.key}" type="number" inputmode="decimal" min="${field.min ?? 0}" max="${field.max ?? 1e10}" step="${field.step ?? 'any'}" value="${esc(value)}">`;
+    return `<div class="v3-field"><label for="${field.key}">${field.label}${requiredMark(field)}</label><div class="v3-entry">${entry}<span>${field.unit}</span></div></div>`;
   }
-  function assignForm() { app.querySelectorAll('input,select').forEach(input => { if (!input.name) return; if (input.type === 'radio') { if (input.checked) draft[input.name] = input.value; return; } draft[input.name] = input.type === 'checkbox' ? input.checked : input.value; }); }
+  // Eingaben lesen: Trennzeichen entfernen, damit die Berechnung rein numerisch bleibt.
+  function assignForm() { app.querySelectorAll('input,select').forEach(input => { if (!input.name) return; if (input.type === 'radio') { if (input.checked) draft[input.name] = input.value; return; } draft[input.name] = input.type === 'checkbox' ? input.checked : (input.hasAttribute('data-amount') ? amountValue(input.value) : input.value); }); }
+  // Betragsfeld formatieren, ohne die Schreibposition mitten im Feld zu zerstören.
+  function formatAmountField(input) {
+    const raw = input.value, formatted = formatAmount(raw);
+    if (formatted === raw) return;
+    input.value = formatted;
+    const caret = formatted.length;
+    input.setSelectionRange?.(caret, caret);
+  }
   // V3 erfasst jede Säule 3a mit Bezugsplanung: ohne Angabe gilt der Bezug bei Pensionierung.
   function normalizeP3(source) {
     const pension3a = source.details && source.details.pension3a;
@@ -152,7 +222,7 @@
   }
   function stepper(active) { return `<nav class="v3-stepper" aria-label="Planungsschritte"><span class="${active === 'rents' ? 'active' : ''}">Meine Renten</span><span class="${active === 'need' ? 'active' : ''}">Mein Bedarf</span><span class="${active === 'plan' ? 'active' : ''}">Mein Plan</span></nav>`; }
   function message(text = '') { const node = document.getElementById('v3Error'); if (node) node.textContent = text; }
-  function apply(group, values) { state = State.apply(state, group, values); }
+  function apply(group, values) { state = State.apply(state, group, values); markDirty(); }
   function renderForm(routeName) {
     state = normalizeP3(state);
     route = routeName;
@@ -199,14 +269,27 @@
   }
   const editorTitles = {personal:'Persönliche Angaben', ahv:'AHV-Renten', pension:'Pensionskasse (PK)', pension3a:'Säule 3a', extra:'Weitere Einnahmen', need:'Bedarf', assumptions:'Annahmen', assets:'Vermögen'};
   const pkRateKeys = ['pkInterest', 'uws'];
+  // V3 weist keine separat einstellbare Wertschriftenrendite aus: der Ruhestand rechnet
+  // mit den Portfolio-Sätzen des Risikoprofols (Cash/Anleihen/Wertschöpfung).
+  const hiddenRateKeys = ['secReturn'];
   function editorFields(detail) {
     if (detail === 'personal') return [...State.fields('time', state), ...State.fields('tax', state)];
     if (detail === 'ahv') return State.fields('income', state).filter(field => field.key === 'ahv');
     if (detail === 'extra') return State.fields('income', state).filter(field => ['other', 'additional'].includes(field.key));
     if (detail === 'pension') return [...State.fields('pension', state).filter(field => field.key !== 'pkShare'), ...State.fields('assumptions', state).filter(field => pkRateKeys.includes(field.key))];
-    return State.fields(detail, state).filter(field => detail !== 'assumptions' || !pkRateKeys.includes(field.key));
+    return State.fields(detail, state).filter(field => detail !== 'assumptions' || (!pkRateKeys.includes(field.key) && !hiddenRateKeys.includes(field.key)));
   }
   function assumptionValues() { const {reviewed, ...values} = state.details.assumptions ?? {}; return {...State.defaults, ...values, targetAge:state.targetAge}; }
+  // Renditen und Kapitalmechanik offenlegen: vor der Pensionierung Aufbau, im Ruhestand drei Töpfe.
+  function rateBody() {
+    const values = assumptionValues(), plan = planFor(chosenShare()), pre = state.mode === 'pre';
+    const returns = plan?.scenarios?.returns ?? [0, 1, 6];
+    const share = chosenShare();
+    const accumulation = pre
+      ? `<p>Bis zur Pensionierung wachsen dein PK-Guthaben mit der PK-Verzinsung, deine Säule 3a mit der 3a-Rendite und deine Wertschriften mit einem hinterlegten internen Satz von ${percent(values.secReturn)} %. Eine separat einstellbare Wertschriftenrendite rechnen wir nicht.</p>`
+      : '<p>Dein Plan startet heute; ein Aufbau bis zur Pensionierung wird nicht mehr gerechnet. Eine separat einstellbare Wertschriftenrendite rechnen wir nicht.</p>';
+    return `${accumulation}<p>Im Ruhestand liegt dein Kapital in drei Töpfen: <strong>Cash</strong> ${percent(returns[0])} %, <strong>Anleihen</strong> ${percent(returns[1])} % und <strong>Wertschöpfung</strong> ${percent(returns[2])} % (Rendite deines Risikoprofils, real). Im Cash-Topf liegt die Entnahme des laufenden Jahres, in den Anleihen die Entnahmen der nächsten zwei Jahre, der Rest in der Wertschöpfung. Die Aufteilung wird jedes Jahr aus dem verbleibenden Kapital neu gebildet.</p><p>Die Entnahme eines Jahres ist der Bedarf abzüglich der Renten nach geschätzter Einkommenssteuer; die Kapitalbezugssteuer wird einmalig beim Bezug abgezogen und danach nicht mehr belastet. Alle Beträge sind in heutiger Kaufkraft gerechnet, die Renten sind feste Nominalbeträge.</p>${pre ? `<p>Die Aufteilung deines PK-Kapitals (${share} % Kapital) bestimmt nur, wie viel Rente und wie viel Kapital du beim Start hast – die Mechanik danach ist für alle Varianten dieselbe.</p>` : ''}`;
+  }
   function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additional:0, ...state.details.income, canton:State.canton(state)}; }
   function returnToPlan() {
     state = normalizeP3(state);
@@ -254,7 +337,9 @@
     // Schnellerfassung: die Annahme gilt vorläufig, bis die Bezüge unter «Mein Plan» geplant sind.
     const p3Hint = detail === 'pension3a' ? `<p class="v3-hint" data-p3-hint>${p3ModeHint()}</p>` : '';
     const p3Note = detail === 'pension3a' ? infoMarkup({label:'So rechnen wir mit der 3a-Bezugssteuer', aria:'Behandlung der Säule 3a erklären', body:`<p>Säule 3a bleibt bis zum Bezugsalter gebunden. Im Bezugsjahr wird der Betrag mit der geschätzten Kapitalbezugssteuer belastet; nur der Nettobetrag zählt zum verfügbaren Vermögen. Werden PK-Kapital und 3a im selben Jahr bezogen, bilden sie eine gemeinsame Steuerbasis.</p><p>${p3TaxNotice}</p>`}) : '';
-    app.innerHTML = `${pageHeader(editorTitles[detail])}<div class="v3-detail-layout"><section class="v3-detail-form"><p class="v3-sublead">${hint}</p><form id="v3DetailForm">${modeField}<div class="v3-fields" id="detailFields" tabindex="-1">${fields.map(fieldMarkup).join('')}</div>${p3ModeField}${p3Hint}${p3Note}<p class="v3-error" id="v3Error" role="alert"></p><div id="pensionResult">${pension ? pensionBreakdown() : ''}</div><div class="v3-actions"><button type="button" data-detail-back>Abbrechen</button><button class="primary" type="submit">Übernehmen</button></div></form></section></div>`;
+    // Mechanik transparent: welche Rendite wo wirkt und wie das Kapital im Ruhestand aufgeteilt wird.
+    const rateNote = detail === 'assumptions' ? infoMarkup({label:'So rechnen wir mit Renditen', aria:'Verwendete Renditen und Kapitalaufteilung erklären', body:rateBody()}) : '';
+    app.innerHTML = `${pageHeader(editorTitles[detail])}<div class="v3-detail-layout"><section class="v3-detail-form"><p class="v3-sublead">${hint}</p><form id="v3DetailForm">${modeField}<div class="v3-fields" id="detailFields" tabindex="-1">${fields.map(fieldMarkup).join('')}</div>${p3ModeField}${p3Hint}${p3Note}${rateNote}<p class="v3-error" id="v3Error" role="alert"></p><div id="pensionResult">${pension ? pensionBreakdown() : ''}</div><div class="v3-actions"><button type="button" data-detail-back>Abbrechen</button><button class="primary" type="submit">Übernehmen</button></div></form></section></div>`;
     window.CantonPicker?.enhanceAll(app);
     if (detail === 'pension3a') updateP3Hint();
     document.querySelector('[data-detail-back]').addEventListener('click', returnToPlan);
@@ -285,6 +370,7 @@
         } else if (['ahv','extra'].includes(detail)) apply('income', {...incomeValues(), ...draft});
         else if (detail === 'assumptions') apply('assumptions', {...assumptionValues(), ...draft});
         else apply(detail, {...state.details[detail], ...draft});
+        markDirty();
         returnToPlan();
       } catch (error) { message(error.message); }
     });
@@ -298,7 +384,7 @@
   }
   function assetFormMarkup(part) {
     const values = part === 'unallocated' ? {unallocated:State.breakdown(state).assets.unallocated ?? ''} : (state.details.assets ?? {});
-    return `<form class="v3-asset-form" id="asset-${part}" data-asset-form="${part}" novalidate><div class="v3-fields">${State.assetFields(part, state).map(field => `<div class="v3-field"><label for="asset-input-${field.key}">${field.label}</label><div class="v3-entry"><input id="asset-input-${field.key}" name="${field.key}" type="number" inputmode="decimal" min="${field.min ?? 0}" max="${field.max ?? 1e10}" step="${field.step ?? 'any'}" value="${esc(values[field.key] ?? '')}"><span>${field.unit}</span></div></div>`).join('')}</div><p class="v3-error" id="asset-error-${part}" role="alert"></p><div class="v3-actions"><button type="button" data-asset-cancel="${part}">Abbrechen</button><button class="primary" type="submit">Übernehmen</button></div></form>`;
+    return `<form class="v3-asset-form" id="asset-${part}" data-asset-form="${part}" novalidate><div class="v3-fields">${State.assetFields(part, state, {keepOptional:true}).map(field => `<div class="v3-field"><label for="asset-input-${field.key}">${field.label}${requiredMark(field)}</label><div class="v3-entry"><input id="asset-input-${field.key}" name="${field.key}" type="text" inputmode="decimal" autocomplete="off" data-amount${field.optional === true ? ' data-optional="true"' : ''} value="${esc(formatAmount(values[field.key] ?? ''))}"><span>${field.unit}</span></div></div>`).join('')}</div><p class="v3-hint">Optionale Felder dürfen leer bleiben; sie zählen dann nicht als erfasst.</p><p class="v3-error" id="asset-error-${part}" role="alert"></p><div class="v3-actions"><button type="button" data-asset-cancel="${part}">Abbrechen</button><button class="primary" type="submit">Übernehmen</button></div></form>`;
   }
   /* Available capital stays with its own sources; Säule 3a and the chosen PK capital
      withdrawal come from Vorsorge and are only shown, never entered here a second time. */
@@ -331,8 +417,8 @@
     app.innerHTML = `${pageHeader('Vermögen')}<div class="v3-detail-layout"><section class="v3-detail-form"><p class="v3-sublead">Dein verfügbares Vermögen besteht aus Bank, Wertschriften und weiteren verfügbaren Vermögenswerten. Vorsorgebeträge werden nur angezeigt; Immobilien netto bleiben als gebundenes Vermögen getrennt.</p>${assetComposition(state)}${backRow()}</section></div>`;
     app.querySelectorAll('[data-asset-form]').forEach(form => form.addEventListener('submit', event => {
       event.preventDefault();
-      const values = Object.fromEntries([...form.querySelectorAll('input')].filter(input => input.name).map(input => [input.name, input.value]));
-      try { state = State.applyAsset(state, form.dataset.assetForm, values); assetPart = null; renderAssets(); }
+      const values = Object.fromEntries([...form.querySelectorAll('input')].filter(input => input.name).map(input => [input.name, amountValue(input.value)]));
+      try { state = State.applyAsset(state, form.dataset.assetForm, values, {keepOptional:true}); assetPart = null; markDirty(); renderAssets(); }
       catch (error) { form.querySelector('.v3-error').textContent = error.message; }
     }));
     if (focusSection) focusTarget(focusSection);
@@ -345,6 +431,7 @@
     assetPart = null;
     if (name === 'assets') renderAssets(focusSection);
     else if (name === 'pension3aplan') renderP3Plan();
+    else if (name === 'years') renderYearByYear();
     else renderDetail(name, focusSection, focusHighlight);
   }
   // Kein Wohnkanton, kein Planobjekt: damit entstehen ohne Kanton auch keine Rechenergebnisse.
@@ -422,6 +509,7 @@
       if (problem) throw Error(problem);
       const accountsToSave = list.map(account => ({name:String(account.name ?? '').trim(), amount:Number(account.amount), age:Number(account.age)}));
       state = State.apply(state, 'pension3a', {...state.details.pension3a, p3:p3SumOf(accountsToSave), p3Mode:'later', p3Accounts:accountsToSave});
+      markDirty();
       p3Draft = null;
       returnToPlan();
     } catch (error) { message(error.message); }
@@ -477,9 +565,9 @@
     closeMenu(); chartObserver?.disconnect(); route = 'pension3aaccount';
     window.scrollTo(0, 0);
     const account = p3AccountRows()[index] || {name:'', amount:'', age:numeric(state.values.retirement)};
-    app.innerHTML = `${pageHeader('3a-Konto bearbeiten', {back:'← Säule 3a', to:'data-back-p3'})}<div class="v3-detail-layout"><section class="v3-detail-form"><form id="v3P3AccountForm"><div class="v3-fields"><div class="v3-field"><label for="p3AccountName">Bezeichnung (optional)</label><div class="v3-entry"><input id="p3AccountName" name="name" type="text" autocomplete="off" value="${esc(account.name ?? '')}" placeholder="3a Konto ${index + 1}"></div></div><div class="v3-field"><label for="p3AccountAmount">Guthaben</label><div class="v3-entry"><input id="p3AccountAmount" name="amount" type="number" inputmode="decimal" min="0" step="any" value="${esc(account.amount ?? '')}"><span>CHF</span></div>${infoMarkup({iconOnly:true, aria:'Guthaben erklären', body:`<p>Guthaben des Kontos zum heutigen Stand. ${p3GrowthNote()}</p>`})}</div><div class="v3-field"><label for="p3AccountAge">Bezug</label><div class="v3-entry v3-entry-select"><select id="p3AccountAge" name="age" aria-label="Bezugsalter"><option value="">Alter wählen</option>${p3AgeOptions(account.age)}</select></div></div></div><div class="v3-p3-live" data-p3-live></div><p class="v3-error" id="v3Error" role="alert"></p><div class="v3-actions"><button type="button" data-detail-back>Abbrechen</button><button class="primary" type="submit">Übernehmen</button></div></form>${p3AccountRows().length > 1 ? '<div class="v3-actions v3-actions-back"><button type="button" data-p3-remove>Konto entfernen</button></div>' : ''}</section></div>`;
+    app.innerHTML = `${pageHeader('3a-Konto bearbeiten', {back:'← Säule 3a', to:'data-back-p3'})}<div class="v3-detail-layout"><section class="v3-detail-form"><form id="v3P3AccountForm"><div class="v3-fields"><div class="v3-field"><label for="p3AccountName">Bezeichnung (optional)</label><div class="v3-entry"><input id="p3AccountName" name="name" type="text" autocomplete="off" value="${esc(account.name ?? '')}" placeholder="3a Konto ${index + 1}"></div></div><div class="v3-field"><label for="p3AccountAmount">Guthaben${requiredMark({})}</label><div class="v3-entry"><input id="p3AccountAmount" name="amount" type="text" inputmode="decimal" autocomplete="off" data-amount value="${esc(formatAmount(account.amount ?? ''))}"><span>CHF</span></div>${infoMarkup({iconOnly:true, aria:'Guthaben erklären', body:`<p>Guthaben des Kontos zum heutigen Stand. ${p3GrowthNote()}</p>`})}</div><div class="v3-field"><label for="p3AccountAge">Bezug${requiredMark({})}</label><div class="v3-entry v3-entry-select"><select id="p3AccountAge" name="age" aria-label="Bezugsalter"><option value="">Alter wählen</option>${p3AgeOptions(account.age)}</select></div></div></div><div class="v3-p3-live" data-p3-live></div><p class="v3-error" id="v3Error" role="alert"></p><div class="v3-actions"><button type="button" data-detail-back>Abbrechen</button><button class="primary" type="submit">Übernehmen</button></div></form>${p3AccountRows().length > 1 ? '<div class="v3-actions v3-actions-back"><button type="button" data-p3-remove>Konto entfernen</button></div>' : ''}</section></div>`;
     const form = document.getElementById('v3P3AccountForm');
-    const read = () => ({name: form.querySelector('[name="name"]').value.trim(), amount: form.querySelector('[name="amount"]').value, age: form.querySelector('[name="age"]').value});
+    const read = () => ({name: form.querySelector('[name="name"]').value.trim(), amount: amountValue(form.querySelector('[name="amount"]').value), age: form.querySelector('[name="age"]').value});
     // Live: die Wirkung dieser Änderung wird sofort gerechnet.
     const live = () => {
       const node = app.querySelector('[data-p3-live]');
@@ -549,22 +637,53 @@
   }
   function marker(index) { return index === 0 ? '●' : index === 1 ? '■' : '◆'; }
   function variantCards() { return currentVariants().map(item => `<div class="v3-variant ${item.share === chosenShare() ? 'selected' : ''}"><button class="v3-variant-select" data-variant-index="${item.index}" type="button" aria-pressed="${item.share === chosenShare()}"><span class="v3-marker marker-${item.index}">${marker(item.index)}</span><span class="v3-variant-copy"><strong>${item.share} % Kapital</strong><small>${item.index === 1 ? 'Rente + Kapital' : item.share === 0 ? 'mehr laufende PK-Rente' : 'mehr Kapital zu Beginn'}</small></span><span class="v3-variant-chevron" aria-hidden="true">›</span></button></div>`).join(''); }
-  function chart(rows, width) {
+  // Kompakte Achsenbeschriftung (Mio./k) und reine Wertangabe für die Endlabels.
+  const axisLabel = value => {
+    const grouped = (number, digits) => Number(number).toLocaleString('de-CH', {maximumFractionDigits:digits}).replace(/’/g, "'");
+    if (value >= 1000000) return `${grouped(value / 1000000, 1)} Mio.`;
+    if (value >= 1000) return `${grouped(value / 1000, 0)} k`;
+    return grouped(value, 0);
+  };
+  const plainMoney = value => Math.round(value || 0).toLocaleString('de-CH').replace(/’/g, "'");
+  const lineColor = (selected, index) => selected ? '#1f6255' : ['#6f7b7b', '#6f675e', '#536477'][index % 3];
+  const isSelectedLine = (row, rows) => row.selected ?? (rows.length === 1 || row.share === chosenShare());
+  function chartLegend(rows, share) {
+    const ordered = [...rows].sort((a, b) => Number(b.share === share) - Number(a.share === share));
+    return ordered.map(row => {
+      const index = rows.indexOf(row);
+      return `<li><span class="v3-legend-dot" style="background:${lineColor(isSelectedLine(row, rows), index)}"></span>${row.share} %</li>`;
+    }).join('');
+  }
+  // Flachere Grafik als früher: mobil rund 200 px, auf Desktop grosszügiger (Spec §11).
+  function chart(rows, width, height = width >= 700 ? 260 : 200) {
     const points = rows.flatMap(row => row.result.yearlyProjection.map(entry => entry.free));
     // Match SVG units to CSS pixels so labels and markers stay legible on mobile.
-    const maximum = Math.max(1, ...points), height = 270, left = money(maximum).length * 8 + 16, right = 20, top = 16, bottom = 32, plotWidth = width - left - right, plotHeight = height - top - bottom;
+    const maximum = Math.max(1, ...points), left = Math.max(52, axisLabel(maximum).length * 7 + 14), right = 62, top = 14, bottom = 30, plotWidth = Math.max(60, width - left - right), plotHeight = height - top - bottom;
     const y = value => top + plotHeight - (value / maximum) * plotHeight;
-    const grid = [0, .5, 1].map(ratio => `<line class="v3-grid" x1="${left}" x2="${width - right}" y1="${y(maximum * ratio)}" y2="${y(maximum * ratio)}"></line><text x="${left - 12}" text-anchor="end" y="${y(maximum * ratio) + 5}">${money(maximum * ratio)}</text>`).join('');
-    const lines = rows.map((row, index) => { const series = row.result.yearlyProjection, coordinates = series.map((entry, i) => `${left + (i / Math.max(1, series.length - 1)) * plotWidth},${y(entry.free)}`).join(' '), selected = row.selected ?? (rows.length === 1 || row.share === chosenShare()), dash = index === 1 ? ' stroke-dasharray="9 6"' : index === 2 ? ' stroke-dasharray="2 6"' : '', color = selected ? '#1f6255' : ['#6f7b7b', '#6f675e', '#536477'][index % 3], markers = [0, Math.floor((series.length - 1) / 2), series.length - 1].filter((value, position, all) => all.indexOf(value) === position).map(i => { const x = left + (i / Math.max(1, series.length - 1)) * plotWidth; const cy = y(series[i].free); return index === 0 ? `<circle cx="${x}" cy="${cy}" r="4" fill="${color}"></circle>` : index === 1 ? `<rect x="${x - 3}" y="${cy - 3}" width="6" height="6" fill="${color}"></rect>` : `<path d="M ${x} ${cy - 5} L ${x + 5} ${cy} L ${x} ${cy + 5} L ${x - 5} ${cy} Z" fill="${color}"></path>`; }).join(''); return `<polyline data-chart-share="${row.share}" points="${coordinates}" fill="none" stroke="${color}" stroke-width="${selected ? 3.5 : 1.8}" opacity="${selected ? 1 : .7}"${dash}></polyline>${markers}`; }).join('');
+    const grid = [0, .5, 1].map(ratio => `<line class="v3-grid" x1="${left}" x2="${width - right}" y1="${y(maximum * ratio)}" y2="${y(maximum * ratio)}"></line><text x="${left - 10}" text-anchor="end" y="${y(maximum * ratio) + 5}">${axisLabel(maximum * ratio)}</text>`).join('');
+    const lines = rows.map((row, index) => { const series = row.result.yearlyProjection, coordinates = series.map((entry, i) => `${left + (i / Math.max(1, series.length - 1)) * plotWidth},${y(entry.free)}`).join(' '), selected = isSelectedLine(row, rows), dash = index === 1 ? ' stroke-dasharray="9 6"' : index === 2 ? ' stroke-dasharray="2 6"' : '', color = lineColor(selected, index), markers = [0, Math.floor((series.length - 1) / 2), series.length - 1].filter((value, position, all) => all.indexOf(value) === position).map(i => { const x = left + (i / Math.max(1, series.length - 1)) * plotWidth; const cy = y(series[i].free); return index === 0 ? `<circle cx="${x}" cy="${cy}" r="4" fill="${color}"></circle>` : index === 1 ? `<rect x="${x - 3}" y="${cy - 3}" width="6" height="6" fill="${color}"></rect>` : `<path d="M ${x} ${cy - 5} L ${x + 5} ${cy} L ${x} ${cy + 5} L ${x - 5} ${cy} Z" fill="${color}"></path>`; }).join(''), end = series.at(-1); return `<polyline data-chart-share="${row.share}" points="${coordinates}" fill="none" stroke="${color}" stroke-width="${selected ? 3.5 : 1.8}" opacity="${selected ? 1 : .7}"${dash}></polyline>${markers}<text class="v3-chart-value" x="${left + plotWidth + 8}" y="${y(end.free) + 4}">${plainMoney(end.free)}</text>`; }).join('');
     const series = rows[0].result.yearlyProjection, startAge = series[0].age, endAge = series.at(-1).age;
     const tickAges = [startAge, ...series.filter(entry => entry.age > startAge && entry.age < endAge && entry.age % 5 === 0).map(entry => entry.age), endAge];
     const xForAge = age => left + ((age - startAge) / Math.max(1, endAge - startAge)) * plotWidth;
     const spacedAges = tickAges.filter((age, index) => index === 0 || index === tickAges.length - 1 || (xForAge(age) - xForAge(startAge) >= 30 && xForAge(endAge) - xForAge(age) >= 38));
     const ticks = spacedAges.filter((age, index) => index === 0 || xForAge(age) - xForAge(spacedAges[index - 1]) >= 32).map(age => `<text data-chart-tick-age="${age}" x="${xForAge(age)}" text-anchor="${age === startAge ? 'start' : age === endAge ? 'end' : 'middle'}" y="${height - 8}">${age}</text>`).join('');
-    const targets = rows.length === 1 ? series.map((entry, index) => { const x = left + (index / Math.max(1, series.length - 1)) * plotWidth; return `<circle class="v3-chart-target" cx="${x}" cy="${y(entry.free)}" r="9" fill="transparent" tabindex="0" data-chart-age="${entry.age}" aria-label="Alter ${entry.age}: ${money(entry.free)} verfügbares Kapital"></circle>`; }).join('') : '';
-    return `<svg class="v3-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Verfügbares Kapital von Alter ${startAge} bis ${endAge}">${grid}<line class="v3-axis" x1="${left}" x2="${width - right}" y1="${y(0)}" y2="${y(0)}"></line>${lines}${targets}${ticks}</svg>`;
+    return `<svg class="v3-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Verfügbares Kapital von Alter ${startAge} bis ${endAge}">${grid}<line class="v3-axis" x1="${left}" x2="${width - right}" y1="${y(0)}" y2="${y(0)}"></line>${lines}${ticks}</svg>`;
   }
-  function planSummary(item) { const result = item.result; const assetsKnown = !!state.details.assets || state.values.free !== undefined; const pensionKnown = state.details.pension?.[state.mode === 'pre' ? 'pk' : 'pkRent'] !== undefined; const assets = assetsKnown ? Calculator.calculateAvailableCapital(item.plan).totalInvestableCapital : null; const assetsMarkup = `<section class="v3-asset-card"><div class="v3-asset-icon" aria-hidden="true">◉</div><div class="v3-asset-copy"><h3>Vermögen</h3><strong>${assets === null ? 'Noch nicht erfasst' : `${money(assets)} im Plan`}</strong><div class="v3-progress"><span style="width:${assets === null ? 0 : 100}%"></span></div><small>${assets === null ? 'Damit wird dein Plan genauer.' : 'Kann einen Teil der Lücke decken.'}</small></div></section>`; const checklist = `<section class="v3-settle"><h2>Plan festigen</h2><button type="button" class="v3-next-row" data-v3-next="assets" data-focus-section="assetTotal"><span class="v3-circle">${assetsKnown ? '✓' : ''}</span><span><strong>Vermögen</strong><small>${assetsKnown ? 'Erfasst' : 'Offen'}</small></span><em>${assetsKnown ? 'Anpassen' : 'Nächster Schritt'}</em><b>›</b></button><button type="button" class="v3-next-row" data-v3-next="pension" data-focus-section="pkBreakdown" data-focus-highlight="pkRente"><span class="v3-circle">${pensionKnown ? '✓' : ''}</span><span><strong>Pensionskasse</strong><small>${pensionKnown ? 'Erfasst' : 'Offen'}</small></span><em>${pensionKnown ? 'Anpassen' : 'Nächster Schritt'}</em><b>›</b></button></section>`; return `<div class="v3-summary"><div><span>Bedarf / Monat</span><strong>${money(result.monthlyNeed)}</strong></div><div><span>Einkommen netto</span><strong>${money(result.monthlyIncomeNet)}</strong></div><div><span>Aus Vermögen / Monat</span><strong>${money(result.monthlyGap)}</strong></div></div>${taxRow(item)}<div class="v3-status ${result.capitalExhaustionAge ? 'gap' : 'covered'}">${result.capitalExhaustionAge ? `Finanzierungslücke voraussichtlich ab Alter ${result.capitalExhaustionAge}.` : `Unter den gewählten Annahmen bis Alter ${item.plan.retirement.targetAge} finanzierbar.`}</div>${assetsMarkup}${checklist}`; }
+  // Vollständigkeit für qualitative Aussagen: erst mit erfasstem Vermögen und Vorsorge
+  // darf eine Lücke prognostiziert werden. Fehlende Angaben sind nicht automatisch 0.
+  function dataKnown() {
+    const pre = state.mode === 'pre', a = state.details.assets ?? null;
+    const assets = state.values.free !== undefined || (!!a && ['cash','securities','otherAssets'].some(key => entered(a[key])));
+    const pension = state.details.pension?.[pre ? 'pk' : 'pkRent'] !== undefined;
+    return {pre, assets, pension, ready:assets && pension};
+  }
+  function planSummary(item) { const result = item.result; const known = dataKnown(); const assetsKnown = known.assets; const pensionKnown = known.pension; const assets = assetsKnown ? Calculator.calculateAvailableCapital(item.plan).totalInvestableCapital : null; const assetsMarkup = `<section class="v3-asset-card"><div class="v3-asset-icon" aria-hidden="true">◉</div><div class="v3-asset-copy"><h3>Vermögen</h3><strong>${assets === null ? 'Noch nicht erfasst' : `${money(assets)} im Plan`}</strong><div class="v3-progress"><span style="width:${assets === null ? 0 : 100}%"></span></div><small>${assets === null ? 'Damit wird dein Plan genauer.' : 'Kann einen Teil der Lücke decken.'}</small></div></section>`; const checklist = `<section class="v3-settle"><h2>Plan festigen</h2><button type="button" class="v3-next-row" data-v3-next="assets" data-focus-section="assetTotal"><span class="v3-circle">${assetsKnown ? '✓' : ''}</span><span><strong>Vermögen</strong><small>${assetsKnown ? 'Erfasst' : 'Offen'}</small></span><em>${assetsKnown ? 'Anpassen' : 'Nächster Schritt'}</em><b>›</b></button><button type="button" class="v3-next-row" data-v3-next="pension" data-focus-section="pkBreakdown" data-focus-highlight="pkRente"><span class="v3-circle">${pensionKnown ? '✓' : ''}</span><span><strong>Pensionskasse</strong><small>${pensionKnown ? 'Erfasst' : 'Offen'}</small></span><em>${pensionKnown ? 'Anpassen' : 'Nächster Schritt'}</em><b>›</b></button></section>`; return `<div class="v3-summary"><div><span>Bedarf / Monat</span><strong>${money(result.monthlyNeed)}</strong></div><div><span>Einkommen netto</span><strong>${money(result.monthlyIncomeNet)}</strong></div><div><span>Aus Vermögen / Monat</span><strong>${money(result.monthlyGap)}</strong></div></div>${taxRow(item)}${prognosisMarkup(item)}${assetsMarkup}${checklist}`; }
+  // Qualitative Finanzierungsaussage: nur mit erfassten Daten, sonst neutraler Hinweis (Spec §5).
+  function prognosisMarkup(item) {
+    const result = item.result;
+    if (!dataKnown().ready) return '<div class="v3-status pending">Vervollständige deinen Plan, um die langfristige Entwicklung zu sehen.</div>';
+    return `<div class="v3-status ${result.capitalExhaustionAge ? 'gap' : 'covered'}">${result.capitalExhaustionAge ? `Finanzierungslücke voraussichtlich ab Alter ${result.capitalExhaustionAge}.` : `Unter den gewählten Annahmen bis Alter ${item.plan.retirement.targetAge} finanzierbar.`}</div>`;
+  }
   function compactReadySummary(item) {
     const result = item.result, sources = Calculator.incomeSourcesAtStart(item.plan);
     const source = id => sources.find(entry => entry.id === id)?.annualIncome / 12 || 0;
@@ -572,38 +691,249 @@
     const other = source('other'), additional = source('additional');
     const pensionsGross = source('ahv') + source('pk') + other;
     const additionalRows = sources.filter(entry => !['ahv', 'pk', 'other', 'additional'].includes(entry.id) && entry.annualIncome > 0);
-    return `<div class="v3-summary-block"><div class="v3-income-sources"><h2>Deine Renten und Einnahmen</h2>${row('AHV', source('ahv'), 'ahv', 'detailFields')}${row('PK-Rente', source('pk'), 'pension', 'pkBreakdown', 'pkRente')}${other > 0 ? `<div class="v3-rent-row">${row('Weitere Renten', other, 'extra', 'detailFields')}${infoMarkup({iconOnly:true, aria:'Weitere Renten erläutern', body:`<p>Weitere Renten: ${money(other)} / Monat</p>`})}</div>` : ''}<div class="v3-pension-total"><span>Renten gesamt · vor Steuern</span><strong>${money(pensionsGross)} / Monat</strong></div>${additional > 0 ? row('Weitere Einnahmen', additional, 'extra', 'detailFields') : ''}${additionalRows.map(entry => `<div class="v3-source-line"><span>${esc(entry.name)}</span><strong>${money(entry.annualIncome / 12)}</strong></div>`).join('')}${taxRow(item)}<div class="v3-income-total"><span>Einkommen netto</span><strong>${money(result.monthlyIncomeNet)} / Monat</strong></div></div><div class="v3-compact-summary">${row('Bedarf / Monat', result.monthlyNeed, 'need', 'detailFields')}<div class="v3-gap-value"><span>Monatlich offen</span><strong>${money(result.monthlyGap)}</strong></div>${row('Verfügbares Vermögen', result.availableCapital, 'assets', 'assetTotal')}</div><p class="v3-compact-note">Nach geschätzten Steuern · Kapitalwirkung über die Jahre vergleichen.</p></div>`;
+    return `<div class="v3-summary-block"><div class="v3-income-sources"><h2>Deine Renten und Einnahmen</h2>${row('AHV', source('ahv'), 'ahv', 'detailFields')}${row('PK-Rente', source('pk'), 'pension', 'pkBreakdown', 'pkRente')}${other > 0 ? `<div class="v3-rent-row">${row('Weitere Renten', other, 'extra', 'detailFields')}${infoMarkup({iconOnly:true, aria:'Weitere Renten erläutern', body:`<p>Weitere Renten: ${money(other)} / Monat</p>`})}</div>` : ''}<div class="v3-pension-total"><span>Renten gesamt · vor Steuern</span><strong>${money(pensionsGross)} / Monat</strong></div>${additional > 0 ? row('Weitere Einnahmen', additional, 'extra', 'detailFields') : ''}${additionalRows.map(entry => `<div class="v3-source-line"><span>${esc(entry.name)}</span><strong>${money(entry.annualIncome / 12)}</strong></div>`).join('')}${taxRow(item)}<div class="v3-income-total"><span>Einkommen netto</span><strong>${money(result.monthlyIncomeNet)} / Monat</strong></div></div><div class="v3-compact-summary">${row('Bedarf / Monat', result.monthlyNeed, 'need', 'detailFields')}<div class="v3-gap-value"><span>Monatlich offen</span><strong>${money(result.monthlyGap)}</strong></div>${row('Verfügbares Vermögen', result.availableCapital, 'assets', 'assetTotal')}</div>${prognosisMarkup(item)}<p class="v3-compact-note">Nach geschätzten Steuern · Kapitalwirkung über die Jahre vergleichen.</p></div>`;
   }
   function updateCompactSummary(item) { document.querySelectorAll('.v3-compact-note').forEach(note => note.remove()); const summary = document.querySelector('.v3-summary-block') || document.querySelector('.v3-compact-summary'); if (summary) summary.outerHTML = compactReadySummary(item); }
+  // Variantenvergleich: kompakter Kopf, flache Grafik mit integriertem Umschalter und Legende.
   function renderCompare() {
     if (!hasCanton()) { returnToPlan(); return; }
     route = 'compare';
     chartObserver?.disconnect();
     const share = chosenShare(), chosen = {share, ...evaluated(share)}, benchmark = currentVariants();
-    const comparison = benchmark.map(item => `<div class="v3-comparison-card ${item.share === share ? 'chosen' : ''}" ${item.share === share ? 'aria-current="true"' : ''}><strong>${item.share} % Kapital ${item.share === share ? '<small>✓ Deine Wahl</small>' : ''}</strong><dl><div><dt>PK-Rente / Monat</dt><dd>${money(item.pension.rent / 12)}</dd></div><div><dt>Verfügbares Startkapital</dt><dd>${money(item.result.availableCapital)}</dd></div><div><dt>Kapital mit ${item.plan.retirement.targetAge}</dt><dd>${money(item.result.capitalAtTargetAge)}</dd></div></dl></div>`).join('');
-    app.innerHTML = `${pageHeader('Varianten vergleichen')}<div class="v3-compare"><section class="v3-section"><h2>Deine Wahl: ${share} % PK-Kapital</h2><p class="v3-hint">Verfügbares Kapital über die Ruhestandsjahre. Der Anfangsbetrag hängt vom gewählten PK-Kapitalanteil ab.</p><div class="v3-chart-container"></div><p class="v3-chart-readout" role="status" aria-live="polite"></p><label class="v3-compare-toggle"><input type="checkbox" id="compareLines"> Drei Verläufe gemeinsam anzeigen</label></section><section class="v3-section"><h2>PK-Aufteilung im Vergleich</h2><p class="v3-hint">Mehr laufende Rente oder mehr Kapital zu Beginn: Die Werte stammen aus derselben Berechnung und verwenden identischen Bedarf und Horizont.</p>${benchmarkShares.includes(share) ? '' : `<p class="v3-chosen-note">Deine aktuelle Wahl: ${share} % Kapital. Die Karten zeigen die festen Vergleichspunkte 0, 50 und 100 %.</p>`}<div class="v3-comparison-cards">${comparison}</div></section>${backRow()}</div>`;
+    const startAge = chosen.plan.retirement.age, targetAge = chosen.plan.retirement.targetAge;
+    const comparison = benchmark.map(item => `<div class="v3-comparison-card ${item.share === share ? 'chosen' : ''}" ${item.share === share ? 'aria-current="true"' : ''}><div class="v3-comparison-head"><strong>${item.share} % Kapital</strong>${item.share === share ? '<small>✓ Deine Wahl</small>' : ''}</div><dl><div><dt>PK-Rente / Monat</dt><dd>${money(item.pension.rent / 12)}</dd></div><div><dt>Verfügbares Startkapital</dt><dd>${money(item.result.availableCapital)}</dd></div><div><dt>Kapital mit ${targetAge}</dt><dd>${money(item.result.capitalAtTargetAge)}</dd></div></dl></div>`).join('');
+    const chartInfo = infoMarkup({iconOnly:true, aria:'Kapitalentwicklung erklären', body:`<p>Verfügbares Kapital über die Ruhestandsjahre ab Alter ${startAge}. Der Anfangsbetrag hängt vom gewählten PK-Kapitalanteil ab.</p>`});
+    const compareInfo = infoMarkup({iconOnly:true, aria:'Vergleich der PK-Aufteilung erklären', body:`<p>Mehr laufende Rente oder mehr Kapital zu Beginn: Die Werte stammen aus derselben Berechnung und verwenden identischen Bedarf und Horizont.</p>${benchmarkShares.includes(share) ? '' : `<p>Deine aktuelle Wahl: ${share} % Kapital. Die Karten zeigen die festen Vergleichspunkte 0, 50 und 100 %.</p>`}`});
+    app.innerHTML = `${pageHeader('Varianten vergleichen')}<div class="v3-compare"><p class="v3-compare-sub">So entwickelt sich dein Kapital bis Alter ${targetAge}.</p><section class="v3-section"><div class="v3-compare-head"><h2>Kapitalentwicklung ${chartInfo}</h2><label class="v3-compare-toggle"><span>Alle Varianten</span><input type="checkbox" id="compareLines" role="switch" aria-label="Alle Varianten anzeigen"></label></div><p class="v3-chosen-line">${share} % PK-Kapital · <strong>Deine Wahl</strong></p><div class="v3-chart-container"></div><ul class="v3-chart-legend" data-chart-legend></ul></section><section class="v3-section"><h2>PK-Aufteilung im Vergleich ${compareInfo}</h2><p class="v3-subline">Monatliche Rente und Kapital zu Beginn (Alter ${startAge}).</p><div class="v3-comparison-cards">${comparison}</div></section><button type="button" class="v3-year-link" data-v3-next="years">So funktioniert deine Planung Jahr für Jahr <span aria-hidden="true">→</span></button>${backRow()}</div>`;
     const container = app.querySelector('.v3-chart-container');
     let rows = [chosen];
     let chartWidth = 0;
+    const draw = () => {
+      container.innerHTML = chart(rows, chartWidth);
+      const legend = app.querySelector('[data-chart-legend]');
+      if (legend) legend.innerHTML = chartLegend(rows, share);
+    };
     const resizeChart = () => {
       const width = container.getBoundingClientRect().width;
       if (width > 0 && width !== chartWidth) {
         chartWidth = width;
-        container.innerHTML = chart(rows, width);
+        draw();
       }
     };
     resizeChart();
     chartObserver = new ResizeObserver(resizeChart);
     chartObserver.observe(container);
-    const showAge = age => { const entry = chosen.result.yearlyProjection.find(point => point.age === age); if (entry) app.querySelector('.v3-chart-readout').textContent = `Alter ${age}: ${money(entry.free)} verfügbares Kapital`; };
-    showAge(chosen.result.yearlyProjection[0].age);
-    container.addEventListener('mouseover', event => { const target = event.target.closest('[data-chart-age]'); if (target) showAge(numeric(target.dataset.chartAge)); });
-    container.addEventListener('click', event => { const target = event.target.closest('[data-chart-age]'); if (target) showAge(numeric(target.dataset.chartAge)); });
-    container.addEventListener('focusin', event => { const target = event.target.closest('[data-chart-age]'); if (target) showAge(numeric(target.dataset.chartAge)); });
-    document.getElementById('compareLines').addEventListener('change', event => { rows = event.target.checked ? (benchmarkShares.includes(share) ? benchmark : [...benchmark, chosen]) : [chosen]; container.innerHTML = chart(rows, chartWidth); });
+    document.getElementById('compareLines').addEventListener('change', event => { rows = event.target.checked ? (benchmarkShares.includes(share) ? benchmark : [...benchmark, chosen]) : [chosen]; draw(); });
+  }
+  /* «Jahr für Jahr»: ein Jahr der bestehenden Simulation Schritt für Schritt.
+     Keine zweite Rechnung: alle Werte stammen aus evaluatePlan().yearlyProjection
+     (Einnahmen je Quelle, Steuern, Bedarf, Kapitalbedarf, Töpfe, Rendite je Topf,
+     Umbuchungen, Endkapital) sowie aus capitalWithdrawalEvents() für PK- und 3a-Bezüge. */
+  const potMeta = [['Geldmarkt','1 Jahr','cash'],['Obligationen','2 Jahre','bonds'],['Wertschöpfung','Rest','growth']];
+  const yearState = {age:null, share:null, step:0, timer:null, mode:null, cache:null};
+  const prefersReducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches;
+  function yearShare() { return yearState.share ?? chosenShare(); }
+  function yearData(share = yearShare()) {
+    if (yearState.cache && yearState.cache.share === share) return yearState.cache.data;
+    const plan = planFor(share);
+    if (!plan) return null;
+    const result = Calculator.evaluatePlan(plan);
+    const rows = result.yearlyProjection.filter(row => !row.terminal);
+    if (!rows.length) return null;
+    const data = {plan, result, rows, share, events:Calculator.capitalWithdrawalEvents(plan, share), rates:plan.scenarios?.returns ?? [0, 1, 6]};
+    yearState.cache = {share, data};
+    return data;
+  }
+  function potColumns(values, compact = false) {
+    return `<div class="v3-year-pots${compact ? ' compact' : ''}">${values.map((value, index) => `<div class="v3-year-pot pot-${potMeta[index][2]}"><span class="v3-year-pot-bar" aria-hidden="true"></span><strong>${money(value)}</strong><small>${potMeta[index][0]}</small><em>${potMeta[index][1]}</em></div>`).join('')}</div>`;
+  }
+  function yearLine(label, value, {total = false, note = ''} = {}) {
+    return `<div class="v3-year-line${total ? ' total' : ''}"><span>${label}${note ? ` <small>${note}</small>` : ''}</span><strong>${value}</strong></div>`;
+  }
+  function yearSteps(data, row) {
+    const code = State.canton(state);
+    const steps = [];
+    const first = row.age === data.rows[0].age;
+    const event = data.events.find(entry => entry.age === row.age) || null;
+    const surplus = Math.max(0, row.rent - row.need - (row.special ?? 0));
+    const index = data.rows.indexOf(row);
+    const initial = index === 0;
+    const rate = TaxModel.getIncomeTaxRate(code, row.taxableAnnualIncome);
+    // Jeder Schritt zeigt genau eine Zahl; die Herleitung liegt hinter dem ⓘ.
+    const step = (title, sub, value, {note = '', info = '', extra = ''} = {}) => ({title, sub, value, note, info, extra});
+    const detail = (aria, body) => infoMarkup({iconOnly:true, aria, body});
+    // 1 Einnahmen: immer brutto / vor Steuern.
+    const sourceRows = (row.sources || []).filter(source => source.gross > 0.5).map(source => yearLine(esc(source.name), money(source.gross), {note:'brutto'})).join('');
+    steps.push(step('Einnahmen', 'vor Steuern', money(row.grossIncome), {
+      info:detail('Einnahmen erklären', `${sourceRows}${yearLine('Einnahmen gesamt', money(row.grossIncome), {total:true})}<p class="v3-year-note">Alle Einnahmen sind brutto, also vor Steuern.</p>`)}));
+    // 2 Steuern: laufende Einkommenssteuer separat, im ersten Jahr gekennzeichnet.
+    steps.push(step('Steuern', 'Einkommenssteuer', `− ${money(row.estimatedIncomeTax ?? 0)}`, {
+      note:`${percent(rate)} %`,
+      info:detail('Steuern erklären', `${yearLine('Steuerbares Einkommen', money(row.taxableAnnualIncome), {note:'nominal'})}${yearLine('Steuersatz', `${percent(rate)} %`)}${yearLine('Einkommenssteuer', `− ${money(row.estimatedIncomeTax ?? 0)}`, {total:true})}<p class="v3-year-note">Die laufende Einkommenssteuer wird jedes Jahr neu aus dem steuerbaren Einkommen gerechnet.</p>${first ? '<p class="v3-year-note">Im Pensionierungsjahr berücksichtigt die Simulation die für dieses Jahr relevanten Steuern. Das erste Jahr kann ein Mischjahr aus Erwerbs- und Renteneinkommen sein; im heutigen Modell rechnen wir es als volles Rentenjahr.</p>' : ''}`),
+      extra:first ? '<p class="v3-year-flag">Steuern im ersten Jahr bereits berücksichtigt ✓</p>' : ''}));
+    // 3 Einnahmen netto (nach Steuern).
+    steps.push(step('Einnahmen netto', 'nach Steuern', money(row.rent), {
+      info:detail('Netto-Einnahmen erklären', `${yearLine('Einnahmen vor Steuern', money(row.grossIncome))}${yearLine('Einkommenssteuer', `− ${money(row.estimatedIncomeTax ?? 0)}`)}${yearLine('Einnahmen netto', money(row.rent), {total:true})}`)}));
+    // 4 Bedarf (nach Steuern).
+    steps.push(step('Bedarf', 'nach Steuern', money(row.need), {
+      info:detail('Bedarf erklären', '<p>Der Bedarf ist im Modell der Lebensbedarf nach Steuern. Er bleibt über die Jahre in heutiger Kaufkraft konstant; die Steuern stehen deshalb als eigener Schritt davor.</p>')}));
+    // 5 Offen: Fehlbetrag, der aus dem Vermögen kommt.
+    const offen = row.withdrawal > 0.5 ? row.withdrawal : surplus;
+    steps.push(step('Offen', row.withdrawal > 0.5 ? 'aus Vermögen' : 'Überschuss in den Geldmarkt', money(offen), {
+      note:`≈ ${money(offen / 12).replace('CHF ', '')} / Monat`,
+      info:detail('Fehlbetrag erklären', `${yearLine('Bedarf', money(row.need))}${yearLine('Einnahmen netto', `− ${money(row.rent)}`)}${yearLine(row.withdrawal > 0.5 ? 'Offen' : 'Überschuss', money(offen), {total:true})}${yearLine('Pro Monat', money(offen / 12))}<p class="v3-year-note">${row.withdrawal > 0.5 ? 'Dieser Betrag wird in diesem Jahr aus dem Geldmarkttopf finanziert.' : 'Der Überschuss wird dem Geldmarkttopf gutgeschrieben.'}</p>`)}));
+    // 5b Kapitalbezug (PK und/oder Säule 3a) in diesem Jahr.
+    if (event) steps.push(step('Kapitalbezug', event.items.some(item => item.id !== 'pk') ? 'PK und Säule 3a' : 'Pensionskasse', money(event.net), {
+      note:'netto investiert',
+      info:detail('Kapitalbezug erklären', `${event.items.map(item => yearLine(esc(item.name), money(item.gross))).join('')}${event.items.length > 1 ? yearLine('Bezug brutto', money(event.gross), {total:true}) : ''}${yearLine('Kapitalbezugssteuer', `− ${money(event.tax)}`, {note:`${percent(TaxModel.getCapitalWithdrawalTaxRate(code, event.gross))} %`})}${yearLine('Netto investiert', money(event.net), {total:true})}<p class="v3-year-note">Die Bezugssteuer fällt einmalig im Bezugsjahr an und wird nicht der laufenden Einkommenssteuer zugerechnet.</p>`)}));
+    // 6 Die drei Töpfe zu Jahresbeginn.
+    const injectionNote = row.injection > 0.5 ? `<p class="v3-year-note">Der 3a-Nettozufluss von ${money(row.injection)} ist bereits enthalten: zuerst werden Geldmarkt und Obligationen auf Ziel gebracht, der Rest fliesst in die Wertschöpfung.</p>` : '';
+    steps.push(step('Die drei Töpfe zu Jahresbeginn', '', money(row.free), {
+      note:row.injection > 0.5 ? 'inkl. 3a-Zufluss' : 'Kapital zu Jahresbeginn',
+      info:detail('Zielstruktur der Töpfe erklären', `<p>Geldmarkt = Kapitalbedarf des laufenden Jahres (1 Jahr): ${money(row.withdrawal)}.</p><p>Obligationen = Kapitalbedarf der beiden Folgejahre (2 Jahre): ${money(row.reserve)}.</p><p>Wertschöpfung = alles übrige investierbare Kapital: ${money(row.buckets[2])}.</p><p>Die Zielgrössen werden jedes Jahr neu aus dem effektiven Kapitalbedarf berechnet.</p>`),
+      extra:potColumns(row.buckets) + injectionNote}));
+    // 7 Rendite je Topf.
+    steps.push(step('Rendite dieses Jahr', '', `+ ${money(row.ret)}`, {
+      note:'gesamt',
+      info:detail('Rendite erklären', `${row.gains.map((gain, position) => yearLine(`${potMeta[position][0]}`, `+ ${money(gain)}`, {note:`${percent(data.rates[position])} %`})).join('')}${yearLine('Rendite gesamt', `+ ${money(row.ret)}`, {total:true})}<p class="v3-year-note">Es gelten die Portfolio-Sätze des Risikoprofils; es wird keine zusätzliche Renditeannahme verwendet.</p>`)}));
+    // 8 Auffüllen auf die Zielstruktur (Umbuchungen zu Beginn des Jahres).
+    const moves = row.transfers.map((value, position) => ({value, position})).filter(move => Math.abs(move.value) > 0.5)
+      .map(move => yearLine(`${move.value > 0 ? 'Ziel' : 'Quelle'} ${potMeta[move.position][0]}`, `${move.value > 0 ? '+' : '−'} ${money(Math.abs(move.value))}`)).join('');
+    steps.push(step(initial ? 'Startbefüllung der Töpfe' : 'Auffüllen auf die Zielstruktur', '', '', {
+      note:initial ? 'Geldmarkt zuerst' : 'zu Beginn des Jahres',
+      info:detail('Auffüllen erklären', `${moves || '<p class="v3-year-note">Die Töpfe liegen bereits auf ihren Zielwerten.</p>'}<p class="v3-year-note">${initial ? 'Zuerst werden Geldmarkt und Obligationen gefüllt, der Rest liegt in der Wertschöpfung.' : 'Geldmarkt und Obligationen werden zuerst aufgefüllt; das Kapital dafür kommt aus dem jeweils nächsten Topf.'}</p>`)}));
+    // 9 Kapital Ende Jahr.
+    steps.push(step('Kapital Ende Jahr', '', money(row.end), {
+      note:'nach Rendite',
+      info:detail('Jahresende erklären', `${yearLine('Töpfe am Jahresende', potMeta.map((meta, position) => `${meta[0]} ${money(row.endBuckets[position])}`).join(' · '))}${yearLine('Kapital am Jahresende', money(row.end), {total:true})}${row.gap > 0.5 ? `<p class="v3-year-note">In diesem Jahr sind ${money(row.gap)} des Bedarfs nicht gedeckt.</p>` : ''}`),
+      extra:potColumns(row.endBuckets, true)}));
+    return steps;
+  }
+  function yearAges() { const data = yearData(); return data ? data.rows.map(row => row.age) : []; }
+  function stopYearPlay() {
+    if (yearState.timer) { clearInterval(yearState.timer); yearState.timer = null; }
+    yearState.mode = null;
+    const button = app.querySelector('[data-year-play]');
+    if (button) button.textContent = '▶ Jahr abspielen';
+  }
+  function startYearPlay(mode) {
+    if (yearState.timer) { stopYearPlay(); return; }
+    const data = yearData();
+    if (!data) return;
+    const row = data.rows.find(entry => entry.age === yearState.age) || data.rows[0];
+    const total = yearSteps(data, row).length;
+    yearState.mode = mode;
+    const button = app.querySelector('[data-year-play]');
+    if (button) button.textContent = '■ Stopp';
+    if (prefersReducedMotion()) { yearState.step = 0; renderYearBody(); if (mode === 'all') advanceYear(1); stopYearPlay(); return; }
+    yearState.step = 1;
+    renderYearBody();
+    yearState.timer = setInterval(() => {
+      const current = yearData();
+      const active = current.rows.find(entry => entry.age === yearState.age) || current.rows[0];
+      const count = yearSteps(current, active).length;
+      if (yearState.step < count) { yearState.step += 1; renderYearBody(); return; }
+      if (yearState.mode !== 'all' || !advanceYear(1)) { stopYearPlay(); return; }
+      yearState.step = 1;
+      renderYearBody();
+    }, 650);
+  }
+  function advanceYear(direction) {
+    const ages = yearAges();
+    const index = ages.indexOf(yearState.age);
+    const next = index + direction;
+    if (index < 0 || next < 0 || next >= ages.length) return false;
+    yearState.age = ages[next];
+    yearState.step = 0;
+    renderYearBody();
+    return true;
+  }
+  function renderYearBody() {
+    const container = app.querySelector('[data-year-body]');
+    if (!container) return;
+    const data = yearData();
+    if (!data) return;
+    const ages = data.rows.map(row => row.age);
+    if (!ages.includes(yearState.age)) yearState.age = ages[0];
+    const row = data.rows.find(entry => entry.age === yearState.age);
+    const steps = yearSteps(data, row);
+    const visible = yearState.step === 0 ? steps.length : Math.min(yearState.step, steps.length);
+    const label = app.querySelector('#yearAgeLabel');
+    if (label) label.textContent = `Alter ${row.age}`;
+    const range = app.querySelector('#yearRange');
+    if (range) range.value = String(row.age);
+    const nextAge = ages[ages.indexOf(row.age) + 1];
+    container.innerHTML = `<ol class="v3-year-steps">${steps.map((step, index) => `<li class="v3-year-step${index < visible ? ' visible' : ''}"><div class="v3-year-step-head"><span class="v3-year-chip" aria-hidden="true">${index + 1}</span><div class="v3-year-step-title"><strong>${step.title}</strong>${step.sub ? `<small>${step.sub}</small>` : ''}</div>${step.value ? `<div class="v3-year-step-value"><strong>${step.value}</strong>${step.note ? `<small>${step.note}</small>` : ''}</div>` : (step.note ? `<small class="v3-year-step-note">${step.note}</small>` : '')}${step.info || ''}</div>${step.extra}</li>`).join('')}</ol>
+      <details class="v3-info v3-year-detail"><summary><span class="v3-info-label">Berechnung dieses Jahres ansehen</span><span class="v3-info-icon" aria-hidden="true">ⓘ</span></summary><div class="v3-info-panel">${yearDetailRows(data, row)}</div></details>
+      <div class="v3-year-next">${yearState.step !== 0 && visible < steps.length ? '<p class="v3-year-note">Wiedergabe läuft …</p>' : ''}${nextAge ? `<button type="button" class="v3-year-next-button" data-year-forward>Weiter zu Alter ${nextAge} →</button>` : '<p class="v3-year-note">Letztes Planungsjahr erreicht.</p>'}</div>`;
+  }
+  function yearDetailRows(data, row) {
+    const code = State.canton(state);
+    const index = data.rows.indexOf(row);
+    const start = index > 0 ? data.rows[index - 1].end : row.free - row.injection;
+    return [
+      yearLine('Kapital zu Jahresbeginn', money(start)),
+      yearLine('Kapitalzufluss 3a netto', `+ ${money(row.injection)}`),
+      yearLine('Kapital nach Zufluss', money(row.free), {total:true}),
+      yearLine('Töpfe zu Jahresbeginn', potMeta.map((meta, position) => `${meta[0]} ${money(row.buckets[position])}`).join(' · ')),
+      yearLine('Einnahmen vor Steuern', money(row.grossIncome)),
+      yearLine('Steuerbares Einkommen', money(row.taxableAnnualIncome), {note:'nominal'}),
+      yearLine('Einkommenssteuer', `− ${money(row.estimatedIncomeTax ?? 0)}`, {note:`${percent(TaxModel.getIncomeTaxRate(code, row.taxableAnnualIncome))} %`}),
+      yearLine('Verfügbar nach Steuern', money(row.rent)),
+      yearLine('Lebensbedarf', money(row.need)),
+      yearLine('Kapitalbedarf', money(row.withdrawal), {total:true}),
+      yearLine('Entnahme aus den Töpfen', money(Math.min(row.withdrawal, row.free))),
+      row.gap > 0.5 ? yearLine('Nicht gedeckt', money(row.gap)) : '',
+      yearLine('Rendite je Topf', potMeta.map((meta, position) => `${meta[0]} + ${money(row.gains[position])}`).join(' · ')),
+      yearLine('Umbuchungen auf Ziel', potMeta.map((meta, position) => `${meta[0]} ${row.transfers[position] >= 0 ? '+' : '−'} ${money(Math.abs(row.transfers[position]))}`).join(' · ')),
+      yearLine('Töpfe am Jahresende', potMeta.map((meta, position) => `${meta[0]} ${money(row.endBuckets[position])}`).join(' · ')),
+      yearLine('Kapital am Jahresende', money(row.end), {total:true}),
+      `<p class="v3-year-note">Alle Beträge in heutiger Kaufkraft; die Steuerbemessung rechnet mit dem nominalen Einkommen. Bedarf und Steuern sind in der Simulation jährlich, die Kapitalbezugssteuer einmalig im Bezugsjahr.</p>`
+    ].filter(Boolean).join('');
+  }
+  // Ein Jahr der Planung verstehen: dieselbe Simulation, Schritt für Schritt.
+  function renderYearByYear() {
+    if (!hasCanton()) { returnToPlan(); return; }
+    const data = yearData();
+    if (!data) { returnToPlan(); return; }
+    closeMenu(); chartObserver?.disconnect(); route = 'years'; assetPart = null;
+    window.scrollTo(0, 0);
+    stopYearPlay();
+    yearState.step = 0;
+    const ages = data.rows.map(row => row.age);
+    if (!ages.includes(yearState.age)) yearState.age = ages[0];
+    const share = yearShare();
+    const options = [[0, '0 % · Rente'], [50, '50 % · Rente + Kapital'], [100, '100 % · Kapital']];
+    if (![0, 50, 100].includes(share)) options.push([share, `${share} % · eigene Mischung`]);
+    options.sort((a, b) => a[0] - b[0]);
+    app.innerHTML = `${pageHeader('Jahr für Jahr', {back:'← Variantenvergleich', to:'data-year-back'})}<div class="v3-detail-layout"><section class="v3-detail-form"><p class="v3-sublead">So entwickelt sich dein Geld über die Jahre.</p><div class="v3-year-head"><label class="v3-year-variant"><span>PK-Variante</span><select id="yearShare">${options.map(([value, label]) => `<option value="${value}" ${value === share ? 'selected' : ''}>${label}</option>`).join('')}</select></label>${share === chosenShare() ? '<small class="v3-year-choice">✓ Deine Wahl</small>' : ''}</div><div class="v3-year-nav"><input id="yearRange" class="v3-range v3-year-range" type="range" min="${ages[0]}" max="${ages[ages.length - 1]}" step="1" value="${yearState.age}" aria-label="Alter wählen"><div class="v3-year-nav-row"><button type="button" data-year-prev>‹ Vorjahr</button><strong id="yearAgeLabel">Alter ${yearState.age}</strong><button type="button" data-year-next>Nächstes Jahr ›</button></div></div><div data-year-body></div><div class="v3-year-actions"><button type="button" class="primary" data-year-play>▶ Jahr abspielen</button><button type="button" data-year-playall>▶ Gesamten Verlauf</button></div>${backRow()}</section></div>`;
+    renderYearBody();
+    bindYearByYear();
+  }
+  function bindYearByYear() {
+    document.querySelector('[data-year-back]')?.addEventListener('click', renderCompare);
+    document.getElementById('yearShare')?.addEventListener('change', event => {
+      const value = numeric(event.target.value);
+      yearState.share = [0, 50, 100].includes(value) ? value : yearShare();
+      yearState.step = 0;
+      stopYearPlay();
+      renderYearByYear();
+    });
+    document.getElementById('yearRange')?.addEventListener('input', event => {
+      yearState.age = numeric(event.target.value);
+      yearState.step = 0;
+      stopYearPlay();
+      renderYearBody();
+    });
+    document.querySelector('[data-year-prev]')?.addEventListener('click', () => { yearState.step = 0; advanceYear(-1); });
+    document.querySelector('[data-year-next]')?.addEventListener('click', () => { yearState.step = 0; advanceYear(1); });
+    app.querySelector('[data-year-body]')?.addEventListener('click', event => {
+      if (event.target.closest('[data-year-forward]')) { yearState.step = 0; advanceYear(1); }
+    });
+    document.querySelector('[data-year-play]')?.addEventListener('click', () => startYearPlay('year'));
+    document.querySelector('[data-year-playall]')?.addEventListener('click', () => startYearPlay('all'));
   }
   // Ohne Wohnkanton bleiben die bisherigen Angaben ladbar, aber es entstehen keine Ergebnisse.
-  const saveRow = () => '<div class="v3-save"><span id="saveLabel">V3 wird separat gespeichert.</span><button data-save>Auf diesem Gerät speichern</button></div>';
   function renderCantonPlan(restore = false) {
     closeMenu(); chartObserver?.disconnect(); route = 'plan';
     if (!restore) window.scrollTo(0, 0);
@@ -617,6 +947,7 @@
       renderPlan();
     });
     document.querySelector('[data-save]')?.addEventListener('click', save);
+    renderSaveState();
   }
   function renderPlan(restore = false) {
     state = normalizeP3(state);
@@ -626,8 +957,9 @@
     route = 'plan';
     if (!restore) window.scrollTo(0, 0);
     const pre = state.mode === 'pre';
-    const assetsReady = !!state.details.assets && Object.values(state.details.assets).some(value => String(value ?? '').trim() !== '' && numeric(value) > 0);
-    const pensionReady = state.details.pension?.[pre ? 'pk' : 'pkRent'] !== undefined;
+    // Qualitative Aussagen nur mit erfassten Daten: eine blosse Teilmenge ist nicht «0».
+    const known = dataKnown();
+    const assetsReady = known.assets, pensionReady = known.pension;
     const decisionReady = assetsReady && pensionReady;
     const item = evaluated(chosenShare());
     const decision = decisionReady && pre ? `<div class="v3-decision"><div class="v3-decision-title"><span>PK-Bezug wählen</span><strong><em id="shareValue">${chosenShare()}</em> % Kapital</strong></div><input id="shareRange" class="v3-range" type="range" min="0" max="100" step="1" value="${chosenShare()}" aria-label="PK-Kapitalanteil"><div class="v3-range-labels"><span>100 % Rente</span><span>100 % Kapital</span></div><div id="previewReadout">${readout(item)}</div></div>` : `<div class="v3-note">${decisionReady ? 'Die laufende PK-Rente wird als bestehende Einnahme verwendet.' : 'Vermögen und PK-Angaben fehlen noch. Ergänze sie, bevor du PK-Bezug und Varianten vergleichst.'}</div>`;
@@ -638,6 +970,7 @@
     const planMeta = `${pre ? `Pensionierung mit ${item.plan.retirement.age}` : 'Planungsstart heute'} · Planung bis ${item.plan.retirement.targetAge}`;
     app.innerHTML = `${pageHeader('Mein Plan', {hidden:true})}<button type="button" class="v3-plan-meta" data-v3-next="personal" aria-label="${planMeta} – Persönliche Angaben bearbeiten"><span>${planMeta}</span><span class="v3-plan-meta-chevron" aria-hidden="true">›</span></button><div class="v3-plan-grid v3-plan-compact"><section>${readyContent}${p3Section(item)}</section><aside>${afterReady}</aside></div>`;
     bindPlan();
+    renderSaveState();
     if (restore) window.scrollTo(0, planScrollY);
   }
   function bindPlan() {
@@ -664,18 +997,36 @@
   }
   function toggleMenu() { const menu = document.getElementById('v3Menu'); const button = document.querySelector('.menu-button'); if (!menu || !button) return; menu.hidden = !menu.hidden; button.setAttribute('aria-expanded', String(!menu.hidden)); }
   function closeMenu() { const menu = document.getElementById('v3Menu'); const button = document.querySelector('.menu-button'); if (menu) menu.hidden = true; if (button) button.setAttribute('aria-expanded', 'false'); }
-  function save() { try { localStorage.setItem(storageKey, JSON.stringify({version:1, savedAt:new Date().toISOString(), state})); document.getElementById('saveLabel').textContent = '✓ Dein Stand wurde auf diesem Gerät gespeichert.'; } catch (error) { document.getElementById('saveLabel').textContent = 'Speichern nicht möglich.'; } }
-  function load() { try { const saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); if (!saved || saved.version !== 1) throw Error('Kein gültiger V3-Stand.'); State.validate(saved.state); state = normalizeP3(saved.state); returnToPlan(); } catch (error) { message(error.message); } }
+  function load() { try { const saved = JSON.parse(localStorage.getItem(storageKey) || 'null'); if (!saved || saved.version !== 1) throw Error('Kein gültiger V3-Stand.'); State.validate(saved.state); state = normalizeP3(saved.state); lastSavedAt = saved.savedAt ?? null; storageFailed = false; if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; } returnToPlan(); } catch (error) { message(error.message); } }
+  /* Inhalt des Knopfs «Beispielplanung laden» auf «Meine Renten».
+     Persönliche Planungswerte – bewusst an einer Stelle gebündelt, damit sie leicht ersetzt
+     oder vor einem Commit wieder auf generische Beispieldaten zurückgestellt werden können. */
+  const demoPlanung = {
+    time: {age:61, retirement:65},
+    // AHV 50'000 pro Jahr; das Feld führt CHF / Monat (50'000 / 12, auf zwei Stellen gerundet).
+    regular: {canton:'AR', ahv:4166.67, other:0, additional:1000},
+    need: {need:9000},
+    // Bank/liquide Mittel 20'000 und Wertschriften 10'000 (ohne zusätzliche jährliche Anlage).
+    assets: {cash:20000, securities:10000, saving:0},
+    // PK-Sparbeiträge zusammen (Arbeitnehmer und Arbeitgeber) 50'000 pro Jahr.
+    pension: {pk:850000, pkContrib:50000, pkShare:50},
+    pension3a: {p3:234500, p3Contrib:0, p3Mode:'later', p3Accounts:[
+      {name:'Helvetia', amount:160000, age:68},
+      {name:'RB SG', amount:44500, age:66},
+      {name:'RB Mö', amount:30000, age:70}
+    ]}
+  };
   function loadDemo() {
     try {
       state = State.fresh('pre'); state.riskProfile = 'balanced';
-      apply('time', {age:55, retirement:65});
-      // Beispielplanung: Beispielkanton AR, damit die Beispielwerte sofort mit Steuerschätzung erscheinen.
-      apply('regular', {canton:'AR', ahv:3300, other:0, additional:0});
-      apply('need', {need:10000});
-      apply('assets', {cash:20000, securities:30000, saving:0, otherAssets:0, propertyValue:0, mortgage:0});
-      apply('pension', {pk:650000, pkContrib:50000, pkShare:50});
-      apply('pension3a', {p3:120000, p3Contrib:7000, p3Mode:'retirement', p3Accounts:[]});
+      apply('time', demoPlanung.time);
+      apply('regular', demoPlanung.regular);
+      apply('need', demoPlanung.need);
+      apply('assets', demoPlanung.assets);
+      apply('pension3a', demoPlanung.pension3a);
+      apply('pension', demoPlanung.pension);
+      // Verzinsung 3 %; der Planungshorizont kommt automatisch aus dem Alter (87).
+      apply('assumptions', {...State.defaults, pkInterest:3, targetAge:state.targetAge, reviewed:true});
       renderPlan();
     } catch (error) { message(error.message); }
   }
@@ -700,6 +1051,14 @@
     else if (asset) { assetPart = asset.dataset.asset; renderAssets(); }
   });
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closeMenu(); });
+  // Betragsfelder formatieren: beim Tippen nur am Feldende, beim Verlassen des Feldes immer.
+  const amountTarget = event => event.target?.closest?.('input[data-amount]') ?? null;
+  app.addEventListener('input', event => {
+    const input = amountTarget(event);
+    if (!input || input.selectionStart !== input.value.length) return;
+    formatAmountField(input);
+  });
+  app.addEventListener('blur', event => { const input = amountTarget(event); if (input) formatAmountField(input); }, true);
   state.riskProfile = 'balanced';
   window.V3 = {save, load, planFor};
   setRentDraft(); renderForm('rents');

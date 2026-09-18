@@ -118,14 +118,99 @@ for (const width of [360, 1280]) {
       seed('pre', 'ZH');
       cy.get('#shareRange').should('have.value', '45');
       cy.get('[data-compare]').click();
-      cy.get('h2').first().should('contain', '45 % PK-Kapital');
+      cy.get('.v3-chosen-line').should('contain', '45 % PK-Kapital').and('contain', 'Deine Wahl');
       cy.get('.v3-chart polyline').should('have.attr', 'data-chart-share', '45');
       cy.get('#compareLines').check();
       cy.get('.v3-chart polyline').should('have.length', 4);
       cy.get('.v3-chart polyline[data-chart-share="45"]').should('have.attr', 'stroke-width', '3.5');
-      cy.get('.v3-chosen-note').should('contain', '45 % Kapital');
+      cy.get('.v3-section').eq(1).find('.v3-info-panel').should('contain', '45 % Kapital');
       cy.get('[data-back]').click();
       cy.get('#shareRange').should('have.value', '45');
+    });
+    it('verdichtet den Variantenvergleich auf einen mobilen Blick', () => {
+      seed('pre', 'ZH');
+      cy.get('#shareRange').invoke('val', 50).trigger('input');
+      cy.get('[data-compare]').click();
+      cy.get('h1').should('have.text', 'Varianten vergleichen');
+      cy.get('.v3-compare-sub').should('contain', 'So entwickelt sich dein Kapital bis Alter 95.');
+      // Keine separate Zeile «Deine Wahl»; Angabe sitzt im Kartenkopf.
+      cy.get('#app').should('not.contain', 'Deine Wahl: 50 % PK-Kapital');
+      cy.get('.v3-compare-head h2').should('contain', 'Kapitalentwicklung');
+      cy.get('.v3-compare-head #compareLines').should('exist');
+      cy.get('.v3-compare-head').should('contain', 'Alle Varianten');
+      cy.get('.v3-chosen-line').should('contain', '50 % PK-Kapital');
+      // Flache Grafik, Endwerte direkt an der Linie, keine doppelte Wertzeile.
+      cy.get('.v3-chart').then(chart => {
+        const height = Number(chart[0].getAttribute('viewBox').split(' ')[3]);
+        expect(height).to.be.within(180, 220);
+      });
+      cy.get('.v3-chart-value').should('have.length', 1).and('not.be.empty');
+      cy.get('.v3-chart-readout, .v3-chart-target').should('not.exist');
+      cy.get('[data-chart-legend] li').should('have.length', 1).and('contain', '50 %');
+      // PK-Aufteilung rückt direkt unter die Grafik und bleibt kompakt.
+      cy.get('.v3-section').eq(1).find('h2').should('contain', 'PK-Aufteilung im Vergleich');
+      cy.get('.v3-subline').should('contain', 'Monatliche Rente und Kapital zu Beginn (Alter 65).');
+      cy.get('.v3-comparison-card').should('have.length', 3);
+      cy.get('.v3-comparison-card.chosen .v3-comparison-head').should('contain', '50 % Kapital').and('contain', 'Deine Wahl');
+      cy.get('#compareLines').check();
+      cy.get('.v3-chart polyline').should('have.length', 3);
+      cy.get('[data-chart-legend] li').should('have.length', 3);
+      cy.get('[data-back]').should('contain', 'Mein Plan');
+      cy.document().then(doc => expect(doc.documentElement.scrollWidth).to.be.at.most(width));
+    });
+    it('markiert Pflichtfelder mit Stern und zeigt Beträge mit Tausendertrennzeichen', () => {
+      seed('pre', 'ZH');
+      openMenu('personal');
+      cy.contains('label', 'Dein Wohnsitzkanton').should('contain', '*');
+      cy.get('#app').should('not.contain', 'Pflichtangabe');
+      cy.get('[data-detail-back]').click();
+      cy.get('[data-v3-next="pension"]').first().click();
+      cy.get('label[for="pk"]').should('contain', '*');
+      cy.get('[name="pk"]').should('have.value', "500'000");
+      cy.get('[name="pk"]').clear().type('620000');
+      cy.get('[name="pk"]').should('have.value', "620'000");
+      cy.get('#v3DetailForm').submit();
+      cy.window().then(w => expect(w.V3.planFor(45).assets.pre.pk).to.equal(620000));
+      cy.get('[data-save]').should('contain', 'Jetzt speichern');
+      cy.get('#app').should('not.contain', 'V3 wird separat gespeichert');
+      cy.get('#saveLabel').should('contain', 'Automatisch gespeichert');
+      cy.get('.v3-save').should('have.attr', 'data-state', 'saved');
+    });
+    it('lässt optionale Betragsfelder leer und sagt keine Lücke aus unvollständigen Daten voraus', () => {
+      cy.visit('/v3.html');
+      cy.window().then(w => {
+        const M = w.CheckV2State;
+        let state = M.fresh('pre');
+        state.riskProfile = 'growth';
+        for (const [group, values] of [
+          ['time', {age:60, retirement:65}],
+          ['regular', {canton:'ZH', ahv:2500, other:200, additional:100}],
+          ['need', {need:6500}],
+          ['assumptions', {...M.defaults, targetAge:95, inflation:1.2, reviewed:true}]
+        ]) state = M.apply(state, group, values);
+        w.localStorage.setItem('retirement-v3-plan', JSON.stringify({version:1, state}));
+        w.V3.load();
+      });
+      // Ohne erfasstes Vermögen und ohne PK keine Lückenprognose.
+      cy.get('.v3-status').should('contain', 'Vervollständige deinen Plan').and('not.contain', 'Finanzierungslücke');
+      cy.get('.v3-status').should('have.class', 'pending');
+      // Optionales Feld bleibt leer, ohne Fehlermeldung und ohne erfundene 0.
+      cy.get('[data-v3-next="assets"]').click();
+      cy.get('[data-asset="otherAssets"]').should('contain', 'Noch nicht erfasst').click();
+      cy.get('#asset-input-otherAssets').should('have.value', '').and('have.attr', 'data-optional', 'true');
+      cy.get('label[for="asset-input-otherAssets"]').should('not.contain', '*');
+      cy.get('#asset-otherAssets').submit();
+      cy.get('[data-asset="otherAssets"]').should('contain', 'Noch nicht erfasst');
+      cy.get('[data-asset="cash"]').click();
+      cy.get('#asset-input-cash').should('have.value', '').clear().type('50000');
+      cy.get('#asset-cash').submit();
+      cy.window().then(w => {
+        const plan = w.V3.planFor(45);
+        expect(plan.assets.pre.otherAssets).to.equal(undefined);
+        expect(plan.assets.pre.cash).to.equal(50000);
+      });
+      cy.get('[data-back]').click();
+      cy.document().then(doc => expect(doc.documentElement.scrollWidth).to.be.at.most(width));
     });
     it('requires a Wohnkanton before any result is calculated', () => {
       seed('pre');
@@ -219,10 +304,10 @@ for (const width of [360, 1280]) {
       });
       cy.get('#shareRange').should('have.value', '100');
       cy.get('[data-pk-breakdown]').click();
-      cy.get('[name="pk"]').should('have.value', '600000').clear().type('700000');
+      cy.get('[name="pk"]').should('have.value', "600'000").clear().type('700000');
       cy.get('[data-detail-back]').click();
       openMenu('pension');
-      cy.get('[name="pk"]').should('have.value', '600000');
+      cy.get('[name="pk"]').should('have.value', "600'000");
       cy.get('[data-detail-back]').click();
       cy.get('[data-compare]').click();
       cy.get('h2').first().should('contain', '100 % PK-Kapital');
@@ -236,8 +321,9 @@ for (const width of [360, 1280]) {
           cy.get('.v3-comparison-card').eq(index).should('contain', money(pk.rent / 12)).and('contain', money(result.availableCapital)).and('contain', money(result.capitalAtTargetAge));
         });
       });
-      cy.get('.v3-chart-target').first().click();
-      cy.get('.v3-chart-readout').should('contain', 'Alter 65');
+      // Der Endwert steht direkt an der Linie; eine zweite Wertzeile gibt es nicht mehr.
+      cy.get('.v3-chart-value').should('have.length', 1).and('not.be.empty');
+      cy.get('.v3-chart-readout, .v3-chart-target').should('not.exist');
       cy.get('#compareLines').check();
       cy.get('.v3-chart polyline').should('have.length', 3);
       cy.get('.v3-chart polyline[data-chart-share="100"]').should('have.attr', 'stroke-width', '3.5');
@@ -253,6 +339,13 @@ for (const width of [360, 1280]) {
         cy.get('#v3DetailForm [name="pk"], #v3DetailForm [name="pkContrib"], #v3DetailForm [name="pkRent"], #v3DetailForm [name="pkInterest"], #v3DetailForm [name="uws"]').should('not.exist');
         cy.get('[data-detail-back]').click();
       }
+      // V3 weist keine Wertschriftenrendite aus; stattdessen ist die Mechanik offengelegt.
+      openMenu('assumptions');
+      cy.get('#v3DetailForm [name="secReturn"]').should('not.exist');
+      cy.get('#v3DetailForm [name="targetAge"], #v3DetailForm [name="inflation"], #v3DetailForm [name="p3Return"]').should('have.length', 3);
+      cy.get('#v3DetailForm').should('contain', 'So rechnen wir mit Renditen');
+      cy.get('#v3DetailForm .v3-info-panel').should('contain', 'Cash 0 %').and('contain', 'Anleihen 1 %').and('contain', 'Wertschöpfung 6 %').and('contain', 'internen Satz von 4,5 %').and('contain', 'separat einstellbare Wertschriftenrendite rechnen wir nicht');
+      cy.get('[data-detail-back]').click();
       cy.get('[data-pk-breakdown]').should('contain', 'PK-Kapital netto').click();
       cy.window().then(w => {
         const pk = w.RetirementCalculator.calculatePension(w.V3.planFor(45));
@@ -288,7 +381,7 @@ for (const width of [360, 1280]) {
       seed('post', 'ZH');
       cy.get('#shareRange, [data-pk-breakdown], [data-compare]').should('not.exist');
       openMenu('pension');
-      cy.get('[name="pkRent"]').should('have.value', '2000');
+      cy.get('[name="pkRent"]').should('have.value', "2'000");
       cy.get('[name="pk"], [name="pkShare"], [name="pkContrib"], [name="uws"], #pkBreakdown, #pkRente, #pkKapital').should('not.exist');
       cy.get('[name="pkRent"]').clear().type('2500');
       cy.get('#v3DetailForm').submit();
@@ -301,7 +394,7 @@ for (const width of [360, 1280]) {
         expect(w.RetirementCalculator.evaluatePlan(plan).incomeGross).to.equal(63600);
       });
       openMenu('pension');
-      cy.get('[name="pkRent"]').should('have.value', '2500');
+      cy.get('[name="pkRent"]').should('have.value', "2'500");
       cy.get('[data-detail-back]').click();
       cy.get('#shareRange, [data-compare]').should('not.exist');
     });
@@ -327,7 +420,7 @@ for (const width of [360, 1280]) {
       cy.get('.v3-bound-assets .v3-hint').should('contain', 'nicht für laufende Entnahmen eingeplant');
       cy.get('[data-open-vorsorge="pension3a"]').click();
       cy.get('h1').should('have.text', 'Säule 3a');
-      cy.get('[name="p3"]').should('have.value', '120000');
+      cy.get('[name="p3"]').should('have.value', "120'000");
       cy.get('[data-detail-back]').click();
       cy.get('h1').should('have.text', 'Mein Plan');
       // Editing an amount recalculates the plan and all three variants.
@@ -568,6 +661,61 @@ for (const width of [360, 1280]) {
       cy.get('[value="later"]').should('be.checked');
       cy.get('#p3DetailForm, #v3DetailForm').submit();
       cy.get('h1').should('have.text', 'Mein Plan');
+      cy.document().then(doc => expect(doc.documentElement.scrollWidth).to.be.at.most(width));
+    });
+    it('erklärt die Planung Jahr für Jahr aus derselben Simulation', () => {
+      seed('pre', 'ZH');
+      cy.get('[data-compare]').click();
+      cy.get('.v3-year-link').should('contain', 'So funktioniert deine Planung Jahr für Jahr').click();
+      cy.get('h1').should('have.text', 'Jahr für Jahr');
+      cy.get('.v3-sublead').should('contain', 'So entwickelt sich dein Geld über die Jahre.');
+      cy.get('#yearAgeLabel').should('have.text', 'Alter 65');
+      // Schritte des ersten Jahres: Einnahmen vor Steuern, Steuern separat, Kapitalbezug PK, Töpfe, Rendite, Ende.
+      cy.get('.v3-year-step-title strong').then(titles => expect([...titles].map(node => node.textContent)).to.deep.equal(['Einnahmen','Steuern','Einnahmen netto','Bedarf','Offen','Kapitalbezug','Die drei Töpfe zu Jahresbeginn','Rendite dieses Jahr','Startbefüllung der Töpfe','Kapital Ende Jahr']));
+      // Kompakt: pro Schritt genau eine Zahl, die Herleitung hinter dem ⓘ.
+      cy.get('.v3-year-step-value').should('have.length', 9);
+      cy.get('.v3-year-step').first().within(() => { cy.get('.v3-info-panel').should('contain', 'AHV').and('contain', 'Einnahmen gesamt'); });
+      cy.get('.v3-year-steps').should('contain', 'Steuern im ersten Jahr bereits berücksichtigt ✓').and('contain', 'Netto investiert');
+      cy.get('#app').should('contain', '1 Jahr').and('contain', '2 Jahre').and('contain', 'Rest');
+      // Werte gegen die Engine prüfen
+      cy.window().then(w => {
+        const plan = w.V3.planFor(45), row = w.RetirementCalculator.evaluatePlan(plan).yearlyProjection[0];
+        expect(row.sources.length).to.be.at.least(2);
+        expect(row.gains.length).to.equal(3);
+        expect(row.buckets[0]).to.be.closeTo(Math.min(row.free, row.withdrawal), 1);
+        cy.get('#app').should('contain', `CHF ${Math.round(row.grossIncome).toLocaleString('de-CH').replace(/’/g, "'")}`);
+        cy.get('#app').should('contain', `CHF ${Math.round(row.buckets[2]).toLocaleString('de-CH').replace(/’/g, "'")}`);
+      });
+      // Jahresnavigation: Vorjahr, Nächstes Jahr, Slider
+      cy.get('.v3-year-nav-row [data-year-next]').click();
+      cy.get('#yearAgeLabel').should('have.text', 'Alter 66');
+      cy.get('.v3-year-nav-row [data-year-prev]').click();
+      cy.get('#yearAgeLabel').should('have.text', 'Alter 65');
+      cy.get('#yearRange').invoke('val', 70).trigger('input');
+      cy.get('#yearAgeLabel').should('have.text', 'Alter 70');
+      cy.get('#yearAgeLabel').should('be.visible');
+      // Variantenwechsel lädt dieselbe Simulation neu
+      cy.get('#yearShare').select('100');
+      cy.get('#yearAgeLabel').should('have.text', 'Alter 70');
+      cy.window().then(w => {
+        const row = w.RetirementCalculator.evaluatePlan(w.V3.planFor(100)).yearlyProjection.find(entry => entry.age === 70);
+        cy.get('#app').should('contain', `CHF ${Math.round(row.end).toLocaleString('de-CH').replace(/’/g, "'")}`);
+      });
+      cy.get('#yearShare').select('50');
+      // Kompakter Dropdown: kurze Optionslabels, Markierung als Badge daneben.
+      cy.get('.v3-year-choice').should('have.text', '✓ Deine Wahl');
+      cy.get('#yearShare option').each(option => expect(option.textContent.length).to.be.at.most(24));
+      // Detailberechnung pro Jahr
+      cy.get('.v3-year-detail > summary').click();
+      cy.get('.v3-year-detail .v3-info-panel').should('contain', 'Kapital zu Jahresbeginn').and('contain', 'Steuerbares Einkommen').and('contain', 'Rendite je Topf').and('contain', 'Umbuchungen auf Ziel').and('contain', 'Kapital am Jahresende');
+      // Abspielen (mit reduzierter Bewegung im Test deaktiviert → Schritte sofort sichtbar)
+      cy.window().then(w => { w.matchMedia = () => ({matches: true, addEventListener() {}, removeEventListener() {}}); });
+      cy.get('[data-year-play]').click();
+      cy.get('.v3-year-step.visible').should('have.length', 10);
+      cy.get('[data-year-play]').should('contain', '▶ Jahr abspielen');
+      // Rückwege
+      cy.get('[data-year-back]').click();
+      cy.get('h1').should('have.text', 'Varianten vergleichen');
       cy.document().then(doc => expect(doc.documentElement.scrollWidth).to.be.at.most(width));
     });
   });

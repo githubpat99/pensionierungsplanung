@@ -55,21 +55,28 @@
   return base?(s.confirmed.assumptions===true&&tax.canton(canton(s))?2:1):0;
  }
  const assetParts={cash:['cash'],securities:['securities','saving'],otherAssets:['otherAssets'],property:['propertyValue','mortgage'],unallocated:['unallocated']};
- function assetFields(part,s){
+ // `keepOptional` ist eine additive V3-Option: optionale Felder dürfen leer bleiben und gelten dann
+ // als nicht erfasst (unknown) statt als explizite 0. V2 ruft die Funktionen unverändert ohne Option auf.
+ function assetFields(part,s,options){
   if(part==='unallocated')return [field('unallocated','Noch nicht aufgeteiltes Vermögen','CHF')];
-  return fields('assets',s).filter(f=>assetParts[part]?.includes(f.key)).map(f=>({...f,optional:false,section:undefined}));
+  const keepOptional=options?.keepOptional===true;
+  return fields('assets',s).filter(f=>assetParts[part]?.includes(f.key)).map(f=>({...f,optional:keepOptional?!!f.optional:false,section:undefined}));
  }
- function assetError(part,values,s){
+ function assetError(part,values,s,options){
   if(!assetParts[part])return {message:'Unbekannte Vermögenszeile.'};
-  const bad=assetFields(part,s).find(f=>!validField(f,values[f.key]));
+  const bad=assetFields(part,s,options).find(f=>!validField(f,values[f.key]));
   return bad?{key:bad.key,message:`Bitte «${bad.label}» als gültigen Betrag ab 0 erfassen.`}:null;
  }
- function applyAsset(s,part,values){
-  const problem=assetError(part,values,s);if(problem)throw Error(problem.message);
+ function applyAsset(s,part,values,options){
+  const problem=assetError(part,values,s,options);if(problem)throw Error(problem.message);
   const next=clone(s),a=next.details.assets??{partial:true,unallocated:num(s.values.free)};
   // Allocate newly identified sources from an existing aggregate; known sources change by delta.
   if(['cash','securities','otherAssets'].includes(part)&&!entered(a[part]))a.unallocated=Math.max(0,num(a.unallocated)-num(values[part]));
-  for(const f of assetFields(part,s))a[f.key]=num(values[f.key]);
+  for(const f of assetFields(part,s,options)){
+   // Leer gelassene optionale Felder bleiben unbekannt statt als 0 zu gelten.
+   if(options?.keepOptional===true&&f.optional&&!entered(values[f.key]))delete a[f.key];
+   else a[f.key]=num(values[f.key]);
+  }
   next.details.assets=a;
   next.confirmed.assets=!error('assets',a,next)&&num(a.unallocated)===0;
   next.confirmed.assumptions=false;

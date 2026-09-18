@@ -6,17 +6,18 @@ const C = require('./retirement-calculator.js');
 const Tax = require('./tax-model.js');
 // Exercise the real UI adapter helpers without a browser or production-only test hooks.
 const node = {innerHTML:'',hidden:false,addEventListener(){},setAttribute(){},querySelectorAll:()=>[],querySelector:()=>null,getBoundingClientRect:()=>({width:0}),focus(){},scrollIntoView(){}};
-const context = vm.createContext({CheckV2State:M, RetirementCalculator:C, TaxModel:Tax, structuredClone,
+const context = vm.createContext({CheckV2State:M, RetirementCalculator:C, TaxModel:Tax, structuredClone, ResizeObserver:class{observe(){} disconnect(){}},
   document:{getElementById:()=>node, querySelector:()=>node, addEventListener(){}}, window:{scrollTo(){}}});
 let source = fs.readFileSync(require.resolve('./v3-ui.js'), 'utf8');
 source = source.replace('window.V3 = {save, load, planFor};', `window.test = {
   seed(value) { state = structuredClone(value); },
   edit(values) { draft = values; state = pensionDraft(); },
   snapshot() { return {state,share:chosenShare()}; },
-  planFor, currentVariants, readout, pensionBreakdown, editorFields, renderAssets, renderPlan, renderDetail, renderP3Plan, renderP3Account, renderP3Effect, p3Section, loadDemo, rentFields, taxRow, taxPanel, taxAssumptionHint,
+  planFor, currentVariants, readout, pensionBreakdown, editorFields, renderAssets, renderPlan, renderDetail, renderP3Plan, renderP3Account, renderP3Effect, renderCompare, renderYearByYear, p3Section, loadDemo, rentFields, taxRow, taxPanel, taxAssumptionHint, amountValue, formatAmount,
   assets() { return assetComposition(state); },
   assetForm(part) { assetPart = part; const markup = assetComposition(state); assetPart = null; return markup; },
-  applyAsset(part, values) { state = State.applyAsset(state, part, values); return state; }
+  applyAsset(part, values) { state = State.applyAsset(state, part, values); return state; },
+  applyAssetOptional(part, values) { state = State.applyAsset(state, part, values, {keepOptional:true}); return state; }
 };`);
 source = source.replace("  setRentDraft(); renderForm('rents');\n})();", '})();');
 vm.runInContext(source, context);
@@ -117,12 +118,41 @@ assert.ok(taxAllCapital.includes(money(C.calculatePension(UI.planFor(100)).capit
 assert.ok(taxHalf.includes(money(C.calculatePension(UI.planFor(50)).capitalTax)));
 assert.ok(taxAllCapital.includes('Kapitalbezüge') && taxHalf.includes('Laufende Einkommenssteuer'));
 assert.match(UI.taxRow(itemAt(0)),/Ohne PK-Kapitalbezug und ohne 3a-Bezug entsteht keine Bezugssteuer/);
-// Die Beispielplanung lädt den Beispielkanton AR mit und zeigt damit sofort Ergebnisse.
+// Die Beispielplanung lädt meine Planungswerte (Kanton AR) und zeigt sofort Ergebnisse.
 UI.loadDemo();
-assert.equal(UI.snapshot().state.canton,'AR');
+const demoState = UI.snapshot().state;
+assert.equal(demoState.canton,'AR');
+assert.equal(demoState.values.age,61);
+assert.equal(demoState.values.retirement,65);
+assert.equal(demoState.values.need,9000);
+assert.equal(demoState.details.pension.pk,850000);
+assert.equal(demoState.details.pension.pkContrib,50000,'PK-Sparbeiträge 50\'000 / Jahr');
+assert.equal(demoState.details.pension.pkShare,50);
+assert.equal(demoState.details.assumptions.pkInterest,3,'die PK-Verzinsung 3 % wird geladen');
+assert.equal(demoState.details.assumptions.targetAge,87,'der Horizont kommt automatisch aus dem Alter');
+assert.equal(demoState.details.assumptions.uws,5.2,'übrige Annahmen bleiben auf den Standardwerten');
+assert.equal(demoState.details.pension3a.p3,234500);
+assert.equal(demoState.details.pension3a.p3Mode,'later');
+assert.deepEqual(demoState.details.pension3a.p3Accounts.map(account=>[account.name,account.amount,account.age]),[['Helvetia',160000,68],['RB SG',44500,66],['RB Mö',30000,70]]);
+assert.equal(demoState.details.income.additional,1000,'weitere Einnahmen 1\'000 / Monat');
+assert.equal(demoState.details.income.ahv,4166.67,'AHV 50\'000 / Jahr im Monatsfeld');
+assert.equal(demoState.details.assets.cash,20000,'Bank/liquide Mittel 20\'000');
+assert.equal(demoState.details.assets.securities,10000,'Wertschriften 10\'000');
+assert.equal(demoState.details.assets.saving,0);
 assert.ok(UI.planFor(50),'Beispielplanung liefert ohne Zwischenschritt ein Planobjekt');
-assert.ok(UI.pensionBreakdown().includes('Appenzell Ausserrhoden'),'PK-Seite nennt den Beispielkanton');
-// In der Einkommensübersicht steht die Steuerzeile zwischen Brutto und Netto.
+// Mit Vermögen ist der Plan vollständig: Regler und Variantenvergleich stehen bereit.
+assert.match(node.innerHTML,/id="shareRange"/,'der PK-Regler erscheint');
+assert.match(node.innerHTML,/data-compare/,'der Variantenvergleich ist erreichbar');
+assert.match(node.innerHTML,/Renten gesamt · vor Steuern/,'die Einkommensübersicht erscheint');
+assert.ok(UI.pensionBreakdown().includes('Appenzell Ausserrhoden'),'PK-Seite nennt den Kanton');
+const demoPlan = C.calculatePension(UI.planFor(50),50);
+assert.deepEqual(UI.snapshot().state.details.pension3a.p3Accounts.map(a=>a.age),[68,66,70]);
+assert.equal(Math.round(demoPlan.rent/12),2526,'PK-Rente der geladenen Planung');
+assert.equal(Math.round(C.calculateRetirementStart(UI.planFor(50)).sec),11925,'Wertschriften wachsen bis 65 mit der hinterlegten Annahme');
+assert.equal(Math.round(C.calculateAvailableCapital(UI.planFor(50),50).totalInvestableCapital),555899,'Startkapital aus Vermögen, PK netto und 3a');
+// In der Einkommensübersicht steht die Steuerzeile zwischen Brutto und Netto (vollständiger Plan).
+UI.seed(seed('pre','ZH'));
+UI.renderPlan();
 const incomeBlock = node.innerHTML;
 assert.ok(incomeBlock.indexOf('Renten gesamt') < incomeBlock.indexOf('Geschätzte Steuern'),'Steuerzeile folgt dem Bruttowert');
 assert.ok(incomeBlock.indexOf('Geschätzte Steuern') < incomeBlock.indexOf('Einkommen netto'),'Steuerzeile steht vor dem Nettowert');
@@ -141,7 +171,10 @@ const rowTax = incomeBlock.match(/v3-tax-amount">− (CHF [\d']+) \/ Monat/);
 const grossIncome = incomeBlock.match(/Renten gesamt · vor Steuern<\/span><strong>(CHF [\d']+) \/ Monat/);
 const netIncome = incomeBlock.match(/v3-income-total"><span>Einkommen netto<\/span><strong>(CHF [\d']+) \/ Monat/);
 assert.ok(rowTax && grossIncome && netIncome,'Steuerzeile, Brutto und Netto sind sichtbar');
-assert.equal(toChf(grossIncome[1]) - toChf(rowTax[1]), toChf(netIncome[1]),'Brutto minus geschätzte Steuern ergibt das ausgewiesene Netto');
+const additionalRow = incomeBlock.match(/<span>Weitere Einnahmen<\/span><strong>(CHF [\d']+) /);
+assert.ok(additionalRow,'die weiteren Einnahmen stehen als eigene Zeile');
+const beforeTax = toChf(grossIncome[1]) + toChf(additionalRow[1]);
+assert.equal(beforeTax - toChf(rowTax[1]), toChf(netIncome[1]),'Renten und weitere Einnahmen minus geschätzte Steuern ergeben das ausgewiesene Netto');
 // 100 % bzw. 0 % Kapital: Aufteilung, PK-Rente und PK-Kapital bleiben konsistent.
 const allCapital = M.apply(seed('pre','ZH'),'pension',{pk:600000,pkContrib:20000,pkShare:100});
 UI.seed(allCapital);
@@ -322,4 +355,122 @@ assert.match(p3EffectHtml,/data-p3-chart/);
 assert.match(p3EffectHtml,/Alter 65 · Pensionierung/,'der Stützpunkt bei Pensionierung ist markiert');
 assert.match(p3EffectHtml,/<th scope="col">Deine Planung<\/th><th scope="col">Bezug bei Pensionierung<\/th>/);
 assert.match(p3EffectHtml,/data-p3-commit/);
-console.log('Passed: V3 PK edits, shared engine/assumptions, all variants, active share, mandatory canton without results, tax transparency, 3a withdrawal planning (capture, plan row, 3a overview, account screen, effect screen, chronological capital tax), invalid input, post-retirement capital and the asset page (menu, editing, Vorsorge sources, single counting).');
+// --- UX-Verdichtung: Pflichtfeld-Stern, Betragsformat, optionale Felder, Speicherstatus, Vergleich ---
+// Pflichtfelder werden mit «*» gekennzeichnet; der ausgeschriebene Hinweis entfällt.
+UI.seed(seed('pre','ZH'));
+UI.renderDetail('personal');
+assert.match(node.innerHTML,/Dein Wohnsitzkanton <span class="v3-required" aria-hidden="true">\*<\/span>/,'der Pflichtkanton trägt den Stern');
+assert.ok(!node.innerHTML.includes('Pflichtangabe'),'kein ausgeschriebener Pflichttext mehr');
+UI.renderDetail('pension');
+assert.match(node.innerHTML,/name="pk" type="text" inputmode="decimal" autocomplete="off" data-amount value="500&#39;000"/,'Betragsfelder zeigen Tausendertrennzeichen und bleiben Textfelder');
+assert.match(node.innerHTML,/PK-Guthaben heute <span class="v3-required" aria-hidden="true">\*<\/span>/);
+assert.match(node.innerHTML,/name="pkInterest"[\s\S]{0,200}?type="number"/,'Prozentfelder bleiben Zahlenfelder');
+// Optionale Betragsfelder bleiben leer und gelten als nicht erfasst statt als 0.
+UI.seed(seed('pre','ZH'));
+const optionalForm = UI.assetForm('otherAssets');
+assert.match(optionalForm,/id="asset-input-otherAssets"[^>]*data-amount data-optional="true" value=""/,'optionales Feld startet leer und ist markiert');
+assert.match(optionalForm,/Weitere verfügbare Vermögenswerte<\/label>/,'optionales Feld ohne Stern');
+assert.match(UI.assetForm('cash'),/Bank \/ liquide Mittel <span class="v3-required" aria-hidden="true">\*<\/span>/,'erfasste Pflichtfelder tragen den Stern');
+UI.applyAssetOptional('otherAssets', {otherAssets:''});
+assert.equal(UI.snapshot().state.details.assets.otherAssets, undefined,'leeres optionales Feld wird nicht zu 0');
+UI.applyAssetOptional('otherAssets', {otherAssets:'0'});
+assert.equal(UI.snapshot().state.details.assets.otherAssets, 0,'eine ausdrückliche 0 bleibt erhalten');
+// Beträge werden für die Anzeige gruppiert und beim Lesen wieder numerisch interpretiert.
+assert.equal(UI.formatAmount('194500'), "194'500");
+assert.equal(UI.formatAmount(1200000), "1'200'000");
+assert.equal(UI.formatAmount('1234.5'), "1'234.5");
+assert.equal(UI.formatAmount(''), '');
+assert.equal(UI.amountValue("120'000"), '120000','Trennzeichen werden beim Lesen ignoriert');
+assert.equal(UI.amountValue('1 234'), '1234');
+assert.equal(UI.amountValue('1500,50'), '1500.50');
+assert.equal(M.breakdown(M.apply(seed('pre','ZH'),'assets',{cash:UI.amountValue("120'000"),securities:0,saving:0})).assets.cash,120000,'die Berechnung erhält den numerischen Wert');
+// Ohne erfasstes Vermögen und ohne PK entsteht keine Lückenprognose.
+const incomplete = M.apply(M.apply(seed('pre','ZH'),'assets',{cash:0,securities:0,saving:0}),'pension',{pk:0,pkContrib:0,pkShare:45});
+delete incomplete.details.assets; delete incomplete.details.pension; delete incomplete.values.free;
+UI.seed(incomplete);
+UI.renderPlan();
+assert.match(node.innerHTML,/class="v3-status pending">Vervollständige deinen Plan, um die langfristige Entwicklung zu sehen\.</,'keine Lücke aus unvollständigen Daten');
+assert.ok(!node.innerHTML.includes('Finanzierungslücke'),'keine verfrühte Lückenaussage');
+assert.match(node.innerHTML,/id="saveLabel">Noch nicht gespeichert</,'der Speicherstatus startet neutral');
+assert.match(node.innerHTML,/<button type="button" data-save>Jetzt speichern<\/button>/,'der Speicherknopf heisst «Jetzt speichern»');
+assert.ok(!node.innerHTML.includes('separat gespeichert'),'kein technischer Speicherhinweis');
+assert.ok(!node.innerHTML.includes('Auf diesem Gerät speichern'));
+// Mit vollständigen Daten bleibt die qualitative Aussage erhalten.
+UI.seed(seed('pre','ZH'));
+UI.renderPlan();
+assert.match(node.innerHTML,/class="v3-status (covered|gap)">(Unter den gewählten Annahmen|Finanzierungslücke)/,'mit erfassten Daten bleibt die Aussage');
+// Variantenvergleich: kompakter Kopf, integrierter Umschalter, flache Grafik ohne doppelte Wertzeile.
+UI.seed(seed('pre','ZH'));
+node.querySelector = () => node;
+UI.renderCompare();
+node.querySelector = () => null;
+const compareHtml = node.innerHTML;
+assert.match(compareHtml,/class="v3-compare-sub">So entwickelt sich dein Kapital bis Alter 95\.</,'Subline nennt den Horizont');
+assert.ok(!compareHtml.includes('Deine Wahl: '),'keine separate Zeile «Deine Wahl»');
+assert.match(compareHtml,/class="v3-compare-head"><h2>Kapitalentwicklung <details class="v3-info v3-info-sub">[\s\S]*?<\/details><\/h2><label class="v3-compare-toggle"><span>Alle Varianten<\/span><input type="checkbox" id="compareLines" role="switch"/,'Umschalter sitzt im Kartenkopf');
+assert.ok(!compareHtml.includes('Drei Verläufe gemeinsam anzeigen'),'keine eigene Zeile für die Checkbox');
+assert.match(compareHtml,/class="v3-chosen-line">45 % PK-Kapital · <strong>Deine Wahl<\/strong>/);
+assert.match(compareHtml,/class="v3-chart-legend" data-chart-legend/,'Legende direkt unter der Grafik');
+assert.ok(!compareHtml.includes('v3-chart-readout'),'keine doppelte Wertzeile unter der Grafik');
+assert.match(compareHtml,/PK-Aufteilung im Vergleich <details/,'der Vergleich trägt sein eigenes ⓘ');
+assert.match(compareHtml,/class="v3-subline">Monatliche Rente und Kapital zu Beginn \(Alter 65\)\.</,'kurze Subline statt Erklärtext');
+assert.equal((compareHtml.match(/<div class="v3-comparison-card /g) || []).length, 3,'drei kompakte Varianten-Karten');
+assert.match(compareHtml,/class="v3-comparison-head"><strong>50 % Kapital<\/strong>/,'Titel und Markierung teilen sich eine Zeile');
+assert.ok(!compareHtml.includes('v3-chosen-note'),'die Zusatznotiz liegt hinter dem ⓘ');
+assert.match(compareHtml,/data-back>← Mein Plan<\/button>/,'Rückweg bleibt am Seitenende');
+assert.match(compareHtml,/data-v3-next="years"/,'Einstieg «Jahr für Jahr» aus dem Vergleich');
+assert.match(UI.taxPanel(itemAt(50)),/data-v3-next="years"/,'Einstieg «Jahr für Jahr» auch aus den Steuerdetails');
+// «Jahr für Jahr»: derselbe Rechenkern, ein Jahr in Schritten – keine zweite Rechnung.
+UI.seed(seed('pre','ZH'));
+node.querySelector = () => node;
+UI.renderYearByYear();
+node.querySelector = () => null;
+const yearHtml = node.innerHTML;
+const yearRow = C.evaluatePlan(UI.planFor(45)).yearlyProjection.find(row => row.age === 65);
+// Kompakt: pro Schritt eine Zahl im Seitenfluss, die Herleitung liegt hinter dem ⓘ.
+assert.ok(!yearHtml.includes('class="v3-year-summary"'),'keine doppelte Jahreszusammenfassung neben den Schritten');
+const yearStepTitles = (yearHtml.match(/<div class="v3-year-step-title"><strong>([^<]+)<\/strong>/g) || []).map(chunk => chunk.replace(/[\s\S]*<strong>([^<]+)<\/strong>/,'$1'));
+assert.deepEqual(yearStepTitles,['Einnahmen','Steuern','Einnahmen netto','Bedarf','Offen','Kapitalbezug','Die drei Töpfe zu Jahresbeginn','Rendite dieses Jahr','Startbefüllung der Töpfe','Kapital Ende Jahr'],'Schrittfolge des Jahres');
+assert.equal((yearHtml.match(/class="v3-year-step-value"/g) || []).length,9,'neun Schritte tragen genau eine Zahl');
+assert.ok((yearHtml.match(/class="v3-info v3-info-sub"/g) || []).length >= 10,'jeder Schritt hat sein ⓘ mit der Herleitung');
+assert.ok(!/class="v3-info v3-info-sub" open/.test(yearHtml),'die ⓘ sind standardmässig geschlossen');
+const firstStep = yearHtml.slice(yearHtml.indexOf('<li class="v3-year-step'), yearHtml.indexOf('</li>'));
+assert.ok(firstStep.includes(`<div class="v3-year-step-value"><strong>${money(yearRow.grossIncome)}</strong></div>`),'Schritt «Einnahmen» zeigt genau den Betrag vor Steuern');
+assert.ok(!/AHV/.test(firstStep.split('v3-info-panel')[0]),'die Quellen stehen nicht mehr im Seitenfluss');
+assert.match(firstStep,/v3-info-panel[\s\S]*AHV[\s\S]*Einnahmen gesamt/,'die Quellen liegen hinter dem ⓘ');
+assert.match(yearHtml,/<strong>Einnahmen<\/strong><small>vor Steuern<\/small>/,'Einnahmen immer vor Steuern');
+assert.match(yearHtml,/<strong>Steuern<\/strong><small>Einkommenssteuer<\/small>/);
+assert.match(yearHtml,/<strong>Einnahmen netto<\/strong><small>nach Steuern<\/small>/,'Einnahmen netto als eigener Schritt');
+assert.match(yearHtml,/<strong>Bedarf<\/strong><small>nach Steuern<\/small>/,'Bedarf nach Steuern');
+assert.match(yearHtml,/<strong>Offen<\/strong><small>aus Vermögen<\/small>/,'Offen als eigener Schritt');
+assert.match(yearHtml,/Steuern im ersten Jahr bereits berücksichtigt ✓/,'das erste Jahr ist gekennzeichnet');
+assert.ok(yearHtml.includes(`Einnahmen gesamt</span><strong>${money(yearRow.grossIncome)}</strong>`),'Einnahmen gesamt stammt aus der Engine');
+assert.match(yearHtml,/Kapitalbezugssteuer <small>[\d.,]+ %<\/small><\/span><strong>− CHF [\d']+<\/strong>/,'Bezugssteuer separat ausgewiesen');
+assert.match(yearHtml,/Netto investiert/,'nur der Nettobetrag wird investiert');
+assert.match(yearHtml,/<small>Geldmarkt<\/small><em>1 Jahr<\/em>/,'Topf 1 mit Untertitel «1 Jahr»');
+assert.match(yearHtml,/<small>Obligationen<\/small><em>2 Jahre<\/em>/,'Topf 2 mit Untertitel «2 Jahre»');
+assert.match(yearHtml,/<small>Wertschöpfung<\/small><em>Rest<\/em>/,'Topf 3 mit Untertitel «Rest»');
+assert.match(yearHtml,/Kapitalbedarf des laufenden Jahres \(1 Jahr\): CHF /,'Zielwert des Geldmarkttopfs erklärt');
+assert.match(yearHtml,/Geldmarkt = Kapitalbedarf der beiden Folgejahre|Kapitalbedarf der beiden Folgejahre/,'die Zielstruktur ist offengelegt');
+assert.match(yearHtml,/Berechnung dieses Jahres ansehen/,'Detailberechnung pro Jahr');
+assert.match(yearHtml,/Weiter zu Alter 66/,'Weiter zum nächsten Jahr');
+assert.equal(UI.planFor(45).pensionDecision.capitalShare,45,'der Screen ändert die Planvariante nicht');
+// Renditen: keine ausgewiesene Wertschriftenrendite, dafür offengelegte Mechanik.
+UI.seed(seed('pre','ZH'));
+UI.renderDetail('assumptions');
+const assumptionHtml = node.innerHTML;
+assert.ok(!assumptionHtml.includes('name="secReturn"'),'keine separat einstellbare Wertschriftenrendite');
+assert.ok(!assumptionHtml.includes('label for="secReturn"'),'kein Eingabefeld für die Wertschriftenrendite');
+assert.match(assumptionHtml,/separat einstellbare Wertschriftenrendite rechnen wir nicht/,'der Verzicht ist ausdrücklich benannt');
+assert.match(assumptionHtml,/name="targetAge"/,'Horizont bleibt');
+assert.match(assumptionHtml,/name="inflation"/,'Inflation bleibt');
+assert.match(assumptionHtml,/name="p3Return"/,'3a-Rendite bleibt');
+assert.ok(!/name="pkInterest"|name="uws"/.test(assumptionHtml),'PK-Raten bleiben im PK-Editor');
+assert.match(assumptionHtml,/So rechnen wir mit Renditen/,'die Mechanik ist offengelegt');
+assert.match(assumptionHtml,/internen Satz von 4,5 %/,'der intern verwendete Satz ist genannt');
+assert.match(assumptionHtml,/<strong>Cash<\/strong> 0 %/,'Cash-Topf mit Satz');
+assert.match(assumptionHtml,/<strong>Anleihen<\/strong> 1 %/,'Anleihentopf mit Satz');
+assert.match(assumptionHtml,/<strong>Wertschöpfung<\/strong> 6 %/,'Wertschöpfungstopf mit Profilsatz');
+assert.match(assumptionHtml,/Entnahme des laufenden Jahres/,'Entnahmemechanik ist erklärt');
+assert.match(assumptionHtml,/einmalig beim Bezug abgezogen/,'keine Doppelbesteuerung der Entnahmen');
+console.log('Passed: V3 PK edits, shared engine/assumptions, all variants, active share, mandatory canton without results, tax transparency, 3a withdrawal planning (capture, plan row, 3a overview, account screen, effect screen, chronological capital tax), invalid input, post-retirement capital, the asset page (menu, editing, Vorsorge sources, single counting), mandatory stars, amount formatting, optional fields, save status, no premature gap prognosis, the compact variant comparison, the disclosed return mechanics and the year-by-year screen.');;

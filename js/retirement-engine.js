@@ -10,16 +10,20 @@
     function cashflow(age){
       const phase=p.phases.filter(x=>age>=x.from).at(-1)||p.phases[0];
       let income=0, rental=0, taxable=0, taxableRental=0;
+      // Einnahmen je Quelle, damit die Jahresansicht keine zweite Rechnung braucht.
+      const sources=[];
       for(const s of p.sources){
         if(age<(s.from??p.start)||age>=(s.until??Infinity))continue;
         const quoteAge=s.quoteAge??p.today;
         const value=s.amount*Math.pow(1+(s.indexed?inflation:0),age-quoteAge)/Math.pow(1+inflation,age-quoteAge);
         income+=value;if(s.rental)rental+=value;
         if(s.taxable!==false){taxable+=value;if(s.rental)taxableRental+=value;}
+        sources.push({id:s.id,name:s.name,rental:!!s.rental,gross:value,taxable:s.taxable!==false});
       }
       const stressed=(scenario==='property'||scenario==='combined')&&age===p.start;
       if(stressed)income-=rental;
       if(stressed)taxable-=taxableRental;
+      if(stressed)sources.forEach(entry=>{if(entry.rental)entry.gross=0;});
       // Apply nominal thresholds, then express the tax in the same purchasing power as income.
       const priceFactor=Math.pow(1+inflation,age-p.start);
       const taxableAnnualIncome=Math.max(0,taxable)*priceFactor;
@@ -27,7 +31,7 @@
       const estimatedIncomeTax=incomeTax===null?null:incomeTax/priceFactor;
       const grossIncome=income;income-=estimatedIncomeTax??0;
       const special=stressed?p.repair:0;
-      return {need:phase.need,income,grossIncome,estimatedIncomeTax,taxableAnnualIncome,special,withdrawal:Math.max(0,phase.need+special-income)};
+      return {need:phase.need,income,grossIncome,estimatedIncomeTax,taxableAnnualIncome,special,withdrawal:Math.max(0,phase.need+special-income),sources};
     }
     for(let age=p.start;age<horizon;age++){
       // Ein 3a-Bezug wird erst in seinem Bezugsjahr zu verfügbarem Kapital: vorher finanzierte er nichts.
@@ -51,7 +55,7 @@
       const end=endBuckets.reduce((a,b)=>a+b,0);
       rows.push({age,free:capital,bound:p.bound,total:capital+p.bound,need:c.need,rent:c.income,
         grossIncome:c.grossIncome,estimatedIncomeTax:c.estimatedIncomeTax,taxableAnnualIncome:c.taxableAnnualIncome,
-        ret:gains.reduce((a,b)=>a+b,0),net:end-capital,gap,withdrawal:c.withdrawal,
+        sources:c.sources,ret:gains.reduce((a,b)=>a+b,0),gains,net:end-capital,gap,withdrawal:c.withdrawal,
         special:c.special,buckets,transfers,endBuckets,end,reserve,injection});
       capital=end;previous=endBuckets;
     }
