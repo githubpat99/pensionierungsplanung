@@ -99,8 +99,10 @@
   const v=s.values,d=s.details,pre=s.mode==='pre',p=d.pension||{},p3=d.pension3a||{},a=d.assets,i=d.income;
   const profile=profiles.getRiskProfile(s.riskProfile??'balanced'),rates={...defaults,...d.assumptions},need=num(v.need)*12;
   const grossOther=i?num(i.other):num(v.regular);
+  // V3-3a-Bezugsplanung: nur Pläne mit Kennzeichnung nutzen die neue Behandlung (Altbestände/V2 unverändert).
+  const p3Plan=p3.p3Mode?{mode:p3.p3Mode,accounts:(Array.isArray(p3.p3Accounts)?p3.p3Accounts:[]).map(account=>({name:account&&account.name,amount:num(account&&account.amount),age:num(account&&account.age)}))}:null;
   const state={mode:s.mode,currentAge:num(v.age),retirementAge:pre?num(v.retirement):num(v.age),planningAge:s.targetAge??life.defaultTargetAge(num(v.age),pre?num(v.retirement):num(v.age)),horizonMode:s.horizonMode,horizonReference:life.reference,need,canton:canton(s)||null,
-   assets:{pk:num(p.pk),p3:num(p3.p3),sec:a?num(a.securities):0,cash:a?num(a.cash)+num(a.otherAssets)+num(a.unallocated):num(v.free),re:num(a?.propertyValue),mort:num(a?.mortgage)},
+   assets:{pk:num(p.pk),p3:num(p3.p3),sec:a?num(a.securities):0,cash:a?num(a.cash)+num(a.otherAssets)+num(a.unallocated):num(v.free),re:num(a?.propertyValue),mort:num(a?.mortgage),...(p3Plan?{p3Plan}:{})},
    post:{ahv:i?num(i.ahv)*12:0,pkRent:num(p.pkRent)*12,other:grossOther*12,otherIncome:i?num(i.additional)*12:0,free:a?num(a.cash)+num(a.securities)+num(a.otherAssets)+num(a.unallocated):num(v.free),re:num(a?.propertyValue),mort:num(a?.mortgage)},
    income:{ahv:i?num(i.ahv)*12:0,other:grossOther*12,rent:i?num(i.additional)*12:0},
    build:{pkContrib:num(p.pkContrib),p3Contrib:num(p3.p3Contrib),otherSave:a?num(a.saving):0},pkShare:num(p.pkShare),risk:profile.key,riskProfile:profile.key,
@@ -113,9 +115,11 @@
   const p=toPlan(s),result=calc.evaluatePlan(p),projected=calc.calculateRetirementStart(p),capital=calc.calculateAvailableCapital(p),pk=calc.calculatePension(p);
   const sources=Object.fromEntries(calc.incomeSourcesAtStart(p).map(source=>[source.id,source.annualIncome]));
   const i=s.details.income,a=s.details.assets,pre=s.mode==='pre';
-  return {result,pk,projected,
+  return {result,pk,projected,capital,
+   // Additive 3a-Aufschlüsselung für V3 (brutto/steuer/netto, gebundener Rest); assets.p3 bleibt unverändert.
+   p3:pre?capital.p3:null,
    income:{ahv:i?sources.ahv:null,pk:s.details.pension?sources.pk:null,other:i?sources.other+sources.additional:null,unallocated:i?null:num(s.values.regular)*12},
-   assets:{cash:a&&entered(a.cash)?num(a.cash):null,securities:a&&entered(a.securities)?(pre?projected.sec:num(a.securities)):null,other:a&&entered(a.otherAssets)?num(a.otherAssets):null,p3:pre&&s.details.pension3a?projected.p3:null,pk:pre&&s.details.pension?capital.netPkCapitalWithdrawal:null,unallocated:a?(num(a.unallocated)>0?num(a.unallocated):null):num(s.values.free),bound:a&&entered(a.propertyValue)&&entered(a.mortgage)?capital.boundCapital:null}
+   assets:{cash:a&&entered(a.cash)?num(a.cash):null,securities:a&&entered(a.securities)?(pre?projected.sec:num(a.securities)):null,other:a&&entered(a.otherAssets)?num(a.otherAssets):null,p3:pre&&s.details.pension3a?projected.p3:null,pk:pre&&s.details.pension?capital.netPkCapitalWithdrawal:null,unallocated:a?(num(a.unallocated)>0?num(a.unallocated):null):num(s.values.free),bound:a&&entered(a.propertyValue)&&entered(a.mortgage)?capital.boundCapital:null,boundP3:pre?capital.boundP3Capital:0}
   };
  }
  function validate(s){

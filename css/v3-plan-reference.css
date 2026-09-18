@@ -59,14 +59,93 @@
 .v3-pk-card dt{font-size:12px;color:var(--v3-muted)}
 .v3-pk-card dd{font-size:16px;font-weight:550;font-variant-numeric:tabular-nums}
 #pkRente,#pkKapital,#pkBreakdown{scroll-margin-top:24px}
-/* Detail-Screens: «← Mein Plan» bleibt beim Scrollen oben erreichbar (Variante A) */
-.v3-heading-detail{position:sticky;top:0;z-index:15;display:flex;align-items:center;gap:10px;max-width:780px;margin:0 auto;padding:10px 0;background:var(--v3-bg)}
-.v3-heading-detail h1{margin:0;font-size:clamp(19px,3.4vw,25px);line-height:1.25}
-.v3-heading-detail .home-link{flex:none;display:inline-flex;align-items:center;min-height:44px;padding:0 8px 0 0;font-size:14px;white-space:nowrap}
+/* Detail-Screens: kein oberer Rücklink; Editoren kehren über Abbrechen/Übernehmen zurück */
 .v3-focus-target{animation:v3-focus-flash 1.5s ease-out 1}
 .v3-focus-target:focus-visible{outline:2px solid var(--v3-green);outline-offset:4px}
 @keyframes v3-focus-flash{0%{box-shadow:0 0 0 3px var(--v3-green)}100%{box-shadow:0 0 0 3px transparent}}
-@media(max-width:699px){.v3-pk-cards{grid-template-columns:1fr;gap:10px}.v3-pk-card{padding:10px}.v3-pk-value strong{font-size:21px}.v3-heading-detail{padding:8px 0;gap:8px}.v3-heading-detail h1{font-size:18px}}
+@media(max-width:699px){.v3-pk-cards{grid-template-columns:1fr;gap:10px}.v3-pk-card{padding:10px}.v3-pk-value strong{font-size:21px}.v3-heading{padding-top:16px}}
 @media(prefers-reduced-motion:reduce){.v3-focus-target{animation:none}}
-button.v3-plan-meta{display:block;border:0;background:transparent;text-align:left;padding:0;color:var(--v3-muted);font-size:14px;font-family:inherit}
+/* Nur noch eine kleine, rechtsbündige Zeitangabe statt Seitentitel und Eyebrow */
+button.v3-plan-meta{display:block;max-width:540px;margin:8px auto 14px;border:0;background:transparent;text-align:right;padding:0;color:var(--v3-muted);font-size:13px;font-family:inherit;line-height:1.4;white-space:nowrap}
+button.v3-plan-meta span{white-space:nowrap}
+button.v3-plan-meta-chevron{color:var(--v3-muted);padding-left:4px}
 button.v3-plan-meta:hover,button.v3-plan-meta:focus-visible{color:var(--v3-green)}
+button.v3-plan-meta:hover .v3-plan-meta-chevron,button.v3-plan-meta:focus-visible .v3-plan-meta-chevron{color:var(--v3-green)}
+@media(max-width:699px){button.v3-plan-meta{font-size:12px}}
+.v3-actions-back{margin-top:18px}
+.v3-actions-back button{width:100%}
+.v3-visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+/* Säule 3a: Bezugswahl in der Schnellerfassung, Planbereich und Detailplanung der Bezüge */
+.v3-radio{border:0;margin:16px 0 0;padding:0;display:grid;gap:2px}
+.v3-radio legend{font-size:14px;font-weight:550;padding:0;margin-bottom:4px}
+.v3-radio label{display:flex;align-items:center;gap:9px;min-height:44px;font-size:15px}
+.v3-radio input{width:18px;height:18px}
+.v3-p3-section{border-top:1px solid var(--v3-line);margin-top:14px;padding-top:12px}
+.v3-p3-section h2{font-size:19px;margin:0}
+/* Ein kompakter, navigierbarer Eintrag auf «Mein Plan» – die 3a-Details leben im eigenen Flow. */
+.v3-p3-link{display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%;margin-top:10px;padding:14px 16px;border:1px solid var(--v3-line);border-radius:8px;background:var(--v3-surface);text-align:left}
+.v3-p3-link:hover,.v3-p3-link:focus-visible{border-color:var(--v3-green)}
+.v3-p3-link-copy{display:grid;gap:2px;min-width:0}
+.v3-p3-link-copy small{color:var(--v3-muted);font-size:13px}
+.v3-p3-rows{margin:8px 0 0}
+.v3-p3-rows>div{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--v3-line)}
+.v3-p3-rows dt{font-size:14px;min-width:0}
+.v3-p3-rows dt small{display:block;color:var(--v3-muted);font-size:12px;margin-top:2px}
+.v3-p3-rows .v3-info-sub>summary{min-height:26px}
+.v3-p3-rows dd{margin:0;font-size:16px;font-weight:550;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.v3-p3-section .v3-compare-button{margin-top:12px}
+.v3-p3-list{display:grid;gap:10px;margin-top:16px}
+.v3-p3-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
+/* Kontenliste: skaliert von einem bis zehn Konten ohne Umbau. */
+.v3-p3-accounts{display:grid}
+.v3-p3-account{display:grid;grid-template-columns:minmax(0,1fr) auto auto 18px;gap:12px;align-items:baseline;width:100%;padding:14px 2px;border:0;border-bottom:1px solid var(--v3-line);border-radius:0;background:transparent;text-align:left}
+.v3-p3-account:hover,.v3-p3-account:focus-visible{background:var(--v3-soft)}
+.v3-p3-account-name{min-width:0;overflow-wrap:anywhere}
+.v3-p3-account-amount,.v3-p3-account-age{font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-p3-account-age{color:var(--v3-muted)}
+.v3-p3-live{min-height:20px;margin-top:4px}
+.v3-p3-live-line{margin:0;font-size:14px;color:var(--v3-green)}
+.v3-tax-note-line{margin:6px 0 0}
+.v3-tax-note-line strong{color:var(--v3-ink);font-weight:600}
+.v3-tax-sum dt,.v3-tax-sum dd{font-weight:600;color:var(--v3-ink)}
+.v3-entry-select{border-bottom:1px solid var(--v3-ink)}
+.v3-entry-select select{border:0;background:transparent;color:var(--v3-ink);font-size:16px;padding:7px 0;width:100%}
+.v3-p3-head{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:12px;align-items:end;margin-bottom:6px}
+.v3-p3-head>div:first-child dd{font-size:20px}
+.v3-p3-effects{margin-top:22px;border-top:1px solid var(--v3-line);padding-top:14px}
+.v3-p3-effects h2{font-size:19px;margin:0 0 6px}
+.v3-p3-effects h3{font-size:15px;margin:18px 0 4px;font-weight:600}
+.v3-p3-effect-link{display:inline-flex;align-items:center;gap:6px;margin-top:12px;min-height:44px;border:0;background:transparent;color:var(--v3-green);padding:0;font-size:15px}
+.v3-p3-compare{margin:10px 0 0;font-size:13px;color:var(--v3-muted)}
+.v3-p3-compare strong{font-variant-numeric:tabular-nums}
+.v3-p3-rows dd small.up{color:var(--v3-green)}
+.v3-p3-rows dd small.down{color:var(--v3-warn)}
+.v3-p3-compare strong.up{color:var(--v3-danger)}
+.v3-p3-compare strong.down{color:var(--v3-green)}
+.v3-p3-toggle{display:flex;gap:16px;flex-wrap:wrap;margin-top:10px}
+.v3-p3-toggle label{display:inline-flex;align-items:center;gap:7px;min-height:44px;font-size:14px}
+.v3-p3-toggle input{width:18px;height:18px}
+.v3-p3-chart{margin-top:10px;min-height:120px}
+.v3-p3-chart .v3-chart{width:100%}
+.v3-p3-table-lead{display:flex;align-items:center;gap:6px;margin-top:18px;font-size:14px;font-weight:550}
+.v3-p3-table{width:100%;border-collapse:collapse;font-size:14px}
+.v3-p3-table th,.v3-p3-table td{padding:10px 0;border-bottom:1px solid var(--v3-line);text-align:right;font-variant-numeric:tabular-nums}
+.v3-p3-table td{white-space:nowrap}
+.v3-p3-table thead th{font-size:12px;font-weight:400;color:var(--v3-muted)}
+.v3-p3-table thead th:first-child,.v3-p3-table tbody th{text-align:left;font-weight:400}
+/* Kopf mit Rückweg: ein Screen, ein Titel, der Weg zurück führt immer in die übergeordnete Ebene. */
+.v3-heading-detail{display:grid;gap:0;padding-top:12px}
+.v3-heading-detail .home-link{justify-self:start;min-height:44px;border:0;background:transparent;color:var(--v3-brand-soft);padding:0;font-size:14px}
+.v3-heading-detail .home-link:hover,.v3-heading-detail .home-link:focus-visible{color:var(--v3-green)}
+.v3-heading-detail h1{font-size:23px;margin-top:2px}
+@media(max-width:699px){.v3-p3-account{grid-template-columns:minmax(0,1fr) auto auto 14px;gap:8px;font-size:14px}.v3-p3-table{font-size:13px}.v3-heading-detail h1{font-size:21px}}
+/* V3 verlangt den Wohnkanton: Pflichtfeld, Kantonstor ohne Ergebnisse und transparente Steuerannahmen */
+.v3-required{display:inline-block;margin-left:6px;padding:1px 7px;border:1px solid var(--v3-line);border-radius:10px;color:var(--v3-muted);font-size:13px;font-weight:400;vertical-align:middle}
+.v3-canton-gate{margin-top:8px}
+.v3-canton-gate h2{font-size:21px;font-weight:550;margin:0 0 6px}
+.v3-canton-gate .v3-field{margin-top:14px}
+.v3-canton-gate .v3-actions{display:block;margin-top:16px}
+.v3-canton-gate .v3-actions button{width:100%}
+.v3-tax-details{margin-top:0}
+.v3-p3-notice{margin-top:12px}
+@media(max-width:699px){.v3-canton-gate h2{font-size:19px}.v3-asset-item .v3-info{margin-left:10px}}

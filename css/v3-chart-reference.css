@@ -24,22 +24,64 @@
 .v3-variant-chevron{color:var(--v3-green);font-size:22px}
 .v3-plan-link small{display:block;color:var(--v3-green);font-size:13px;margin-top:4px}
 .v3-plan-link:hover strong,.v3-plan-link:focus-visible strong{text-decoration:underline}
-.v3-plan-link:focus-visible,.v3-summary-row:focus-visible,.v3-source-detail summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-plan-link:focus-visible,.v3-summary-row:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
 .v3-income-sources h2{font-size:17px;margin:12px 0 4px}
-.v3-summary-row,.v3-source-detail summary,.v3-source-line{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:10px 0;min-height:44px;border:0;border-bottom:1px solid var(--v3-line);background:transparent;color:var(--v3-ink);text-align:left;font-size:14px}
-.v3-summary-row strong,.v3-source-detail strong,.v3-source-line strong{font-size:15px;font-weight:550;white-space:nowrap}
-.v3-summary-row small,.v3-source-detail small{color:var(--v3-green);font-size:16px}
+.v3-summary-row,.v3-source-line{display:flex;align-items:center;justify-content:space-between;gap:8px;width:100%;padding:10px 0;min-height:44px;border:0;border-bottom:1px solid var(--v3-line);background:transparent;color:var(--v3-ink);text-align:left;font-size:14px}
+.v3-summary-row strong,.v3-source-line strong{font-size:15px;font-weight:550;white-space:nowrap}
+.v3-summary-row small{color:var(--v3-green);font-size:16px}
 .v3-summary-row:hover{color:var(--v3-green)}
-.v3-source-detail summary{cursor:pointer}
 .v3-rent-row{display:grid;grid-template-columns:minmax(0,1fr) 44px;position:relative}
 .v3-rent-row .v3-summary-row{min-width:0}
-.v3-rent-row .v3-source-detail{position:relative;border-bottom:1px solid var(--v3-line)}
-.v3-rent-row .v3-source-detail summary{display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0;border:0;color:var(--v3-green);list-style:none;font-size:17px}
-.v3-rent-row .v3-source-detail summary::-webkit-details-marker{display:none}
-.v3-rent-row .v3-source-detail>div{position:absolute;right:0;top:44px;z-index:2;width:max-content;max-width:min(280px,80vw);padding:10px;background:var(--v3-surface);border:1px solid var(--v3-line);box-shadow:0 4px 12px #142b3420}
-.v3-source-detail>div{font-size:13px;color:var(--v3-muted);padding:8px 0}
-.v3-source-detail>button{border:0;background:transparent;color:var(--v3-green);padding:8px 0;min-height:44px}
+/* In der Zeile bleibt das ⓘ ein Popup, damit die Werteliste nicht springt */
+.v3-rent-row .v3-info{position:relative;border-bottom:1px solid var(--v3-line)}
+.v3-rent-row .v3-info>summary{display:grid;place-items:center;width:44px;height:44px;min-height:44px;padding:0}
+.v3-rent-row .v3-info-panel{position:absolute;right:0;top:44px;z-index:2;width:max-content;max-width:min(280px,80vw);padding:10px;background:var(--v3-surface);border:1px solid var(--v3-line);box-shadow:0 4px 12px #142b3420}
 .v3-income-total{display:flex;justify-content:space-between;gap:8px;padding:11px 0;font-size:14px;font-weight:600}
+/* Steuerzeile direkt in der Einkommensübersicht; die Rechnung liegt hinter dem ⓘ */
+.v3-tax-details{border-top:1px solid var(--v3-line)}
+.v3-income-sources .v3-tax-details{border-top:0}
+.v3-tax-details>summary{display:flex;align-items:baseline;justify-content:space-between;gap:8px;padding:11px 0;min-height:44px;font-size:14px;font-weight:550;cursor:pointer;list-style:none}
+.v3-tax-details>summary::-webkit-details-marker{display:none}
+.v3-tax-details>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-tax-label{color:var(--v3-muted);font-weight:400}
+.v3-tax-icon{color:var(--v3-green);font-size:15px}
+.v3-tax-amount{text-align:right;white-space:nowrap}
+.v3-tax-panel{padding:2px 0 12px;font-size:13px;line-height:1.5;color:var(--v3-muted)}
+.v3-tax-panel h3{margin:0 0 4px;font-size:14px;color:var(--v3-ink)}
+.v3-tax-panel h4{margin:12px 0 2px;font-size:13px;font-weight:600;color:var(--v3-ink)}
+.v3-tax-panel dl{margin:0}
+.v3-tax-panel dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:6px 0;border-bottom:1px solid var(--v3-line)}
+.v3-tax-panel dt{min-width:0}
+.v3-tax-panel dd{margin:0;color:var(--v3-ink);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.v3-tax-panel dd small{display:block;color:var(--v3-muted);font-size:12px;font-weight:400}
+.v3-tax-panel p{margin:8px 0 0}
+.v3-tax-rate{display:flex;align-items:center;flex-wrap:wrap;gap:4px 6px;margin-top:8px}
+/* Einheitliches Info-Muster für alle Screens: Wert zuerst, Erklärung hinter dem ⓘ,
+   technische Annahme hinter dem zweiten ⓘ (v3-info-sub) */
+.v3-info{display:block}
+.v3-info>summary{display:inline-flex;align-items:center;gap:7px;min-height:44px;color:var(--v3-green);font-size:14px;cursor:pointer;list-style:none}
+.v3-info>summary::-webkit-details-marker{display:none}
+.v3-info>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-info-icon{font-size:16px}
+.v3-info-panel{padding:2px 0 12px;font-size:13px;line-height:1.5;color:var(--v3-muted);max-width:66ch}
+.v3-info-panel p{margin:6px 0}
+.v3-info-panel h3{margin:0 0 4px;font-size:14px;color:var(--v3-ink)}
+.v3-info-panel h4{margin:12px 0 2px;font-size:13px;font-weight:600;color:var(--v3-ink)}
+.v3-info-panel dl{margin:6px 0}
+.v3-info-panel dl>div{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:5px 0;border-bottom:1px solid var(--v3-line)}
+.v3-info-panel dt{min-width:0}
+.v3-info-panel dd{margin:0;color:var(--v3-ink);font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
+.v3-info-panel dd small{display:block;color:var(--v3-muted);font-size:12px;font-weight:400}
+.v3-info-sub{display:inline-block}
+.v3-info-sub>summary{display:inline-flex;align-items:center;min-height:36px;color:var(--v3-green);cursor:pointer;list-style:none}
+.v3-info-sub>summary::-webkit-details-marker{display:none}
+.v3-info-sub>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-info-sub>div{padding:4px 0 0}
+.v3-asset-item .v3-info{margin:0 0 10px 12px}
+.v3-asset-item .v3-info>summary{font-size:13px;min-height:40px}
+.v3-pk-breakdown .v3-info{margin-top:12px}
+.v3-field .v3-info{margin-top:2px}
+.v3-field .v3-info>summary{min-height:40px;font-size:13px}
 .v3-pension-total{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--v3-line);font-size:13px;font-weight:600}
 .v3-pension-total strong{text-align:right;white-space:nowrap}
 .v3-income-total strong{text-align:right;white-space:nowrap}

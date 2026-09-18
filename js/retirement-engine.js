@@ -4,6 +4,8 @@
   function simulate(p, scenario='base'){
     const horizon=p.end+(scenario==='longlife'?5:0), rows=[];
     const inflation=p.inflation/100;
+    // Nettozuflüsse aus Vorsorge-Kapitalbezügen (Säule 3a, später bezogenes Kapital) je Alter.
+    const injections=p.capitalInjections||{};
     let capital=Math.max(0,p.capital), previous=[0,0,0];
     function cashflow(age){
       const phase=p.phases.filter(x=>age>=x.from).at(-1)||p.phases[0];
@@ -28,6 +30,9 @@
       return {need:phase.need,income,grossIncome,estimatedIncomeTax,taxableAnnualIncome,special,withdrawal:Math.max(0,phase.need+special-income)};
     }
     for(let age=p.start;age<horizon;age++){
+      // Ein 3a-Bezug wird erst in seinem Bezugsjahr zu verfügbarem Kapital: vorher finanzierte er nichts.
+      const injection=Math.max(0,Number(injections[age]??0));
+      capital+=injection;
       const c=cashflow(age), reserve=cashflow(age+1).withdrawal+cashflow(age+2).withdrawal;
       const cash=Math.min(capital,c.withdrawal), bonds=Math.min(Math.max(0,capital-cash),reserve);
       const buckets=[cash,bonds,Math.max(0,capital-cash-bonds)];
@@ -47,7 +52,7 @@
       rows.push({age,free:capital,bound:p.bound,total:capital+p.bound,need:c.need,rent:c.income,
         grossIncome:c.grossIncome,estimatedIncomeTax:c.estimatedIncomeTax,taxableAnnualIncome:c.taxableAnnualIncome,
         ret:gains.reduce((a,b)=>a+b,0),net:end-capital,gap,withdrawal:c.withdrawal,
-        special:c.special,buckets,transfers,endBuckets,end,reserve});
+        special:c.special,buckets,transfers,endBuckets,end,reserve,injection});
       capital=end;previous=endBuckets;
     }
     rows.push({age:horizon,free:capital,bound:p.bound,total:capital+p.bound,need:0,rent:0,ret:0,net:0,gap:0,withdrawal:0,buckets:previous,endBuckets:previous,end:capital,terminal:true});

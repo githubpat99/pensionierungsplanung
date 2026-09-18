@@ -45,7 +45,8 @@
     list.className = 'canton-list';
     list.setAttribute('role', 'listbox');
     list.setAttribute('aria-label', 'Kantone');
-    const options = [...select.options].map(option => {
+    // Pflichtfelder (V3) blenden die leere Platzhalteroption aus; V2 behält «Noch offen».
+    const options = [...select.options].filter(option => !option.disabled).map(option => {
       const code = option.value;
       const name = code ? TaxModel.config.cantons[code].name : option.textContent;
       const button = document.createElement('button');
@@ -87,7 +88,7 @@
         trigger.append(image);
       }
       const text = document.createElement('span');
-      text.textContent = code ? `${code} · ${TaxModel.config.cantons[code].name}` : 'Noch offen · keine Steuerschätzung';
+      text.textContent = code ? `${code} · ${TaxModel.config.cantons[code].name}` : (select.dataset.emptyLabel || 'Noch offen · keine Steuerschätzung');
       trigger.append(text);
       const chevron = document.createElement('span');
       chevron.className = 'canton-chevron';
