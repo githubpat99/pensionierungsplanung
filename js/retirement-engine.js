@@ -43,7 +43,9 @@
       const transfers=buckets.map((v,i)=>v-previous[i]);
       const gap=Math.max(0,c.withdrawal-capital);
       let spending=Math.min(c.withdrawal,capital);
-      const after=buckets.map(v=>{const take=Math.min(v,spending);spending-=take;return v-take});
+      // Entnahme je Topf mitschreiben, damit die Jahresansicht sie nicht nachrechnen muss.
+      const takes=buckets.map(v=>{const take=Math.min(v,spending);spending-=take;return take});
+      const after=buckets.map((v,i)=>v-takes[i]);
       after[0]+=Math.max(0,c.income-c.need-c.special);
       const rates=p.returns.map(x=>x/100);
       const t=age-p.start;
@@ -56,7 +58,7 @@
       rows.push({age,free:capital,bound:p.bound,total:capital+p.bound,need:c.need,rent:c.income,
         grossIncome:c.grossIncome,estimatedIncomeTax:c.estimatedIncomeTax,taxableAnnualIncome:c.taxableAnnualIncome,
         sources:c.sources,ret:gains.reduce((a,b)=>a+b,0),gains,net:end-capital,gap,withdrawal:c.withdrawal,
-        special:c.special,buckets,transfers,endBuckets,end,reserve,injection});
+        special:c.special,buckets,takes,transfers,endBuckets,end,reserve,injection});
       capital=end;previous=endBuckets;
     }
     rows.push({age:horizon,free:capital,bound:p.bound,total:capital+p.bound,need:0,rent:0,ret:0,net:0,gap:0,withdrawal:0,buckets:previous,endBuckets:previous,end:capital,terminal:true});

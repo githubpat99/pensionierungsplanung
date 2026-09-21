@@ -2,6 +2,7 @@
 .canton-native{position:absolute!important;width:1px!important;height:1px!important;opacity:0!important;pointer-events:none!important;padding:0!important;border:0!important}
 .canton-trigger{display:flex;align-items:center;gap:10px;width:100%;min-height:48px;text-align:left;padding:8px 10px;background:var(--v3-surface,var(--surface,#fff));color:var(--v3-ink,var(--text-primary,#142b34));border:1px solid var(--v3-line,var(--border,#d8ddda));border-radius:5px}
 .canton-trigger img,.canton-option img{width:22px;height:27px;object-fit:contain;flex:none}
+.canton-trigger[aria-invalid=true]{border-color:var(--v3-danger,#a0443c)}
 .canton-trigger span:not(.canton-chevron){min-width:0;flex:1;overflow-wrap:anywhere}
 .canton-chevron{font-size:20px;color:var(--v3-muted,var(--text-secondary,#6b777b))}
 .canton-panel{position:absolute;z-index:50;top:calc(100% + 4px);left:0;width:min(360px,calc(100vw - 36px));max-height:min(440px,70vh);padding:8px;background:var(--v3-surface,var(--surface,#fff));border:1px solid var(--v3-line,var(--border,#d8ddda));border-radius:6px;box-shadow:0 8px 24px #142b3429}

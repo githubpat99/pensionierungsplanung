@@ -12,6 +12,10 @@
  const clone=v=>structuredClone(v),num=v=>Number(v||0);
  const entered=v=>v!==undefined&&v!==null&&String(v).trim()!=='';
  const canton=s=>s.canton??s.details.income?.canton??'';
+ // New plans are only calculated with a chosen canton. The V3 draft keeps its documented
+ // open-canton path and asks for it explicitly with {requireCanton:true}.
+ const cantonGroups=['regular','income','tax'];
+ const cantonMissing={key:'canton',message:'Bitte wähle deinen Wohnsitzkanton.'};
  function fresh(mode=null){return {mode,values:{},details:{},confirmed:{},position:'time',targetAge:null,horizonMode:'automatic',riskProfile:'cautious'};}
  function field(key,label,unit='CHF / Monat',min=0,max=1e10,step='any'){return {key,label,unit,min,max,step};}
  function fields(group,s){
@@ -36,9 +40,12 @@
   if(f.type==='canton')return v===''||!!tax.canton(v);
   return v!==undefined&&v!==null&&String(v).trim()!==''&&Number.isFinite(Number(v))&&Number(v)>=f.min&&Number(v)<=f.max&&(f.step!==1||Number.isInteger(Number(v)));
  }
- function error(group,v,s){
+ function error(group,v,s,{requireCanton=false}={}){
   const bad=fields(group,s).find(f=>!validField(f,v[f.key]));
   if(bad)return {key:bad.key,message:`Bitte «${bad.label}» prüfen${bad.min!==undefined?` (${bad.min} bis ${bad.max.toLocaleString('de-CH')})`:''}.`};
+  // New plans need a canton before anything is calculated; the V3 draft deliberately keeps
+  // an open canton (documented, tested) and asks for it with {requireCanton:true}.
+  if(requireCanton&&cantonGroups.includes(group)&&!tax.canton(v.canton??''))return cantonMissing;
   const start=s.mode==='pre'?num(group==='time'?v.retirement:s.values.retirement):num(group==='time'?v.age:s.values.age);
   if(group==='time'&&s.mode==='pre'&&num(v.retirement)<num(v.age))return {key:'retirement',message:'Die Pensionierung darf nicht vor deinem heutigen Alter liegen.'};
   if(group==='time'&&s.horizonMode==='manual'&&s.targetAge<=start)return {key:s.mode==='pre'?'retirement':'age',message:'Bitte zuerst unter Annahmen den Planungshorizont über den neuen Start hinaus verlängern.'};
@@ -48,7 +55,8 @@
  }
  function timing(s){return s.mode&&s.values.age!==undefined&&!error('time',s.values,s);}
  // The aggregate remains a compatibility marker; new input always records sources.
- function complete(s){return !!timing(s)&&['need','free'].every(g=>!error(g,s.values,s))&&validField(field('regular','Einnahmen'),s.values.regular);}
+ // A canton is part of a complete new plan; an older saved stand without one stays readable.
+ function complete(s,{requireCanton=true}={}){return !!timing(s)&&['need','free'].every(g=>!error(g,s.values,s))&&validField(field('regular','Einnahmen'),s.values.regular)&&!(requireCanton&&!tax.canton(canton(s)));}
  function quality(s){
   const confirmedGroups=['time','need','regular','free','income','assets','pension',...(s.mode==='pre'?['pension3a']:[])];
   const base=complete(s)&&confirmedGroups.every(g=>s.confirmed[g]===true);
@@ -167,7 +175,8 @@
    if(s.confirmed[g]&&!data)throw Error('Bestätigung ohne Angaben.');
   }
   if(timing(s)&&(!Number.isInteger(s.targetAge)||s.targetAge>110||s.targetAge<=(s.mode==='pre'?s.values.retirement:s.values.age)))throw Error('Ungültiger Planungshorizont.');
-  if((detailGroups.includes(s.position)||['plan','vorsorge','tax','income-detail','assets-detail','asset-funding'].includes(s.position))&&!complete(s))throw Error('Unvollständiger Einstieg.');
+  // A stand saved before the canton became mandatory stays loadable and savable.
+  if((detailGroups.includes(s.position)||['plan','vorsorge','tax','income-detail','assets-detail','asset-funding'].includes(s.position))&&!complete(s,{requireCanton:false}))throw Error('Unvollständiger Einstieg.');
   return s;
  }
  function save(storage,s,theme){

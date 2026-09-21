@@ -2,9 +2,9 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
  const fill=(values)=>Object.entries(values).forEach(([name,value])=>{if(name==='canton'){cy.get('.canton-trigger').click();cy.get(`.canton-option[data-code="${value}"]`).click();}else if(typeof value==='boolean')cy.get(`[name=${name}]`).check();else if(name==='pkShare')cy.get(`[name=${name}]`).invoke('val',value).trigger('input');else cy.get(`[name=${name}]`).clear().type(String(value));});
  function core(mode){
   cy.get(`[data-mode=${mode}]`).click();fill(mode==='pre'?{age:60,retirement:65}:{age:70});cy.get('#question').submit();
-  fill({need:7500});cy.get('#question').submit();cy.get('[name=pkRent]').should('not.exist');fill({canton:'',ahv:3430,other:0,additional:0});
-  cy.get('[data-metric=income]').should('contain',"− CHF 3'430").and('contain',"− CHF 41'160");
-  cy.get('[data-metric=withdrawal]').should('contain',"= CHF 4'070").and('contain',"= CHF 48'840");
+  fill({need:7500});cy.get('#question').submit();cy.get('[name=pkRent]').should('not.exist');fill({canton:'AR',ahv:3430,other:0,additional:0});
+  cy.get('[data-metric=income]').should('contain',"− CHF 2'967").and('contain',"− CHF 35'603");
+  cy.get('[data-metric=withdrawal]').should('contain',"= CHF 4'533").and('contain',"= CHF 54'397");
   cy.get('#question').submit();fill({free:650000});cy.get('.funding').should('be.visible');if(mode==='pre')cy.screenshot('guided-live-pre',{capture:'fullPage'});cy.get('#question').submit();
  }
  for(const mode of ['pre','post'])for(const width of [360,1280])it(`${mode} ${width}: first answer, grouped refinement, quality, reload and system appearance`,()=>{
@@ -12,7 +12,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
   cy.window().then(w=>w.localStorage.setItem('retirement-personal-snapshot-v1','legacy-preserved'));
   core(mode);
   cy.get('.quality-plan strong').should('contain','Erste Einschätzung');
-  cy.get('.funding').should('have.attr','data-status','pending');
+  cy.get('.funding').should('have.attr','data-status','red');
   cy.get('#app select').should('not.exist');
   cy.get('#v2Nav [data-nav=pension]').click();
   cy.get('[data-open=pension]').click();
@@ -67,7 +67,7 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
   fill({age:70,retirement:65});cy.get('#question').submit();cy.get('[name=retirement]').should('have.attr','aria-invalid','true');
   fill({retirement:70});cy.get('#question').submit();fill({need:9999});cy.reload();
   cy.get('[data-resume]').click();cy.get('[name=need]').should('have.value','');
-  fill({need:5000});cy.get('#question').submit();fill({canton:'',ahv:0,other:0,additional:0});cy.get('#question').submit();fill({free:0});cy.get('#question').submit();
+  fill({need:5000});cy.get('#question').submit();fill({canton:'AR',ahv:0,other:0,additional:0});cy.get('#question').submit();fill({free:0});cy.get('#question').submit();
   cy.get('.funding').should('contain','bis Alter 70').and('contain','Es fehlen noch');
   cy.window().then(w=>cy.stub(w,'confirm').returns(false).as('confirmation'));
   cy.get('[data-nav=more]').click();cy.get('[data-new]').click();cy.get('h1').should('contain','Mehr');
@@ -84,6 +84,40 @@ describe('Guided V2: confirmed data and financing are separate',()=>{
   fill({age:70});cy.get('#question').submit();cy.get('#saveStatus').should('contain','Speichern nicht möglich');
   cy.get('[name=need]').should('be.visible');cy.get('[data-home]').click();cy.get('[data-resume]').click();cy.get('[name=need]').should('be.visible');
   cy.window().then(w=>expect(w.CheckV2.getState().values.age).to.equal(70));
+ });
+ it('requires the canton before the first calculation',()=>{
+ cy.viewport(390,850);cy.visit('/v2.html');cy.get('[data-mode=pre]').click();
+ fill({age:60,retirement:65});cy.get('#question').submit();fill({need:5000});cy.get('#question').submit();
+ cy.get('#canton').should('have.attr','required').and('have.value','');
+ cy.get('.canton-trigger').should('contain','Bitte wählen');
+ cy.get('#cantonHint').should('contain','Für die Schätzung deiner Steuern.');
+ fill({ahv:2500,other:0,additional:0});cy.get('#question').submit();
+ cy.get('#error').should('contain','Bitte wähle deinen Wohnsitzkanton.');
+ cy.get('.canton-trigger').should('have.attr','aria-invalid','true').and('be.focused');
+ cy.get('[name=free]').should('not.exist');
+ cy.get('.canton-trigger').click();cy.get('.canton-option[data-code=""]').should('not.exist');
+ cy.get('.canton-option[data-code="AR"]').click();cy.get('#question').submit();
+ cy.get('[name=free]').should('be.visible');
+ cy.window().then(w=>expect(w.CheckV2.getState().canton).to.equal('AR'));
+});
+it('shows the tax arithmetic and the tax details in the income view',()=>{
+ cy.viewport(390,844);cy.visit('/v2.html');cy.window().then(w=>{
+  const M=w.CheckV2State;let s=M.fresh('pre');
+  for(const [g,v] of [['time',{age:60,retirement:65}],['regular',{canton:'AR',ahv:5000,other:0,additional:1000}],['need',{need:6500}],['free',{free:200000}]])s=M.apply(s,g,v);
+  s.position='plan';M.save(w.localStorage,s,'system');
+ });cy.reload();cy.get('[data-resume]').click();cy.get('[data-metric=income]').click();
+ cy.get('[data-detail=income-pensions]').should('contain',"CHF 5'000");
+ cy.get('[data-detail=income-additional]').should('contain',"CHF 1'000");
+ cy.get('[data-detail=income-gross]').should('contain',"CHF 6'000");
+ cy.get('[data-detail=income-tax]').should('contain',"CHF 810").and('contain',"CHF 9'720");
+ cy.get('[data-detail=income-net]').should('contain',"CHF 5'190").and('contain','nach geschätzten Steuern');
+ cy.get('.tax-details summary').should('contain','So rechnen wir mit Steuern').click();
+ cy.get('.tax-details').should('contain','Jährlich im Ruhestand').and('contain',"CHF 72'000").and('contain','13,5 %')
+  .and('contain',"− CHF 9'720 / Jahr").and('contain',"CHF 62'280 / Jahr").and('contain',"CHF 5'190 / Monat")
+  .and('contain','Planungsannahme');
+ cy.get('.tax-details').should('not.contain','Säule-3a-Bezugssteuer');
+ cy.get('#app').should('not.contain','ESTV');
+ cy.window().then(w=>expect(w.document.documentElement.scrollWidth).to.be.at.most(390));
  });
 });
 

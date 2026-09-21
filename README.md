@@ -11,8 +11,8 @@ Die App speichert bestätigte V2-Angaben im Browser auf diesem Gerät. V3 verwen
 ## Aufbau
 
 - `v2.html`, `js/v2-ui.js`, `css/v2-ui.css`: aktuelle Oberfläche und Navigation.
-- `v3.html`, `js/v3-ui.js`, `css/v3*.css`: separater Entwurf mit PK-Varianten.
-- `js/v2-state.js`: Eingabeadapter und Browserzustand für V2 und den V3-Entwurf.
+- `v3.html`, `js/v3-ui.js`, `css/v3*.css`: eigenständige V3 mit PK-Vorschauen, bis zu drei gespeicherten Varianten und eigenen Informationsseiten.
+- `js/v3-state.js`: eigener V3-Varianten-, Migrations- und Speicheradapter; nutzt den vorhandenen reinen Eingabeadapter `js/v2-state.js` unverändert. V2-Dateien und V2-Browserdaten bleiben unverändert.
 - `js/retirement-calculator.js`, `js/retirement-engine.js`, `js/tax-model.js`: gemeinsamer Rechenkern und Steuerberechnung.
 - `docs/MASTER_SPEC.md`, `docs/PRODUCT_RULES.md`: verbindlicher Sollzustand und Produktregeln.
 - `docs/USE_CASES.md`, `docs/TEST_CASES.md`: aktuelle Use Cases und Testzuordnung.

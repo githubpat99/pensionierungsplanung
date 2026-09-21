@@ -13,6 +13,7 @@ it('v2 pre mode flow at 360 and 1280', () => {
     cy.get('#question').submit()
     cy.get('[name=ahv]').type('3430')
     for(const name of ['other','additional'])cy.get(`[name=${name}]`).type('0')
+    cy.get('.canton-trigger').click();cy.get('.canton-option[data-code="AR"]').click()
     cy.get('#question').submit()
     cy.get('input[name="free"]').type('650000')
     cy.get('#question').submit()
@@ -38,7 +39,7 @@ for(const width of [390,1280])it(`preserves the PK editor through the overview, 
  cy.viewport(width,844);cy.visit('/v2.html');
  cy.window().then(w=>{
   let s=w.CheckV2State.fresh('pre');
-  for(const [g,v] of Object.entries({time:{age:60,retirement:65},need:{need:5000},regular:{canton:'',ahv:2500,pkRent:1500,other:0,additional:0},free:{free:200000},pension:{pk:500000,pkContrib:20000,pkShare:51}}))s=w.CheckV2State.apply(s,g,v);
+  for(const [g,v] of Object.entries({time:{age:60,retirement:65},need:{need:5000},regular:{canton:'AR',ahv:2500,pkRent:1500,other:0,additional:0},free:{free:200000},pension:{pk:500000,pkContrib:20000,pkShare:51}}))s=w.CheckV2State.apply(s,g,v);
   s.position='plan';w.CheckV2State.save(w.localStorage,s,'system');
  });cy.reload();cy.get('[data-resume]').click();
  cy.get('[data-nav=assumptions]').click();cy.get('[name=inflation]').clear().type('2');

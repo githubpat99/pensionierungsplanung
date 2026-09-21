@@ -88,7 +88,7 @@
         trigger.append(image);
       }
       const text = document.createElement('span');
-      text.textContent = code ? `${code} · ${TaxModel.config.cantons[code].name}` : (select.dataset.emptyLabel || 'Noch offen · keine Steuerschätzung');
+      text.textContent = code ? `${code} · ${TaxModel.config.cantons[code].name}` : (select.options[0]?.textContent?.trim() || select.dataset.emptyLabel || 'Noch offen');
       trigger.append(text);
       const chevron = document.createElement('span');
       chevron.className = 'canton-chevron';
@@ -96,6 +96,8 @@
       chevron.textContent = '⌄';
       trigger.append(chevron);
       options.forEach(option => option.setAttribute('aria-selected', String(option.dataset.code === code)));
+      // A required canton field reports its invalid state on the visible trigger, not on the hidden select.
+      if (select.getAttribute('aria-invalid') === 'true') trigger.setAttribute('aria-invalid', 'true'); else trigger.removeAttribute('aria-invalid');
     };
     select.addEventListener('change', sync);
     sync();

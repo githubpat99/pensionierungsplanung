@@ -12,7 +12,7 @@ const editorRoutes=[...basic,'income','assets','tax','pension','pension3a','assu
 const detailRoutes=['income-detail','assets-detail','asset-funding'];
 const parentOf=g=>g==='income'||g==='tax'?'income-detail':g==='assets'?'assets-detail':g==='pension3a'||g==='pension'?'vorsorge':'plan';
 function keepDraft(){if(editorRoutes.includes(route))drafts[route]=structuredClone(draft);}
-function firstOpen(){return basic.find(g=>g==='regular'?state.values.regular===undefined:!!M.error(g,state.values,state))||'time';}
+function firstOpen(){return basic.find(g=>g==='regular'?(state.values.regular===undefined||!!M.error('regular',{canton:M.canton(state),...state.details.income},state,{requireCanton:true})):!!M.error(g,state.values,state))||'time';}
 function focusHeading(){window.scrollTo(0,0);const h=app.querySelector('h1');if(h){h.tabIndex=-1;h.focus({preventScroll:true});}}
 function restorePosition(){if(state.position==='plan')plan();else if(state.position==='vorsorge')renderVorsorge();else if(state.position==='more')renderMore();else if(detailRoutes.includes(state.position))showDetail(state.position);else showEditor(state.position);}
 function showParent(g){const parent=parentOf(g);if(parent==='vorsorge')renderVorsorge();else if(detailRoutes.includes(parent))showDetail(parent);else plan();}
@@ -118,7 +118,7 @@ function renderMore() {
   return {
    time:{title:pre?'Wann beginnt dein Ruhestand?':'Dein Zeitpunkt',hint:'Alter heute'+(pre?' und gewünschter Pensionierungsstart.':'. Die Planung beginnt heute.')},
    need:{title:'Wie viel möchtest du monatlich zur Verfügung haben?',hint:'Dein Lebensbedarf zu Beginn deiner '+(pre?'Pensionierung.':'Planung.')},
-   regular:{title:'Welche Einnahmen hast du im Ruhestand?',hint:'Monatsbeträge vor persönlicher Steuer. Erfasse AHV und weitere regelmässige Einnahmen; falls nicht vorhanden: 0. Den Wohnkanton kannst du noch offen lassen.'},
+   regular:{title:'Welche Einnahmen hast du im Ruhestand?',hint:'Monatsbeträge vor persönlicher Steuer. Erfasse AHV und weitere regelmässige Einnahmen; falls nicht vorhanden: 0. Dein Wohnkanton wird für die Schätzung deiner Steuern benötigt.'},
    free:{title:'Wie viel frei verfügbares Vermögen hast du ungefähr?',hint:'Heute frei verfügbares Kapital. Noch gebundene PK-/3a-Guthaben und Immobilien nicht mitzählen.'},
    income:{title:'Dein Einkommen',hint:'Monatsbeträge vor persönlicher Steuer; Nettomiete nach Objektkosten. Alle Einnahmen gelten ab Planungsstart, ohne Indexierung.'},
    assets:{title:'Dein verfügbares Vermögen',hint:'Erfasse heutige Beträge. Bereits bezogenes Vorsorgekapital gehört zu deinen verfügbaren Mitteln. Weitere Vermögenswerte und Immobilien sind optional; leere Zusatzfelder bleiben offen.'},
@@ -139,7 +139,7 @@ function renderMore() {
  function input(f){
   const v=draft[f.key]??'';
   const section=f.section?`<h3 class="field-section">${f.section}</h3>`:'';
-  if(f.type==='canton')return `<div class="field"><label for="${f.key}">${f.label}</label><select id="${f.key}" name="${f.key}"><option value="">Noch offen · keine Steuerschätzung</option>${Object.entries(TaxModel.config.cantons).map(([k,c])=>`<option value="${k}" ${v===k?'selected':''}>${k} · ${esc(c.name)}</option>`).join('')}</select></div>`;
+  if(f.type==='canton')return `<div class="field"><label for="${f.key}">${f.label}</label><select id="${f.key}" name="${f.key}" data-empty-label="Bitte wählen" aria-describedby="cantonHint" required><option value="" disabled ${v?'':'selected'}>Bitte wählen</option>${Object.entries(TaxModel.config.cantons).map(([k,c])=>`<option value="${k}" ${v===k?'selected':''}>${k} · ${esc(c.name)}</option>`).join('')}</select><p class="hint" id="cantonHint">Für die Schätzung deiner Steuern.</p></div>`;
   return `${section}<div class="field"><label for="${f.key}">${f.label}</label><div class="entry"><input id="${f.key}" name="${f.key}" type="number" inputmode="${f.step===1?'numeric':'decimal'}" min="${f.min}" max="${f.max}" step="${f.step}" value="${esc(v)}" aria-describedby="groupHint error" ${f.optional?'':'required'}><span>${f.unit}</span></div></div>`;
  }
  function groupNote(g){
@@ -205,30 +205,62 @@ function renderMore() {
   renderLive(preview());focusHeading();
  }
  function preview(){
-  if(!M.error(route,draft,state)){
+  if(!M.error(route,draft,state,{requireCanton:true})){
    const next=M.apply(state,route,draft);next.confirmed=state.confirmed;return next;
   }
   const next=structuredClone(state);
   if(route==='regular')delete next.values.regular;else if(basic.includes(route))for(const f of M.fields(route,state))delete next.values[f.key];
   return next;
  }
- function detailRow(key,label,value,{unit='',hint='',negative=false,total=false,empty='Noch nicht erfasst'}={}){
-  return `<div class="detail-row${total?' detail-total':''}" data-detail="${key}"><dt>${label}${hint?`<small>${hint}</small>`:''}</dt><dd>${value===null?`<span class="unknown">${empty}</span>`:`<strong>${negative?'− ':''}${cash(value)}</strong>${unit?`<span class="detail-unit">${unit}</span>`:''}`}</dd></div>`;
+ function detailRow(key,label,value,{unit='',hint='',negative=false,total=false,subtotal=false,empty='Noch nicht erfasst'}={}){
+  return `<div class="detail-row${total?' detail-total':''}${subtotal?' detail-subtotal':''}" data-detail="${key}"><dt>${label}${hint?`<small>${hint}</small>`:''}</dt><dd>${value===null?`<span class="unknown">${empty}</span>`:`<strong>${negative?'− ':''}${cash(value)}</strong>${unit?`<span class="detail-unit">${unit}</span>`:''}`}</dd></div>`;
+ }
+ /* Tax transparency: the one-time withdrawal at retirement, the running tax of the first
+  * retirement year and the simplified planning assumption behind both. Every amount comes
+  * from TaxDetail/RetirementCalculator, so no tax arithmetic is duplicated here. */
+ function taxDetails(s,b){
+  const plan=M.toPlan(s);if(!plan)return '';
+  const t=TaxDetail.summary(plan,b.result),y=t.yearly,o=t.once,c=TaxModel.canton(y.canton);
+  const source=id=>t.yearly.sources.find(x=>x.id===id)?.annual??0;
+  const row=(label,value,{negative=false,total=false,unit=''}={})=>`<div${total?' class="tax-total"':''}><dt>${label}</dt><dd>${negative?'− ':''}${cash(value)}${unit}</dd></div>`;
+  const once=o&&o.pkGross>0?`<h4>Einmalig bei Pensionierung</h4><dl>
+   ${row('PK-Kapital brutto',o.pkGross)}
+   <div><dt>↓ Geschätzte Kapitalbezugssteuer</dt><dd>${o.taxOpen?'Steuern offen':`− ${cash(o.pkTax)}`}</dd></div>
+   <div><dt>↓ PK-Kapital netto</dt><dd>${o.taxOpen?'Steuern offen':cash(o.pkNet)}</dd></div>
+   ${row('+ Bereits vorhandenes freies Kapital',o.existingFreeCapital)}
+   ${row('= Verfügbares Startkapital',o.startCapital,{total:true})}</dl>
+   <p>${o.taxOpen?'Ohne Wohnkanton bleibt die Bezugssteuer offen; das PK-Kapital ist deshalb brutto ausgewiesen.':`Besteuert wird nur der bezogene PK-Anteil von ${cash(o.pkGross)}; bestehendes freies Vermögen wird nicht mit einer Kapitalbezugssteuer belastet.`}</p>`:'';
+  const yearly=`<h4>Jährlich im Ruhestand</h4><dl>
+   ${row('AHV',source('ahv'))}
+   ${row('PK-Rente',source('pk'))}
+   ${row('Weitere steuerbare Einnahmen',Math.max(0,y.taxable-source('ahv')-source('pk')))}
+   ${row('Steuerbare Einnahmen',y.taxable,{total:true})}
+   <div><dt>Verwendete Steuerannahme${c?` ${esc(y.canton)}`:''}</dt><dd>${y.rate===null?'Steuern offen':`${String(y.rate).replace('.',',')} %`}</dd></div>
+   <div><dt>Geschätzte Einkommenssteuer</dt><dd>${y.tax===null?'Steuern offen':`− ${cash(y.tax)} / Jahr`}</dd></div>
+   ${row('Verfügbares Einkommen',y.net,{total:true,unit:' / Jahr'})}
+   ${row('= pro Monat',y.net/12,{unit:' / Monat'})}</dl>`;
+  const note=c?`<p>Für ${esc(c.name)} verwendet das vereinfachte kantonale Modell ${esc(TaxModel.config.version)} je nach Höhe des steuerbaren Einkommens ${String(c.incomeTaxPct.low).replace('.',',')} %, ${String(c.incomeTaxPct.medium).replace('.',',')} % oder ${String(c.incomeTaxPct.high).replace('.',',')} %; der Satz gilt jeweils für den gesamten Betrag.</p>`:'';
+  const threeA=t.threeA.has3a?'<p>Säule-3a-Bezugssteuer ist in dieser Planung derzeit noch nicht separat berücksichtigt.</p>':'';
+  return `<details class="model-notes tax-details"><summary><span class="tax-info" aria-hidden="true">ⓘ</span>So rechnen wir mit Steuern</summary>${once}${yearly}${note}${threeA}<p><strong>Planungsannahme:</strong> Die Steuerwerte sind vereinfachte Schätzwerte für die langfristige Planung. Persönliche Faktoren wie Gemeinde, Zivilstand, Konfession, individuelle Abzüge und weitere steuerbare Einkünfte werden nicht vollständig berücksichtigt.</p></details>`;
  }
  function incomeComposition(s){
   const b=M.breakdown(s),r=b.result,c=TaxModel.canton(M.canton(s)),monthly={unit:'/ Monat'};
+  const t=TaxDetail.summary(M.toPlan(s),r),source=id=>t.yearly.sources.find(x=>x.id===id)?.annual??0;
+  const pensions=source('ahv')+source('pk')+source('other'),additional=source('additional');
   return `<p class="hint">${s.mode==='pre'?`Ab Pensionierung mit ${s.values.retirement}`:`Ab Alter ${s.values.age}`} · Einnahmen vor persönlicher Steuer</p><dl class="detail-list income-sources">
    ${detailRow('ahv','AHV',b.income.ahv===null?null:b.income.ahv/12,monthly)}
    ${detailRow('pk-income','PK-Rente',b.income.pk===null?null:b.income.pk/12,{...monthly,hint:s.details.pension?'aus Vorsorge':'Unter Vorsorge → Pensionskasse ergänzen'})}
    ${detailRow('other-income','Weitere regelmässige Einnahmen',b.income.other===null?null:b.income.other/12,{...monthly,hint:'Weitere Renten und Einnahmen, einschliesslich Nettomiete'})}
    ${b.income.unallocated===null?'':detailRow('unallocated-income','Noch nicht aufgeteilte Einnahmen',b.income.unallocated/12,monthly)}
   </dl><section class="tax-summary" aria-label="Einkommen und Steuern"><dl class="detail-list">
-   ${detailRow('income-gross','Bruttoeinkommen',r.incomeGross/12,monthly)}
-   ${detailRow('income-tax','Geschätzte Einkommenssteuer',r.incomeTax===null?null:r.incomeTax/12,{...monthly,negative:true,empty:'Steuern noch offen',hint:r.incomeTax===null?'':`${cash(r.incomeTax)} / Jahr`})}
+   ${pensions>0?detailRow('income-pensions','Renten gesamt · vor Steuern',pensions/12,monthly):''}
+   ${additional>0?detailRow('income-additional','Weitere Einnahmen',additional/12,monthly):''}
+   ${detailRow('income-gross','Einnahmen vor Steuern',r.incomeGross/12,{...monthly,subtotal:true})}
+   ${detailRow('income-tax','Geschätzte Steuern',r.incomeTax===null?null:r.incomeTax/12,{...monthly,negative:true,empty:'Steuern noch offen',hint:r.incomeTax===null?'':`${cash(r.incomeTax)} / Jahr`})}
   </dl><p class="canton-line">Wohnkanton: <strong>${c?esc(c.name):'Noch offen'}</strong></p>
-  ${c?`<p class="hint">Geschätzter Satz: ${String(TaxModel.getIncomeTaxRate(M.canton(s),r.incomeGross)).replace('.',',')} % · <button class="inline-action" data-open="tax">Wohnkanton ändern</button></p>`:'<p class="hint">Die vorläufige Rechnung enthält noch keinen Steuerabzug. Die Datengrundlage ist deshalb noch nicht gut abgestützt.</p><button data-open="tax">Wohnkanton ergänzen</button>'}
-  <dl class="detail-list">${detailRow('income-net',c?'Netto verfügbar':'Vorläufig verfügbar',r.monthlyIncomeNet,{...monthly,total:true,hint:c?'nach geschätzten Steuern':'Steuern noch offen'})}</dl>
-  </section><p class="hint">Beträge auf ganze Franken gerundet. Modellrechnung, keine individuelle Steuerberechnung.</p>`;
+  ${c?`<p class="hint">Geschätzter Satz: ${String(TaxModel.getIncomeTaxRate(M.canton(s),r.incomeGross)).replace('.',',')} % · <button class="inline-action" data-open="tax">Wohnkanton ändern</button></p>`:'<p class="hint">Diese gespeicherte Planung enthält noch keinen Wohnkanton und damit keinen Steuerabzug.</p><button data-open="tax">Wohnkanton ergänzen</button>'}
+  <dl class="detail-list">${detailRow('income-net',c?'Einkommen netto':'Vorläufig verfügbar',r.monthlyIncomeNet,{...monthly,total:true,hint:c?'nach geschätzten Steuern':'Steuern noch offen'})}</dl>
+  </section>${taxDetails(s,b)}<p class="hint">Beträge auf ganze Franken gerundet. Modellrechnung, keine individuelle Steuerberechnung.</p>`;
  }
  function assetRow(s,key,label,value,{part,hint='',source}={}){
   const expanded=part&&assetOpen===part;
@@ -331,9 +363,13 @@ function modelNotes(){
   renderLive(state);window.scrollTo(0,0);const h=app.querySelector('h1');h.tabIndex=-1;h.focus({preventScroll:true});
  }
  function submit(){
-  const problem=M.error(route,draft,state);
+  const problem=M.error(route,draft,state,{requireCanton:true});
   if(problem){
-   document.getElementById('error').textContent=problem.message;const el=app.querySelector(`[name="${problem.key}"]`);el?.setAttribute('aria-invalid','true');el?.focus();return;
+   document.getElementById('error').textContent=problem.message;const el=app.querySelector(`[name="${problem.key}"]`);el?.setAttribute('aria-invalid','true');
+   // The canton field is rendered by the picker; its trigger has to carry the invalid state and the focus.
+   const trigger=el?.closest('.canton-picker')?.querySelector('.canton-trigger');
+   if(trigger){trigger.setAttribute('aria-invalid','true');trigger.focus();}else el?.focus();
+   return;
   }
   const wasComplete=M.complete(state),before=wasComplete?C.evaluatePlan(M.toPlan(state)):null,old=state,g=route;
   state=M.apply(state,g,draft);

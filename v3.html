@@ -7,16 +7,17 @@
   <link rel="stylesheet" href="css/v2-ui.css">
   <link rel="stylesheet" href="css/v3.css?v=3">
   <link rel="stylesheet" href="css/v3-reference.css?v=2">
-  <link rel="stylesheet" href="css/v3-plan-reference.css?v=7">
+  <link rel="stylesheet" href="css/v3-plan-reference.css?v=16">
   <link rel="stylesheet" href="css/v3-chart-reference.css?v=5">
   <link rel="stylesheet" href="css/canton-picker.css">
 </head>
 <body>
   <header class="masthead">
-    <div class="brand"><span class="brand-leaf" aria-hidden="true"></span><span class="brand-copy"><span class="brand-name">Finanziell entspannt.</span><span class="brand-tagline">Sicher planen. Investiert bleiben.</span></span></div>
+    <button type="button" class="brand" id="v3Home" aria-label="Mein Plan öffnen"><span class="brand-leaf" aria-hidden="true"></span><span class="brand-copy"><span class="brand-name">Ruhestands-Check</span></span></button>
     <button class="menu-button" type="button" aria-label="Menü öffnen" aria-expanded="false"><span></span><span></span><span></span></button>
   </header>
   <nav id="v3Menu" class="v3-menu" hidden aria-label="Menü">
+    <button type="button" data-menu-page="plan">Mein Plan</button>
     <button type="button" data-menu-page="personal">Persönliche Angaben</button>
     <button type="button" data-menu-page="ahv">AHV-Renten</button>
     <button type="button" data-menu-page="pension">Pensionskasse</button>
@@ -35,7 +36,9 @@
   <script src="js/retirement-engine.js"></script>
   <script src="js/retirement-calculator.js"></script>
   <script src="js/v2-state.js"></script>
+  <script src="js/icons.js"></script>
   <script src="js/canton-picker.js"></script>
-  <script src="js/v3-ui.js?v=15"></script>
+  <script src="js/v3-state.js"></script>
+  <script src="js/v3-ui.js?v=16"></script>
 </body>
 </html>

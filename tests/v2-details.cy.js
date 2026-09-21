@@ -26,10 +26,17 @@ describe('V2: composition one tap from the compact plan',()=>{
   });
   cy.screenshot(`income-${mode}-${width}`,{capture:'fullPage'});
   cy.reload();cy.get('[data-resume]').click();cy.get('h1').should('have.text','Deine Einkommen im Ruhestand');
-  cy.get('[data-open=tax]').click();cy.get('.canton-trigger').click();cy.get('.canton-option[data-code=""]').click();cy.get('#question').submit();
+  // The canton is mandatory for new input: it can be changed but not cleared. A stand saved
+  // before that rule keeps loading and shows the tax explicitly as open.
+  cy.get('[data-open=tax]').click();cy.get('.canton-option[data-code=""]').should('not.exist');
+  cy.get('.canton-trigger').click();cy.get('.canton-option[data-code="ZH"]').click();cy.get('#question').submit();
+  cy.window().then(w=>{const r=w.CheckV2.getResult();cy.get('[data-detail=income-tax]').should('contain',money(r.incomeTax/12)).and('contain',money(r.incomeTax));});
+  cy.window().then(w=>{const record=JSON.parse(w.localStorage.getItem('retirement-v2-plan'));record.state.canton='';if(record.state.details.income)record.state.details.income.canton='';w.localStorage.setItem('retirement-v2-plan',JSON.stringify(record));});
+  cy.reload();cy.get('[data-resume]').click();
   cy.get('[data-detail=income-tax]').should('contain','Steuern noch offen').and('not.contain','CHF 0');
   cy.get('[data-detail=income-net]').should('contain','Vorläufig verfügbar');
   cy.get('[data-parent=plan]').click();cy.get('.quality-plan strong').should('not.contain','Gut abgestützt');
+  cy.get('.funding').should('have.attr','data-status','pending');
   cy.get('[data-metric=income]').should('contain','Steuern noch offen');
   cy.get('[data-metric=income]').click();cy.get('[data-open=tax]').click();cy.get('.canton-trigger').click();cy.get('.canton-option[data-code="SG"]').click();cy.get('#question').submit();
   cy.get('[data-detail=income-net] strong').should(el=>expect(el.text()).to.equal(net));

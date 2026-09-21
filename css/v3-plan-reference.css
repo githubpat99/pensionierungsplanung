@@ -136,10 +136,6 @@ button.v3-plan-meta:hover .v3-plan-meta-chevron,button.v3-plan-meta:focus-visibl
 /* Kopf mit Rückweg: ein Screen, ein Titel, der Weg zurück führt immer in die übergeordnete Ebene. */
 /* «Jahr für Jahr»: ein Jahr der Simulation Schritt für Schritt (Mobile First, vertikaler Fluss) */
 .v3-year-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
-.v3-year-variant{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--v3-muted);min-width:0;flex:1 1 auto}
-.v3-year-variant>span{flex:none;white-space:nowrap}
-.v3-year-variant select{flex:0 1 auto;min-width:0;max-width:100%;border:1px solid var(--v3-line);border-radius:6px;background:var(--v3-surface);color:var(--v3-ink);font:inherit;font-size:14px;padding:5px 6px;min-height:34px}
-.v3-year-choice{flex:none;color:var(--v3-green);font-size:12px;white-space:nowrap}
 .v3-year-nav{margin-top:12px;border-top:1px solid var(--v3-line);padding-top:10px}
 .v3-year-range{width:100%;margin:2px 0 6px}
 .v3-year-nav-row{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px}
@@ -151,39 +147,7 @@ button.v3-plan-meta:hover .v3-plan-meta-chevron,button.v3-plan-meta:focus-visibl
 .v3-year-line span small{color:var(--v3-muted);font-size:12px;margin-left:4px}
 .v3-year-line strong{font-variant-numeric:tabular-nums;white-space:nowrap}
 .v3-year-line.total{font-weight:600}
-.v3-year-steps{list-style:none;margin:14px 0 0;padding:0;display:grid;gap:8px}
-.v3-year-step{border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);padding:8px 10px;opacity:0;transform:translateY(4px);transition:opacity .2s ease,transform .2s ease}
-.v3-year-step.visible{opacity:1;transform:none}
-/* Ein Schritt = eine Zahl; die Herleitung liegt hinter dem ⓘ */
-.v3-year-step-head{display:grid;grid-template-columns:24px minmax(0,1fr) auto auto;align-items:center;gap:8px}
-.v3-year-step-title{min-width:0}
-.v3-year-step-title strong{font-size:14px;display:block;overflow-wrap:anywhere}
-.v3-year-step-title small{display:block;color:var(--v3-muted);font-size:11px}
-.v3-year-step-value{text-align:right;min-width:0}
-.v3-year-step-value strong{display:block;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
-.v3-year-step-value small{display:block;color:var(--v3-muted);font-size:11px;white-space:nowrap}
-.v3-year-step-note{color:var(--v3-muted);font-size:11px;text-align:right}
-.v3-year-chip{display:grid;place-items:center;flex:none;width:24px;height:24px;border-radius:50%;background:var(--v3-soft);color:var(--v3-green);font:13px/1 sans-serif;font-weight:600}
-.v3-year-pots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:4px}
-.v3-year-pots.compact{margin-top:8px}
-.v3-year-pot{display:grid;gap:3px;justify-items:center;text-align:center;min-width:0}
-.v3-year-pot-bar{display:block;width:100%;max-width:64px;height:38px;border-radius:5px 5px 2px 2px}
-.v3-year-pot strong{font-size:14px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
-.v3-year-pot small{font-size:12px;color:var(--v3-ink)}
-.v3-year-pot em{font-size:11px;font-style:normal;color:var(--v3-muted)}
-.pot-cash .v3-year-pot-bar{background:var(--v3-green)}
-.pot-bonds .v3-year-pot-bar{background:var(--v3-leaf-teal)}
-.pot-growth .v3-year-pot-bar{background:var(--v3-brand)}
-.v3-year-note{margin:6px 0 0;font-size:12px;line-height:1.45;color:var(--v3-muted)}
-.v3-year-flag{margin:6px 0 0;font-size:13px;color:var(--v3-green);font-weight:600}
-.v3-year-detail{margin-top:12px;border-top:1px solid var(--v3-line);padding-top:4px}
-.v3-year-next{margin-top:12px}
-.v3-year-next-button{width:100%;border:1px solid var(--v3-green);background:transparent;color:var(--v3-green);font-size:14px;padding:10px;min-height:44px}
-.v3-year-actions{display:grid;gap:8px;margin-top:12px}
-.v3-year-actions button{min-height:46px;border-radius:6px}
-.v3-year-link{display:inline-flex;align-items:center;gap:6px;margin-top:12px;min-height:44px;border:0;background:transparent;color:var(--v3-green);padding:0;font-size:14px}
-@media(max-width:699px){.v3-year-nav-row button{font-size:12px;padding:6px 8px}.v3-year-pot-bar{height:32px}.v3-year-step{padding:10px}}
-@media(prefers-reduced-motion:reduce){.v3-year-step{transition:none;transform:none}}
+@media(max-width:699px){.v3-year-nav-row button{font-size:12px;padding:6px 8px}}
 /* Kopf mit Rückweg: ein Screen, ein Titel, der Weg zurück führt in die übergeordnete Ebene. */
 .v3-heading-detail{display:grid;gap:0;padding-top:12px}
 .v3-heading-detail .home-link{justify-self:start;min-height:44px;border:0;background:transparent;color:var(--v3-brand-soft);padding:0;font-size:14px}
@@ -200,3 +164,207 @@ button.v3-plan-meta:hover .v3-plan-meta-chevron,button.v3-plan-meta:focus-visibl
 .v3-tax-details{margin-top:0}
 .v3-p3-notice{margin-top:12px}
 @media(max-width:699px){.v3-canton-gate h2{font-size:19px}.v3-asset-item .v3-info{margin-left:10px}}
+
+/* V3: central PK decision, explicit preview, and a calm current-plan summary. */
+.brand{border:0;background:transparent;padding:0;min-height:44px}.brand-name{font-size:21px}.v3-share-label{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:12px 0;font-size:16px}.v3-share-label>span:first-child{width:100%;font-family:system-ui,sans-serif;font-size:14px;color:var(--v3-muted)}.v3-share-label input{width:72px;min-height:44px;font:24px Georgia,serif;border:1px solid var(--v3-line);border-radius:6px;background:transparent;color:var(--v3-ink);padding:6px}.v3-overview{border:1px solid var(--v3-line);background:var(--v3-surface);border-radius:10px;padding:18px;margin-bottom:18px}.v3-summary>div{display:flex;justify-content:space-between;gap:12px;align-items:baseline}.v3-summary strong{font-size:22px;text-align:right}.v3-complete{font-family:system-ui,sans-serif;font-size:14px;color:var(--v3-green);margin:12px 0}.v3-next-row{display:flex;justify-content:space-between;font:16px system-ui,sans-serif;min-height:52px}.v3-variant{display:flex;padding:0;gap:0}.v3-variant-select{flex:1;min-width:0;display:flex;gap:12px;align-items:center;text-align:left;background:transparent;border:0;padding:12px;min-height:60px}.v3-variant-select .v3-variant-copy{flex:1}.v3-variant [data-remove-variant]{min-width:44px;min-height:44px;padding:5px;background:transparent;border:0;font-size:24px}.v3-variant.current{border-color:#54636a;box-shadow:inset 3px 0 #54636a}.v3-preview-chart{border:1px solid var(--v3-line);border-radius:8px;margin-top:18px;padding:14px;background:var(--v3-surface)}.v3-preview-chart h2{font-size:22px;font-weight:500}.v3-income-sources>summary{min-height:44px;padding:12px 0;cursor:pointer;color:var(--v3-green);font:15px system-ui,sans-serif}.v3-status.pending{background:#f0efeb;color:#59616a!important}.v3-hint{font-size:14px}.v3-range{min-height:32px}.v3-decision h2{font-size:25px;font-weight:500}.v3-actions [hidden]{display:none!important}.v3-actions button{font-family:system-ui,sans-serif;min-height:44px}.v3-chart-legend{display:flex;flex-wrap:wrap;gap:10px;font:13px system-ui,sans-serif;list-style:none;padding:0}.v3-chart-legend li{display:flex;gap:6px;align-items:center}.v3-status.covered,.v3-status.gap{background:#f0f1ef;color:var(--v3-ink)!important}.v3-p3-link{width:100%;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:12px}.v3-plan-grid.v3-plan-compact{max-width:780px;display:block}.v3-plan-meta{width:100%;text-align:right}.v3-heading{max-width:780px}.v3-compact-summary .v3-summary-row{min-height:46px}.v3-compact-note{font-size:13px}button:focus-visible,summary:focus-visible,input:focus-visible{outline:2px solid var(--v3-green);outline-offset:3px}@media(max-width:699px){.v3-actions .primary{order:0}.v3-summary strong{font-size:21px}.v3-summary span{font-size:14px}.v3-decision{margin-top:18px}.v3-share-label{gap:6px}.brand-name{font-size:20px}.v3-preview-chart{padding:10px}.v3-compact-summary .v3-summary-row{font-size:14px}.v3-plan-meta{font-size:12px}}
+
+:root{--v3-leaf-teal:#78a394;--v3-leaf-green:#125448}.v3-error:empty,.v3-actions:not(:has(button:not([hidden]))){display:none}.v3-share-label>span,.v3-range-labels,.v3-hint,.v3-readout span,.v3-readout small,.v3-plan-meta,.v3-summary-row>span,.v3-compact-note,.v3-save,.v3-field label,.v3-entry span{font-family:system-ui,sans-serif}.v3-readout span,.v3-readout small{font-size:13px}.v3-heading{padding-bottom:0}.v3-plan-meta{margin-bottom:8px}.v3-compact-summary .v3-summary-row{line-height:1.4}.v3-variant-copy small{font:13px system-ui,sans-serif}.v3-field label{font-size:15px}.v3-summary-row{gap:12px}.v3-summary-row strong{white-space:nowrap}@media(max-width:699px){.v3-heading{padding-top:10px}.v3-plan-meta{min-height:36px}.v3-readout{margin-bottom:4px}.v3-readout strong{font-size:21px}.v3-compact-summary .v3-summary-row{align-items:center}.v3-compact-summary .v3-summary-row>span{max-width:52%}.v3-plan-meta{font-size:12px}}
+
+.v3-decision .v3-readout{display:grid;grid-template-columns:1fr;gap:0;margin-top:10px}.v3-decision .v3-readout button{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:4px 8px;padding:10px 0;border-top:1px solid var(--v3-line);text-align:left}.v3-decision .v3-readout strong{font-size:23px;white-space:nowrap;margin:0}.v3-decision .v3-readout small{grid-column:1/-1;margin:0;text-align:right}.v3-decision .v3-readout span{font-size:14px}.v3-decision .v3-readout .v3-capital-link{margin:0;border-radius:0}@media(max-width:699px){.v3-decision .v3-readout strong{font-size:22px}.v3-decision .v3-readout span{font-size:13px}}
+
+.v3-compare .v3-comparison-card.chosen{border-color:#54636a;background:#f1f2f0}.v3-compare .v3-comparison-head small,.v3-compare .v3-chosen-line strong{color:#39474f}
+
+/* --- «Mein Plan»: PK-Entscheid, Vorschau, gespeicherte Varianten --- */
+button.v3-plan-meta{margin:10px auto 2px}
+.v3-plan-sub{max-width:540px;margin:0 auto 16px;color:var(--v3-muted);font-size:14px;line-height:1.45;font-family:system-ui,sans-serif}
+.v3-share-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.v3-share-field{display:flex;flex-direction:column;gap:4px}
+.v3-share-caption{font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-share-entry{display:inline-flex;align-items:center;gap:4px;border:1px solid var(--v3-line);border-radius:6px;padding:0 10px;min-height:48px;background:var(--v3-surface)}
+.v3-share-entry input{width:62px;border:0;background:transparent;font:24px Georgia,"Times New Roman",serif;color:var(--v3-ink);padding:6px 0}
+.v3-share-unit{font:14px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-share-readout{margin:0 0 8px;font:14px system-ui,sans-serif;color:var(--v3-ink)}
+.v3-preview{margin-top:14px;border:1px solid var(--v3-line);border-radius:7px;padding:12px 14px;background:var(--v3-surface)}
+.v3-preview[data-preview=draft]{border-color:var(--v3-green);background:var(--v3-soft)}
+.v3-preview-caption{display:block;font:13px system-ui,sans-serif;color:var(--v3-muted);margin-bottom:10px}
+.v3-preview[data-preview=draft] .v3-preview-caption{color:var(--v3-green)}
+.v3-decision .v3-readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:0}
+.v3-decision .v3-readout .v3-readout-tile{display:block;padding:0;border:0;text-align:left;background:transparent;min-height:0}
+.v3-decision .v3-readout .v3-readout-tile span{font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-decision .v3-readout .v3-readout-tile strong{font-size:21px;margin:2px 0 0;white-space:normal;overflow-wrap:anywhere}
+.v3-decision .v3-readout .v3-readout-tile small{text-align:left;margin:2px 0 0;font:13px system-ui,sans-serif}
+.v3-readout-tile:hover strong{text-decoration:underline}
+.v3-decision-actions{display:grid;gap:10px;margin-top:16px}
+.v3-decision-actions .primary{width:100%}
+.v3-decision-links{display:flex;gap:8px;flex-wrap:wrap}
+.v3-decision-links button{flex:1 1 auto;border:0;background:transparent;color:var(--v3-green);font:14px system-ui,sans-serif;min-height:44px;padding:0 6px;text-decoration:underline}
+.v3-decision-links button[hidden]{display:none}
+.v3-notice{margin-top:10px;font:14px system-ui,sans-serif;color:var(--v3-green)}
+.v3-variants-section{margin-top:20px}
+.v3-variants-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.v3-variants-head h2{margin:0}
+.v3-link{border:0;background:transparent;color:var(--v3-green);font:14px system-ui,sans-serif;padding:0;min-height:44px}
+.v3-variant-list{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:8px}
+.v3-variant-row{display:flex;align-items:stretch;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);overflow:hidden}
+.v3-variant-row.current{border-color:var(--v3-green)}
+.v3-variant-row .v3-variant-select{flex:1;display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:12px;min-height:56px;color:var(--v3-ink)}
+.v3-variant-circle{width:20px;height:20px;border:2px solid #bdc5c2;border-radius:50%;display:grid;place-items:center;color:#fff;font:12px system-ui,sans-serif}
+.v3-variant-row.current .v3-variant-circle{border-color:var(--v3-green);background:var(--v3-green)}
+.v3-variant-main{min-width:0}
+.v3-variant-main strong{display:block;font-size:16px;font-weight:550}
+.v3-variant-main small{display:block;font:13px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px}
+.v3-variant-badge{font:12px system-ui,sans-serif;padding:3px 9px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);white-space:nowrap}
+.v3-variant-badge.new{background:#ece9f6;color:#4c3f86}
+.v3-variant-menu{position:relative;border-left:1px solid var(--v3-line)}
+.v3-variant-menu summary{list-style:none;cursor:pointer;display:grid;place-items:center;width:44px;height:100%;color:var(--v3-muted);font-size:18px;letter-spacing:1px}
+.v3-variant-menu summary::-webkit-details-marker{display:none}
+.v3-variant-menu[open] summary{color:var(--v3-green)}
+.v3-variant-menu>div{position:absolute;right:0;top:100%;z-index:5;min-width:230px;background:var(--v3-surface);border:1px solid var(--v3-line);border-radius:6px;box-shadow:0 6px 18px #142b3420;padding:6px;display:grid}
+.v3-variant-menu button{border:0;background:transparent;text-align:left;padding:10px 12px;font:14px system-ui,sans-serif;color:var(--v3-ink);min-height:44px}
+.v3-variant-menu button:hover{background:var(--v3-soft);color:var(--v3-green)}
+.v3-plan-status{margin-top:20px;border-top:1px solid var(--v3-line);padding-top:8px}
+.v3-plan-status summary{font:14px system-ui,sans-serif;color:var(--v3-muted);min-height:44px;display:flex;align-items:center}
+.v3-compare-button{display:flex;align-items:center;gap:10px;width:100%;margin-top:18px;min-height:54px;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);color:var(--v3-ink);font:15px system-ui,sans-serif;padding:0 14px;text-align:left}
+.v3-compare-button:hover{border-color:var(--v3-green)}
+.v3-compare-button>span:last-child{margin-left:auto;color:var(--v3-green)}
+.v3-chart-icon{font-size:15px;color:var(--v3-green);flex:none}
+/* --- Variantenvergleich: Auswahl, Übernahme, eingeklappte Kapitalentwicklung --- */
+.v3-compare-sub{margin:0 0 14px;color:var(--v3-muted);font:14px system-ui,sans-serif;line-height:1.45}
+.v3-compare-list{list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.v3-compare-card{display:flex;align-items:stretch;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);overflow:hidden}
+.v3-compare-card.selected{border-color:var(--v3-green);box-shadow:inset 0 0 0 1px var(--v3-green)}
+.v3-compare-card .v3-compare-select{flex:1;display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:start;border:0;background:transparent;text-align:left;padding:12px;color:var(--v3-ink)}
+.v3-compare-check{width:22px;height:22px;border:2px solid #bdc5c2;border-radius:50%;display:grid;place-items:center;color:#fff;font:12px system-ui,sans-serif;margin-top:2px}
+.v3-compare-card.selected .v3-compare-check{border-color:var(--v3-green);background:var(--v3-green)}
+.v3-compare-main{display:block;min-width:0}
+.v3-compare-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.v3-compare-title strong{font-size:17px;font-weight:550}
+.v3-compare-badge{font:12px system-ui,sans-serif;padding:3px 9px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);white-space:nowrap}
+.v3-compare-badge.new{background:#ece9f6;color:#4c3f86}
+.v3-compare-main>small{display:block;font:13px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px}
+.v3-compare-values{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--v3-line)}
+.v3-compare-values>span>span{display:block;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-compare-values strong{display:block;font-size:18px;font-weight:550;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+.v3-adopt{width:100%;margin-top:14px}
+.v3-chart-card{margin-top:16px;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface)}
+.v3-chart-head{display:flex;align-items:center;gap:6px;padding-right:10px}
+.v3-chart-toggle{flex:1;display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--v3-ink);min-height:52px;padding:0 14px;text-align:left;font:15px system-ui,sans-serif;min-width:0}
+.v3-chart-toggle .v3-chevron{margin-left:auto;color:var(--v3-muted)}
+.v3-chart-title{min-width:0}
+.v3-chart-body{padding:0 14px 14px}
+.v3-chart-foot{display:flex;align-items:center;gap:10px;width:100%;border:0;border-top:1px solid var(--v3-line);background:transparent;color:var(--v3-muted);min-height:48px;padding:0 14px;text-align:left;font:14px system-ui,sans-serif}
+.v3-chart-foot>span:last-child{margin-left:auto}
+@media(max-width:699px){.v3-plan-sub{margin-bottom:12px}.v3-decision .v3-readout .v3-readout-tile strong{font-size:19px}.v3-compare-values strong{font-size:17px}.v3-variant-menu>div{min-width:200px}.v3-compare-title strong{font-size:16px}}
+
+/* --- «Jahr für Jahr»: ein Jahr als kompaktes Dashboard --- */
+/* Topf-Identität appweit: Geldmarkt grün, Obligationen blau, Wertschöpfung violett. */
+:root{--v3-pot-cash:var(--v3-green);--v3-pot-bonds:#2f6ea8;--v3-pot-growth:#7a45c9}
+.v3-icon{display:inline-block;vertical-align:-.2em}
+.v3-year-block{border:1px solid var(--v3-line);border-radius:8px;background:var(--v3-surface);padding:12px;margin-top:12px}
+.v3-year-block-head{display:flex;align-items:center;gap:9px}
+.v3-year-block-head h3{margin:0;font-size:17px;font-weight:550;overflow-wrap:anywhere}
+.v3-year-rows{margin-top:10px}
+.v3-year-row{display:flex;align-items:baseline;justify-content:space-between;gap:10px;padding:8px 0;border-bottom:1px solid var(--v3-line);font-size:14px}
+.v3-year-row>span{min-width:0;display:flex;align-items:center;gap:6px}
+.v3-year-row strong{font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-year-block .v3-year-row:last-child{border-bottom:0}
+.v3-year-row.gap{background:#fbeceb;border-bottom:0;border-radius:6px;padding:10px 12px;margin-top:8px;color:#8f2f26}
+.v3-year-row.gap strong{font-size:17px;font-weight:600}
+.v3-year-sum{border-radius:6px;background:var(--v3-soft);margin-top:8px}
+.v3-year-sum summary{display:flex;align-items:center;gap:10px;min-height:46px;padding:0 12px;cursor:pointer;list-style:none}
+.v3-year-sum summary::-webkit-details-marker{display:none}
+.v3-year-sum summary>span:first-child{flex:1;color:var(--v3-green);font-weight:550}
+.v3-year-sum summary strong{font-size:18px;font-weight:600;color:var(--v3-green);font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-year-sum summary .v3-chevron{color:var(--v3-green)}
+.v3-year-sum-body{padding:0 12px 12px}
+.v3-year-callout{margin:10px 0 0;padding:9px 11px;border-radius:6px;background:#fbeceb;color:#8f2f26;font-size:13px;line-height:1.45}
+.v3-year-pot-cards{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.v3-year-pot-card{border:1px solid var(--v3-line);border-radius:7px;padding:9px;background:var(--v3-bg);min-width:0}
+.v3-year-pot-card.active{background:var(--v3-soft);border-color:var(--v3-green)}
+.v3-year-pot-card>strong{display:block;font-size:12px;font-weight:600;margin-bottom:6px;overflow-wrap:anywhere}
+.v3-year-pot-row{padding:4px 0;border-top:1px solid var(--v3-line)}
+.v3-year-pot-row:first-of-type{border-top:0}
+.v3-year-pot-row span{display:block;font-size:10px;line-height:1.3;color:var(--v3-muted)}
+.v3-year-pot-row strong{display:block;font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.v3-year-wealth{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:10px 0 0}
+.v3-year-wealth>strong{font-size:27px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.v3-year-delta{margin-left:auto;font-size:13px;color:var(--v3-green);white-space:nowrap}
+.v3-year-delta.down{color:#8f2f26}
+.v3-year-delta small{display:block;font-size:11px;color:var(--v3-muted)}
+.v3-year-bar{display:flex;height:16px;border-radius:8px;overflow:hidden;margin-top:12px;background:var(--v3-line)}
+.v3-year-bar span{display:block;height:100%}
+.v3-year-legend{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.v3-year-legend li{min-width:0}
+.v3-year-legend strong{display:block;font-size:13px;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.v3-year-legend span,.v3-year-legend small{display:block;font-size:11px;color:var(--v3-muted)}
+.v3-year-foot{display:flex;gap:8px;margin-top:12px;border-top:1px solid var(--v3-line);padding-top:12px}
+.v3-year-foot button{flex:1;border:0;background:transparent;color:var(--v3-green);font:13px system-ui,sans-serif;min-height:44px;padding:0 4px}
+.v3-year-nav-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--v3-muted)}
+/* Lange Summenzeilen («Geldmarkt … · Obligationen … · Wertschöpfung …») müssen in den
+   aufgeklappten Info-Panels umbrechen, sonst entsteht auf Mobile ein horizontaler Überlauf. */
+.v3-info-panel .v3-year-line strong{white-space:normal;overflow-wrap:anywhere;text-align:right}
+.v3-info-panel .v3-year-line{align-items:flex-start}
+/* Topf-Kacheln: Ausgangslage im Vergleich und Vermögen am Jahresanfang.
+   «Total» steht rechts in der Titelzeile, die Kacheln zeigen nur die drei Töpfe. */
+.v3-pot-heading{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.v3-pot-heading h2,.v3-pot-heading h3{margin:0}
+.v3-pot-total{display:flex;align-items:baseline;gap:8px;margin:0 0 0 auto}
+.v3-pot-total span{font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-pot-total strong{font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-pot-tiles{list-style:none;margin:10px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.v3-pot-tile{border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-bg);padding:9px;min-width:0}
+.v3-pot-icon{display:block;font-size:15px;line-height:1;color:var(--v3-muted)}
+.v3-pot-name{display:block;font:600 12px system-ui,sans-serif;color:var(--v3-ink);margin-top:3px;overflow-wrap:break-word}
+.v3-pot-tile strong{display:block;font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:3px;white-space:nowrap}
+.v3-pot-share{display:block;font-size:11px;color:var(--v3-muted);margin-top:1px}
+.v3-pot-bar{display:block;height:5px;border-radius:3px;background:var(--v3-line);margin-top:6px;overflow:hidden}
+.v3-pot-bar>span{display:block;height:100%}
+.v3-compare-start{margin-top:18px}
+.v3-compare-start h2{font-size:17px;font-weight:550;margin:0}
+.v3-compare-start .v3-compare-sub{margin:4px 0 0}
+.v3-compare-note{display:flex;gap:8px;margin:10px 0 0;padding:9px 11px;border-radius:6px;background:var(--v3-soft);color:var(--v3-muted);font:13px system-ui,sans-serif;line-height:1.45}
+.v3-compare-chevron{align-self:center;color:var(--v3-muted);font-size:18px;padding-left:2px}
+.v3-compare-card.selected .v3-compare-chevron{color:var(--v3-green)}
+.v3-compare-title{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:550;margin:16px 0 0}
+.v3-compare-title .v3-icon{color:var(--v3-muted)}
+/* Kompakte Variantenzeile auf «Mein Plan»: beschriftete Kennzahlen statt nackter Zahlen. */
+.v3-variant-check{display:grid;place-items:center;color:var(--v3-green);width:22px}
+.v3-variant-spacer{display:block;width:22px}
+.v3-variant-main small{display:block;font:12px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px;white-space:nowrap}
+.v3-variant-main .v3-variant-net{color:var(--v3-text-secondary,var(--v3-muted))}
+.v3-info-glyph{display:inline-grid;place-items:center;color:var(--v3-muted)}
+.v3-info summary .v3-info-glyph{margin-left:auto}
+.v3-chart-chevron{display:inline-grid;place-items:center;margin-left:auto;color:var(--v3-muted)}
+.v3-chart-more{display:flex;align-items:center;gap:8px;width:100%;border:0;border-top:1px solid var(--v3-line);background:transparent;color:var(--v3-green);min-height:48px;padding:0 14px;text-align:left;font:14px system-ui,sans-serif}
+.v3-chart-more .v3-icon{margin-left:auto}
+.v3-chart-toggle{width:100%}
+/* Topf-Karten im Jahr: dieselbe Sprache wie die Kacheln (Icon, Name, Beschriftungen, Farben). */
+.v3-pot-cards{list-style:none;margin:8px 0 0;padding:0;display:grid;grid-template-columns:repeat(auto-fit,minmax(118px,1fr));gap:8px}
+.v3-pot-card{border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-bg);padding:9px;min-width:0}
+.v3-pot-card.active{background:var(--v3-soft);border-color:var(--v3-green)}
+.v3-pot-line{padding:5px 0 0;margin-top:5px;border-top:1px solid var(--v3-line)}
+.v3-pot-line span{display:block;font-size:11px;line-height:1.3;color:var(--v3-muted)}
+.v3-pot-line strong{display:block;font-size:14px;font-weight:550;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-pot-line.negative strong{color:var(--v3-danger)}
+.v3-pot-line.end strong{font-weight:650}
+/* Eine Palette für alle Topf-Darstellungen (Kacheln, Karten, Balken, Legende). */
+.pot-cash .v3-pot-icon,.v3-year-legend li.pot-cash>span{color:var(--v3-pot-cash)}
+.pot-bonds .v3-pot-icon,.v3-year-legend li.pot-bonds>span{color:var(--v3-pot-bonds)}
+.pot-growth .v3-pot-icon,.v3-year-legend li.pot-growth>span{color:var(--v3-pot-growth)}
+.pot-cash .v3-pot-bar>span,.v3-year-bar .seg-cash{background:var(--v3-pot-cash)}
+.pot-bonds .v3-pot-bar>span,.v3-year-bar .seg-bonds{background:var(--v3-pot-bonds)}
+.pot-growth .v3-pot-bar>span,.v3-year-bar .seg-growth{background:var(--v3-pot-growth)}
+.pot-cash .v3-pot-line.end strong{color:var(--v3-pot-cash)}
+.pot-bonds .v3-pot-line.end strong{color:var(--v3-pot-bonds)}
+.pot-growth .v3-pot-line.end strong{color:var(--v3-pot-growth)}
+/* Kopf-Pille der Jahresansicht und deren Fusszeile. */
+.v3-year-topline{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.v3-year-pill{font:13px system-ui,sans-serif;padding:5px 12px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);white-space:nowrap}
+.v3-year-block-icon{font-size:14px;color:var(--v3-muted)}
+.v3-year-foot{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px;margin-top:14px;border-top:1px solid var(--v3-line);padding-top:12px}
+.v3-year-foot button{border:1px solid var(--v3-line);border-radius:6px;background:var(--v3-surface);color:var(--v3-ink);font:13px system-ui,sans-serif;min-height:48px;padding:0 10px}
+.v3-year-foot button.primary{background:var(--v3-green);color:#fff;border-color:var(--v3-green)}
+.v3-year-foot button[disabled]{opacity:.5}
+.v3-year-foot .v3-year-play{grid-column:1/-1;border:0;background:transparent;color:var(--v3-green);min-height:42px}
+@media(max-width:699px){.v3-pot-tiles{gap:6px}.v3-pot-tile{padding:8px}.v3-pot-tile strong{font-size:13px}.v3-pot-name{font-size:11px}.v3-pot-share{font-size:10px}.v3-pot-total strong{font-size:16px}.v3-year-foot{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.v3-year-foot button{font-size:12px;padding:0 6px}}
+@media(max-width:699px){.v3-year-block{padding:10px}.v3-year-block-head h3{font-size:16px}.v3-pot-cards{gap:6px}.v3-pot-card{padding:7px}.v3-pot-line strong{font-size:13px}.v3-year-wealth>strong{font-size:24px}.v3-year-legend strong{font-size:12px}.v3-year-foot button{font-size:12px}}
