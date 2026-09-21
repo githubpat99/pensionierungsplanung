@@ -107,6 +107,8 @@
   let previewShare = null;
   // Zuletzt gespeicherte Quote (Abzeichen «Neu» und Bestätigungszeile im Plan).
   let variantNotice = null;
+  // Platz der Variante, deren Wert gerade im PK-Bezug geladen ist (Klick auf die Zeile).
+  let editSlot = null;
   // Auswahl im Variantenvergleich und Zustand der standardmässig eingeklappten Grafik.
   let compareShare = null;
   let chartOpen = false;
@@ -445,21 +447,19 @@
   }
   function marker(index) { return index === 0 ? '●' : index === 1 ? '■' : '◆'; }
   const splitLabel = share => share === 0 ? 'Nur PK-Rente' : share === 100 ? 'Keine PK-Rente' : `${share} % Kapital · ${100 - share} % Rente`;
-  const variantBadge = share => share === chosenShare()
-    ? '<span class="v3-variant-badge current">Aktueller Plan</span>'
-    : variantNotice === share ? '<span class="v3-variant-badge new">Neu</span>' : '';
-  /* «···»-Menü einer Variante: nur Aktionen, die für diese Quote sinnvoll sind. */
+  /* «···»-Menü: wählt ausschliesslich, ob diese Variante der aktuelle Plan ist.
+     Alle Varianten sehen identisch aus – kein Sonderzustand, kein Entfernen. */
   function variantMenu(share) {
-    if (share === chosenShare()) return '';
-    return `<details class="v3-variant-menu"><summary aria-label="Weitere Aktionen für ${share} Prozent Kapital">···</summary><div><button type="button" data-adopt-variant="${share}">Als aktuellen Plan übernehmen</button><button type="button" data-remove-variant="${share}">Variante entfernen</button></div></details>`;
+    const current = share === chosenShare();
+    return `<details class="v3-variant-menu"><summary aria-label="Aktionen für ${share} Prozent Kapital">···</summary><div><button type="button" data-adopt-variant="${share}"${current ? ' disabled aria-current="true"' : ''}>${current ? 'Aktueller Plan' : 'Als aktuellen Plan übernehmen'}</button></div></details>`;
   }
-  /* Kompakte Variantenzeile: Quote, wichtigste Werte, Zustand und Aktionen. */
+  /* Kompakte Variantenzeile: für alle Varianten identisch aufgebaut (Quote, Kennzahlen, ···). */
   function variantCards() {
     return `<ul class="v3-variant-list">${variantShares().map((share, index) => {
-      const item = evaluated(share), current = share === chosenShare();
+      const item = evaluated(share);
       const cap = item ? Calculator.calculateAvailableCapital(item.plan, share) : null;
-      const detail = item ? `<small class="v3-variant-values">PK-Rente ${money(item.pension.rent / 12)} · Startkapital ${money(item.result.availableCapital)}</small><small class="v3-variant-net">davon PK netto ${money(cap.netPkCapitalWithdrawal)}</small>` : '';
-      return `<li class="v3-variant-row${current ? ' current' : ''}"><button type="button" class="v3-variant-select" data-variant-index="${index}" aria-pressed="${current}">${current ? `<span class="v3-variant-check" aria-hidden="true">${Icons.icon('circleCheck', {size:20})}</span>` : '<span class="v3-variant-spacer" aria-hidden="true"></span>'}<span class="v3-variant-main"><strong>${share} % Kapital</strong>${detail}</span>${variantBadge(share)}</button>${variantMenu(share)}</li>`;
+      const detail = item ? `<small class="v3-variant-values">PK-Rente ${money(item.pension.rent / 12)} · Startkapital ${money(item.result.availableCapital)}</small><small class="v3-variant-values">PK-Kapital netto ${money(cap.netPkCapitalWithdrawal)}</small>` : '';
+      return `<li class="v3-variant-row${share === (previewShare ?? chosenShare()) ? ' editing' : ''}"><button type="button" class="v3-variant-select" data-variant-index="${index}"${share === chosenShare() ? ' aria-current="true"' : ''}><span class="v3-variant-main"><strong>${share} % Kapital</strong>${detail}</span></button>${variantMenu(share)}</li>`;
     }).join('')}</ul>`;
   }
   // Kompakte Achsenbeschriftung (Mio./k) und reine Wertangabe für die Endlabels.
@@ -548,9 +548,22 @@
     if (compareShare === null || !variantShares().includes(compareShare)) compareShare = share;
     const selected = compareShare;
     const chosenItem = benchmark.find(item => item.share === selected) ?? benchmark[0];
+    /* Gleiche Kennzahlen und gleiche Reihenfolge in jeder Variantenkarte (Spec: identische Darstellung).
+       Jede Kennzahl ist über ⓘ erklärt; die Erklärung ist für alle Karten dieselbe. */
+    const metricInfo = {
+      totalRent: infoMarkup({iconOnly:true, aria:'Total-Rente erklären', body:'<p>AHV und alle Renten zusammen, pro Monat und vor Steuern.</p>'}),
+      start: infoMarkup({iconOnly:true, aria:'Startkapital erklären', body:'<p>Alles, was dir zum Start der Pensionierung zur Verfügung steht: PK-Kapital netto plus weiteres Kapital (Säule 3a, Wertschriften, Bank und weitere Mittel).</p>'}),
+      target: infoMarkup({iconOnly:true, aria:'Vermögen am Zielalter erklären', body:`<p>Verfügbares Kapital am Ende des Planungshorizonts (Alter ${targetAge}), in heutiger Kaufkraft und ohne gebundenes Immobilienkapital.</p>`}),
+      rent: infoMarkup({iconOnly:true, aria:'PK-Rente erklären', body:'<p>Laufende Rente aus dem nicht bezogenen PK-Anteil, pro Monat und vor Steuern.</p>'}),
+      pkNet: infoMarkup({iconOnly:true, aria:'PK-Kapital netto erklären', body:'<p>Bezogenes PK-Kapital nach der geschätzten Kapitalbezugssteuer. Bestehendes freies Vermögen wird nicht damit belastet.</p>'})
+    };
+    const metric = (label, value, info) => `<div class="v3-compare-metric"><span>${label} ${info}</span><strong>${money(value)}</strong></div>`;
     const comparison = benchmark.map(item => {
       const current = item.share === share;
-      return `<li class="v3-compare-card${item.share === selected ? ' selected' : ''}${current ? ' current' : ''}"><button type="button" class="v3-compare-select" data-compare-share="${item.share}" aria-pressed="${item.share === selected}"><span class="v3-compare-check" aria-hidden="true">${item.share === selected ? '✓' : ''}</span><span class="v3-compare-main"><span class="v3-compare-title"><strong>${item.share} % Kapital</strong>${current ? '<span class="v3-compare-badge">Aktueller Plan</span>' : variantNotice === item.share ? '<span class="v3-compare-badge new">Neu</span>' : ''}</span><small>${splitLabel(item.share)}</small><span class="v3-compare-values"><span><span>PK-Rente / Monat</span><strong>${money(item.pension.rent / 12)}</strong></span><span><span>Vermögen mit ${targetAge}</span><strong>${money(item.result.capitalAtTargetAge)}</strong></span></span></span><span class="v3-compare-chevron" aria-hidden="true">›</span></button></li>`;
+      const capital = Calculator.calculateAvailableCapital(item.plan, item.share);
+      const sources = Calculator.incomeSourcesAtStart(item.plan).reduce((map, entry) => ({...map, [entry.id]: entry.annualIncome}), {});
+      const totalRent = ((sources.ahv ?? 0) + (sources.pk ?? 0) + (sources.other ?? 0)) / 12;
+      return `<li class="v3-compare-card${item.share === selected ? ' selected' : ''}${current ? ' current' : ''}"><div class="v3-compare-head"><button type="button" class="v3-compare-select" data-compare-share="${item.share}" role="radio" aria-checked="${item.share === selected}"><span class="v3-compare-check" aria-hidden="true">${item.share === selected ? '✓' : ''}</span><span class="v3-compare-main"><span class="v3-compare-title"><strong>${item.share} % Kapital</strong>${current ? '<span class="v3-compare-badge">Aktueller Plan</span>' : ''}</span><small>${splitLabel(item.share)}</small></span></button><span class="v3-compare-chevron" aria-hidden="true">${Icons.icon('chevronRight', {size:18})}</span></div><div class="v3-compare-metrics">${metric('Total-Rente / Monat', totalRent, metricInfo.totalRent)}${metric('Startkapital', item.result.availableCapital, metricInfo.start)}${metric(`Vermögen mit ${targetAge}`, item.result.capitalAtTargetAge, metricInfo.target)}${metric('PK-Rente / Monat', item.pension.rent / 12, metricInfo.rent)}${metric('PK-Kapital netto', capital.netPkCapitalWithdrawal, metricInfo.pkNet)}</div></li>`;
     }).join('');
     const chartInfo = infoMarkup({iconOnly:true, aria:'Kapitalentwicklung erklären', body:`<p>Verfügbares Kapital über die Ruhestandsjahre ab Alter ${startAge}. Der Anfangsbetrag hängt vom gewählten PK-Kapitalanteil ab. Die Beträge zeigen Kaufkraft zu Beginn deiner Pensionierung. Immobilien bleiben getrennt. Die stärkere Linie kennzeichnet ausschliesslich deinen aktuellen Plan.</p>`});
     const buckets = chosenItem ? chosenItem.result.bucketAllocation : [0, 0, 0];
@@ -789,28 +802,39 @@
       if (adopt) adopt.hidden = !preview;
       if (cancel) cancel.hidden = !preview;
       if (remember) remember.hidden = !preview;
+      // Die geladene Variante wird auch in der Liste sichtbar (identische Zeilen, nur der Zustand wechselt).
+      const cards = app.querySelector('.v3-cards');
+      if (cards) cards.innerHTML = variantCards();
     };
     range?.addEventListener('input', event => update(event.target.value));
     number?.addEventListener('input', event => update(event.target.value));
     app.querySelector('.v3-cards')?.addEventListener('click', event => {
       const button = event.target.closest('[data-variant-index]');
-      if (button) { update(variantShares()[Number(button.dataset.variantIndex)]); focusTarget('shareNumber'); }
+      if (!button) return;
+      // Klick auf eine Variante lädt genau diesen Wert in den PK-Bezug (Preview).
+      editSlot = Number(button.dataset.variantIndex);
+      update(variantShares()[editSlot]);
+      focusTarget('shareNumber');
     });
     app.querySelectorAll('[data-adopt-variant]').forEach(button => button.addEventListener('click', () => {
-      try { state = V3State.activate(state, numeric(button.dataset.adoptVariant)); variantNotice = null; previewShare = null; markDirty(); renderPlan(true); }
+      try { state = V3State.activate(state, numeric(button.dataset.adoptVariant)); previewShare = null; editSlot = null; markDirty(); renderPlan(true); }
       catch (error) { message(error.message); }
     }));
-    app.querySelectorAll('[data-remove-variant]').forEach(button => button.addEventListener('click', () => {
-      try { const removed = numeric(button.dataset.removeVariant); state = V3State.remove(state, removed); if (variantNotice === removed) variantNotice = null; markDirty(); renderPlan(true); }
-      catch (error) { message(error.message); }
-    }));
-    cancel?.addEventListener('click', () => { previewShare = null; renderPlan(true); });
+    cancel?.addEventListener('click', () => { previewShare = null; editSlot = null; renderPlan(true); });
     adopt?.addEventListener('click', () => {
-      try { state = V3State.activate(state, previewShare); variantNotice = null; previewShare = null; markDirty(); renderPlan(true); }
+      try { state = V3State.activate(state, previewShare, editSlot); previewShare = null; editSlot = null; markDirty(); renderPlan(true); }
       catch (error) { message(error.message); }
     });
     remember?.addEventListener('click', () => {
-      try { const saved = previewShare; state = V3State.remember(state, saved); variantNotice = saved; markDirty(); renderPlan(true); }
+      try {
+        const saved = previewShare;
+        // Ohne Klick auf eine Zeile wird der erste Platz mutiert, der nicht der aktuelle Plan ist.
+        const target = editSlot !== null && variantShares()[editSlot] !== chosenShare()
+          ? editSlot
+          : variantShares().findIndex(entry => entry !== chosenShare());
+        state = V3State.remember(state, saved, target);
+        variantNotice = saved; editSlot = null; markDirty(); renderPlan(true);
+      }
       catch (error) { message(error.message); }
     });
     app.querySelectorAll('[data-compare]').forEach(button => button.addEventListener('click', renderCompare));
@@ -823,7 +847,7 @@
       const raw = localStorage.getItem(storageKey);
       if (!raw) return false;
       const saved = V3State.decode(raw);
-      state = saved.state; previewShare = null; lastSavedAt = saved.savedAt; storageBlocked = false; storageFailed = false;
+      state = saved.state; previewShare = null; editSlot = null; lastSavedAt = saved.savedAt; storageBlocked = false; storageFailed = false;
       const position = state.position;
       if (!State.timing(state) || state.values.need === undefined) returnToPlan();
       else if (position === 'compare' && state.mode === 'pre') renderCompare();
@@ -849,7 +873,7 @@
   };
   function loadDemo() {
     try {
-      state = State.fresh('pre'); state.riskProfile = 'balanced'; previewShare = null;
+      state = State.fresh('pre'); state.riskProfile = 'balanced'; previewShare = null; editSlot = null;
       apply('time', demoPlanung.time);
       apply('regular', demoPlanung.regular);
       apply('need', demoPlanung.need);
@@ -866,7 +890,7 @@
   document.querySelector('.menu-button').addEventListener('click', toggleMenu);
   document.getElementById('v3Menu').addEventListener('click', event => {
     const button = event.target.closest('[data-menu-page]');
-    if (button) { previewShare = null; openDetail(button.dataset.menuPage); }
+    if (button) { previewShare = null; editSlot = null; openDetail(button.dataset.menuPage); }
   });
   app.addEventListener('click', event => {
     const back = event.target.closest('[data-back]');
@@ -875,7 +899,7 @@
     const next = event.target.closest('[data-v3-next]');
     const cancel = event.target.closest('[data-asset-cancel]');
     const asset = event.target.closest('[data-asset]');
-    if (back) { previewShare = null; returnToPlan(); }
+    if (back) { previewShare = null; editSlot = null; returnToPlan(); }
     else if (breakdown) openDetail('pension', 'pkBreakdown', 'pkKapital');
     else if (vorsorge) openDetail(vorsorge.dataset.openVorsorge, vorsorge.dataset.focusSection || '', vorsorge.dataset.focusHighlight || '');
     else if (next) openDetail(next.dataset.v3Next, next.dataset.focusSection || '', next.dataset.focusHighlight || '');

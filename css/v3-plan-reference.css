@@ -206,10 +206,7 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-link{border:0;background:transparent;color:var(--v3-green);font:14px system-ui,sans-serif;padding:0;min-height:44px}
 .v3-variant-list{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:8px}
 .v3-variant-row{display:flex;align-items:stretch;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);overflow:hidden}
-.v3-variant-row.current{border-color:var(--v3-green)}
-.v3-variant-row .v3-variant-select{flex:1;display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:10px;border:0;background:transparent;text-align:left;padding:12px;min-height:56px;color:var(--v3-ink)}
-.v3-variant-circle{width:20px;height:20px;border:2px solid #bdc5c2;border-radius:50%;display:grid;place-items:center;color:#fff;font:12px system-ui,sans-serif}
-.v3-variant-row.current .v3-variant-circle{border-color:var(--v3-green);background:var(--v3-green)}
+.v3-variant-row .v3-variant-select{flex:1;display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:0;border:0;background:transparent;text-align:left;padding:12px;min-height:56px;color:var(--v3-ink)}
 .v3-variant-main{min-width:0}
 .v3-variant-main strong{display:block;font-size:16px;font-weight:550}
 .v3-variant-main small{display:block;font:13px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px}
@@ -231,9 +228,18 @@ button.v3-plan-meta{margin:10px auto 2px}
 /* --- Variantenvergleich: Auswahl, Übernahme, eingeklappte Kapitalentwicklung --- */
 .v3-compare-sub{margin:0 0 14px;color:var(--v3-muted);font:14px system-ui,sans-serif;line-height:1.45}
 .v3-compare-list{list-style:none;padding:0;margin:0;display:grid;gap:10px}
-.v3-compare-card{display:flex;align-items:stretch;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);overflow:hidden}
+.v3-compare-card{display:block;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);overflow:hidden}
 .v3-compare-card.selected{border-color:var(--v3-green);box-shadow:inset 0 0 0 1px var(--v3-green)}
-.v3-compare-card .v3-compare-select{flex:1;display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:start;border:0;background:transparent;text-align:left;padding:12px;color:var(--v3-ink)}
+.v3-compare-head{display:flex;align-items:flex-start;gap:6px;padding-right:12px}
+.v3-compare-card .v3-compare-select{flex:1;display:grid;grid-template-columns:26px minmax(0,1fr);gap:8px;align-items:start;border:0;background:transparent;text-align:left;padding:12px;color:var(--v3-ink)}
+/* Identische Kennzahlzeilen in jeder Variante: drei oben, zwei darunter. */
+.v3-compare-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px;padding:0 12px 12px;border-top:1px solid var(--v3-line);margin-top:2px}
+.v3-compare-metric{padding-top:10px;min-width:0}
+.v3-compare-metric>span{display:flex;align-items:center;gap:4px;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-compare-metric>span .v3-info{flex:none}
+.v3-compare-metric>span .v3-info summary{min-height:0;padding:0}
+.v3-compare-metric strong{display:block;font-size:18px;font-weight:600;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
+.v3-compare-metric:nth-child(4),.v3-compare-metric:nth-child(5){border-top:1px solid var(--v3-line)}
 .v3-compare-check{width:22px;height:22px;border:2px solid #bdc5c2;border-radius:50%;display:grid;place-items:center;color:#fff;font:12px system-ui,sans-serif;margin-top:2px}
 .v3-compare-card.selected .v3-compare-check{border-color:var(--v3-green);background:var(--v3-green)}
 .v3-compare-main{display:block;min-width:0}
@@ -242,9 +248,6 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-compare-badge{font:12px system-ui,sans-serif;padding:3px 9px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);white-space:nowrap}
 .v3-compare-badge.new{background:#ece9f6;color:#4c3f86}
 .v3-compare-main>small{display:block;font:13px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px}
-.v3-compare-values{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin-top:10px;padding-top:10px;border-top:1px solid var(--v3-line)}
-.v3-compare-values>span>span{display:block;font:12px system-ui,sans-serif;color:var(--v3-muted)}
-.v3-compare-values strong{display:block;font-size:18px;font-weight:550;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap}
 .v3-adopt{width:100%;margin-top:14px}
 .v3-chart-card{margin-top:16px;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface)}
 .v3-chart-head{display:flex;align-items:center;gap:6px;padding-right:10px}
@@ -323,15 +326,13 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-compare-start h2{font-size:17px;font-weight:550;margin:0}
 .v3-compare-start .v3-compare-sub{margin:4px 0 0}
 .v3-compare-note{display:flex;gap:8px;margin:10px 0 0;padding:9px 11px;border-radius:6px;background:var(--v3-soft);color:var(--v3-muted);font:13px system-ui,sans-serif;line-height:1.45}
-.v3-compare-chevron{align-self:center;color:var(--v3-muted);font-size:18px;padding-left:2px}
+.v3-compare-chevron{align-self:center;color:var(--v3-muted);padding-top:14px}
 .v3-compare-card.selected .v3-compare-chevron{color:var(--v3-green)}
 .v3-compare-title{display:flex;align-items:center;gap:8px;font-size:17px;font-weight:550;margin:16px 0 0}
 .v3-compare-title .v3-icon{color:var(--v3-muted)}
-/* Kompakte Variantenzeile auf «Mein Plan»: beschriftete Kennzahlen statt nackter Zahlen. */
-.v3-variant-check{display:grid;place-items:center;color:var(--v3-green);width:22px}
-.v3-variant-spacer{display:block;width:22px}
-.v3-variant-main small{display:block;font:12px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px;white-space:nowrap}
-.v3-variant-main .v3-variant-net{color:var(--v3-text-secondary,var(--v3-muted))}
+/* Kompakte Variantenzeile auf «Mein Plan»: für alle Varianten identisch aufgebaut. */
+.v3-variant-main small{display:block;font:12px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px;overflow-wrap:anywhere}
+.v3-variant-row.editing{border-color:var(--v3-green)}
 .v3-info-glyph{display:inline-grid;place-items:center;color:var(--v3-muted)}
 .v3-info summary .v3-info-glyph{margin-left:auto}
 .v3-chart-chevron{display:inline-grid;place-items:center;margin-left:auto;color:var(--v3-muted)}

@@ -38,15 +38,18 @@ for(const width of [360,1280]) describe(`V3 standalone at ${width}px`,()=>{
   }
   cy.get('#shareNumber').clear().type('35');cy.get('#shareRange').should('have.value','35');cy.get('[data-remember]').click();
   cy.contains('Variante «35 % Kapital» gespeichert').should('exist');
-  cy.get('#shareNumber').clear().type('70');cy.get('[data-remember]').click();cy.contains('Varianten vergleichen · 3 Varianten').should('exist');
-  cy.get('#shareNumber').clear().type('99');cy.get('[data-remember]').click();cy.get('#v3Error').should('contain','Drei Varianten');
+  // Drei feste Plätze: Speichern mutiert den Platz, es entsteht kein vierter.
+  cy.get('[data-variant-index="2"]').click();cy.get('#shareNumber').clear().type('70');cy.get('[data-remember]').click();
+  cy.get('.v3-variants-head').should('contain','Varianten vergleichen');
+  cy.get('.v3-variant-row').should('have.length',3).each(row=>expect(row.find('.v3-variant-menu').length).to.equal(1));
+  cy.contains('Neu').should('not.exist');
   cy.get('[data-variant-index="1"]').click();cy.get('[data-adopt]').click();cy.get('#previewStatus').should('have.text','Dein aktueller Plan');
   cy.get('[data-save]').click();stored((s,w)=>{expect(s.details.pension.pkShare).eq(35);expect(s.v3Variants).deep.eq([0,35,70]);expect(w.localStorage.getItem('retirement-v2-plan')).eq('V2 remains untouched');});
   cy.get('#shareNumber').clear().type('99');cy.reload();cy.get('#shareNumber').should('have.value','35');
   cy.get('[data-compare]').click();cy.get('h1').should('have.text','Varianten vergleichen');
   cy.get('.v3-compare-sub').should('contain','Ausgangslage deiner Töpfe');
   cy.get('.v3-compare-chevron').should('have.length',3);
-  cy.get('.v3-compare-start h2').should('contain','Ausgangslage zum Start der Pensionierung (Alter 65)');
+  cy.get('.v3-compare-start h3').should('contain','Ausgangslage zum Start der Pensionierung (Alter 65)');
   cy.get('.v3-compare-start .v3-pot-heading').should('contain','Total').and('contain','CHF');
   cy.get('.v3-compare-start .v3-pot-tiles li').should('have.length',3);
   cy.get('.v3-compare-start').should('contain','Geldmarkt').and('contain','Obligationen').and('contain','Wertschöpfung').and('contain','Total');
@@ -58,8 +61,8 @@ for(const width of [360,1280]) describe(`V3 standalone at ${width}px`,()=>{
   cy.get('[data-chart-tick-age="95"]').should('exist');cy.get('.v3-chart-legend').should('contain','0 %').and('contain','35 %').and('contain','70 %');
   cy.get('[data-compare-share="70"]').click();cy.get('[data-adopt-compare]').should('not.be.disabled').click();
   cy.get('#previewStatus').should('not.exist');
-  cy.contains('Varianten vergleichen · 3 Varianten').should('exist');
-  cy.get('.v3-compare-start h2').should('contain','(Alter 65)');
+  cy.get('.v3-compare-start .v3-pot-heading').should('contain','Startkapital');
+  cy.get('.v3-compare-metric').should('have.length',15);
   cy.contains('So funktioniert der Variantenvergleich').should('exist');
   cy.contains('Planung Jahr für Jahr').should('exist');
   cy.document().then(d=>expect(d.documentElement.scrollWidth).lte(width));

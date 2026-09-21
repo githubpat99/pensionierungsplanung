@@ -21,28 +21,31 @@ function seed(mode = 'pre') {
 const share = s => Number(s.details.pension?.pkShare ?? 0);
 const planFor = (s, value) => { const plan = M.toPlan(s); plan.pensionDecision.capitalShare = value; return plan; };
 
-// --- Speichern, Übernehmen, Entfernen: keine Mutation gespeicherter Varianten ----
-let s = seed();
-const original = JSON.stringify(s), originalResult = JSON.stringify(C.evaluatePlan(planFor(s, 70)));
-s = V.remember(s, 70);
-assert.deepEqual(V.variants(s), [70], 'eine unveränderte Variante wird nicht doppelt gespeichert');
-s = V.remember(s, 55); s = V.remember(s, 100);
-assert.deepEqual(V.variants(s), [70,55,100], 'höchstens drei Varianten, in Speicherreihenfolge');
-assert.equal(share(s), 70, 'Speichern lässt den aktuellen Plan unberührt');
-assert.equal(JSON.stringify(V.variants(s)) !== '[]', true);
-assert.throws(() => V.remember(s, 42), /Drei Varianten/, 'vierte Variante wird blockiert');
-const removed = V.remove(s, 100);
-assert.deepEqual(V.variants(removed), [70,55], 'nach dem Entfernen ist wieder Platz');
-assert.deepEqual(V.variants(V.remember(removed, 42)), [70,55,42], 'der freie Platz ist nutzbar');
-assert.equal(JSON.stringify(s) !== original, true, 'der Aufruferzustand wird weiterverwendet');
-assert.equal(JSON.stringify(C.evaluatePlan(planFor(s, 70))), originalResult, 'das Speichern verändert keine Rechenwerte');
+// --- Drei feste, mutierbare Plätze ---------------------------------------------
+const withShare = (state, value) => V.normalize({...state, v3Variants:undefined, details:{...state.details, pension:{...state.details.pension, pkShare:value}}});
+let s = withShare(seed(), 50);
+assert.deepEqual(V.variants(s), [0,50,100], 'eine neue Planung startet mit 0 / 50 / 100 %');
+assert.deepEqual(V.variants(withShare(seed(), 61)), [0,61,100], 'ein bestehender Anteil ersetzt den mittleren Platz');
+assert.deepEqual(V.variants(V.normalize({...s, v3Variants:[0,35,50]})), [0,35,50], 'bestehende drei Plätze bleiben unverändert');
+assert.deepEqual(V.variants(V.normalize({...s, v3Variants:[0,35,70]})), [0,50,70], 'ein fehlender aktueller Anteil wird in die Plätze aufgenommen');
+const before = JSON.stringify(C.evaluatePlan(planFor(s, 50)));
+s = V.remember(s, 61, 2);
+assert.deepEqual(V.variants(s), [0,50,61], 'der gewählte Platz wird mutiert');
+assert.equal(share(s), 50, 'das Speichern lässt den aktuellen Plan unberührt');
+assert.equal(JSON.stringify(C.evaluatePlan(planFor(s, 50))), before, 'das Speichern verändert keine Rechenwerte');
+assert.deepEqual(V.variants(V.remember(s, 0, 2)), [0,50,61], 'kein doppelter Wert');
+assert.deepEqual(V.variants(V.remember(s, 61, 1)), [0,50,61], 'ein bereits vorhandener Wert wird nicht erneut gespeichert');
+const guarded = V.remember(s, 7, 1);
+assert.equal(V.variants(guarded)[1], 50, 'der Platz des aktuellen Plans wird nie überschrieben');
+assert.ok(V.variants(guarded).includes(50), 'der aktuelle Plan bleibt in den Varianten');
+for (const invalid of [-1, 101, 1.5, NaN, '35']) assert.throws(() => V.remember(s, invalid), undefined, 'ungültige Anteile werden abgelehnt');
 
-const activated = V.activate(s, 55);
-assert.equal(share(activated), 55, 'Übernehmen setzt den aktuellen Plan');
-assert.deepEqual(V.variants(activated), [70,55,100], 'die übernommene Variante bleibt gespeichert');
-assert.equal(share(s), 70, 'die Quelle bleibt unverändert (kein Snapshot wird mutiert)');
-assert.throws(() => V.remove(activated, 55), /aktuelle Plan/, 'der aktuelle Plan ist nicht entfernbar');
-assert.deepEqual(V.variants(V.remove(activated, 100)), [70,55], 'inaktive Varianten bleiben entfernbar');
+const activated = V.activate(s, 61);
+assert.equal(share(activated), 61, 'Übernehmen setzt den aktuellen Plan');
+assert.deepEqual(V.variants(activated), [0,50,61], 'die Plätze bleiben beim Übernehmen erhalten');
+assert.equal(share(s), 50, 'die Quelle bleibt unverändert (kein Snapshot wird mutiert)');
+assert.throws(() => V.remove(activated, 61), /aktuelle Plan/, 'der aktuelle Plan ist nicht entfernbar');
+assert.deepEqual(V.variants(V.remove(activated, 0)), [50,61], 'die Zustands-API kann weiterhin Plätze entfernen');
 
 // --- Invarianten je Variante (§31) ---------------------------------------------
 for (const value of V.variants(activated)) {

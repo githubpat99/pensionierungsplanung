@@ -55,18 +55,23 @@ assert.deepEqual(C.evaluatePlan(M.toPlan(migrated)),C.evaluatePlan(M.toPlan(seed
 const post=seed('post'); post.details.pension3a=legacy.details.pension3a;
 near(C.evaluatePlan(M.toPlan(V.normalize(post))).availableCapital,230000);
 assert.throws(()=>V.normalize({...legacy,details:{...legacy.details,pension3a:{p3Accounts:[{amount:-1}]}}}));
-// Variants share one state, never duplicate person data; preview calculations are pure.
+// Variants are three fixed, mutable slots; they share one state and never duplicate person data.
 let s=seed(), before=structuredClone(s);
 for(const share of [0,1,35,99,100]) { const p=M.toPlan(s);p.pensionDecision.capitalShare=share;C.evaluatePlan(p); }
 assert.deepEqual(s,before);
-s=V.remember(s,35); s=V.remember(s,70);
-assert.deepEqual(V.variants(s),[0,35,70]);
-assert.equal(s.details.pension.pkShare,0);
-assert.throws(()=>V.remember(s,99));
+s=V.normalize({...s,v3Variants:undefined});
+assert.deepEqual(V.variants(s),[0,50,100],'neue Planung startet mit den drei Standardwerten');
+s=V.remember(s,35,1);
+assert.deepEqual(V.variants(s),[0,35,100],'der gewählte Platz wird mutiert');
+assert.equal(s.details.pension.pkShare,0,'der aktuelle Plan bleibt unberührt');
+assert.deepEqual(V.variants(V.remember(s,0,2)),[0,35,100],'kein doppelter Wert');
+const protectedSlot=V.remember(s,7,0);
+assert.equal(V.variants(protectedSlot)[0],0,'der Platz des aktuellen Plans bleibt erhalten');
+assert.ok(V.variants(protectedSlot).includes(0),'der aktuelle Plan bleibt in den Varianten');
 s=V.activate(s,35); assert.equal(s.details.pension.pkShare,35);
+assert.deepEqual(V.variants(s),[0,35,100],'Übernehmen verändert die Plätze nicht');
 assert.throws(()=>V.remove(s,35));
-s=V.remove(s,70); s=V.remember(s,99);
-assert.deepEqual(V.variants(s),[0,35,99]);
+s=V.remove(s,100); assert.deepEqual(V.variants(s),[0,35]);
 for(const invalid of [-1,101,1.5,NaN,'35']) assert.throws(()=>V.remember(s,invalid));
 const oldResults=V.variants(s).map(share=>{const p=M.toPlan(s);p.pensionDecision.capitalShare=share;return C.evaluatePlan(p);});
 s=M.apply(s,'pension',{...s.details.pension,pk:800000});
@@ -82,7 +87,7 @@ assert.equal(V.normalize(oldPost).details.pension.pkRent,3100);
 // Versioned storage, full restoration and protection against unsupported or corrupt records.
 s.position='assets';
 const record={version:2,savedAt:new Date().toISOString(),state:s};
-assert.deepEqual(V.decode(JSON.stringify(record)).state,s);
+assert.deepEqual(V.decode(JSON.stringify(record)).state,V.normalize(s),'Laden füllt die drei Variantenplätze auf');
 assert.deepEqual(C.evaluatePlan(M.toPlan(V.decode(JSON.stringify(record)).state)),C.evaluatePlan(M.toPlan(s)));
 assert.deepEqual(V.variants(V.decode(JSON.stringify({...record,version:1})).state),[35]);
 for(const raw of ['{','null',JSON.stringify({...record,version:99}),JSON.stringify({...record,state:{...s,v3Variants:[35,35]}}),JSON.stringify({...record,savedAt:'bad'})]) assert.throws(()=>V.decode(raw));

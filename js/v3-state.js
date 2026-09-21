@@ -3,12 +3,26 @@
   const base = typeof module !== 'undefined' ? require('./v2-state.js') : root.CheckV2State;
   const copy = value => structuredClone(value);
   const routes = ['rents','need','plan','personal','ahv','pension','pension3a','extra','assets','assumptions','compare','years'];
+  /* Drei Variantenplätze sind der Standard. Bestehende Werte bleiben auf ihren Plätzen
+     erhalten und werden nur dann mit den Standardwerten aufgefüllt, wenn Plätze fehlen. */
+  const defaultVariants = [0, 50, 100];
+  function slots(source) {
+    const existing = Array.isArray(source.v3Variants)
+      ? source.v3Variants.map(Number).filter(value => Number.isInteger(value) && value >= 0 && value <= 100)
+      : [];
+    let values = existing.length === 3 ? [...existing] : [...defaultVariants];
+    if (existing.length && existing.length !== 3) existing.forEach((value, index) => { values[index] = value; });
+    const current = Number(source.details?.pension?.pkShare ?? 0);
+    if (!values.includes(current)) values[1] = current;
+    return values;
+  }
   function normalize(source) {
     const state = copy(source), position = state.position;
     state.position = 'time';
     // Preserve the base adapter's compatible migrations (e.g. old post PK rent).
     base.validate(state);
     state.position = position;
+    state.v3Variants = slots(state);
     const p3 = state.details.pension3a;
     if (p3 && (p3.p3Mode || p3.p3Accounts)) {
       const accounts = p3.p3Accounts ?? [];
@@ -27,7 +41,28 @@
     if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 100) throw Error('Der Kapitalanteil muss eine ganze Zahl von 0 bis 100 sein.');
     return value;
   }
-  function variants(state) { return state.v3Variants ?? [Number(state.details.pension?.pkShare ?? 0)]; }
+  function variants(state) { return state.v3Variants ?? slots(state); }
+  /* Einen Platz mit dem neuen Wert belegen. Ist der Wert schon vorhanden, bleibt alles
+     unverändert; der Platz des aktuellen Plans wird nie überschrieben. */
+  function remember(state, value, slot = null) {
+    share(value);
+    const next = copy(state), values = [...variants(next)];
+    if (values.includes(value)) return next;
+    const current = Number(next.details?.pension?.pkShare ?? 0);
+    const requested = Number.isInteger(slot) && slot >= 0 && slot < values.length ? slot : -1;
+    const target = requested >= 0 && values[requested] !== current
+      ? requested
+      : values.findIndex(entry => entry !== current);
+    if (target < 0) return next;
+    values[target] = value;
+    next.v3Variants = values;
+    return next;
+  }
+  function activate(state, value, slot = null) {
+    const next = remember(state, value, slot);
+    if (next.mode !== 'pre' || next.details.pension?.pk === undefined) throw Error('Erfasse zuerst deine PK-Grunddaten.');
+    return base.apply(next, 'pension', {...next.details.pension, pkShare:value});
+  }
   function validate(state) {
     const position = state.position;
     // V3 has a shorter onboarding than V2; validate data with the base adapter,
@@ -39,16 +74,6 @@
     values.forEach(share);
     if (state.mode === 'pre' && !values.includes(Number(state.details.pension?.pkShare ?? 0))) throw Error('Aktueller Plan fehlt in den Varianten.');
     return state;
-  }
-  function remember(state, value) {
-    share(value); const next = copy(state), values = [...variants(state)];
-    if (!values.includes(value)) { if (values.length === 3) throw Error('Drei Varianten gespeichert. Entferne zuerst eine inaktive Variante.'); values.push(value); }
-    next.v3Variants = values; return next;
-  }
-  function activate(state, value) {
-    const next = remember(state, value);
-    if (next.mode !== 'pre' || next.details.pension?.pk === undefined) throw Error('Erfasse zuerst deine PK-Grunddaten.');
-    return base.apply(next, 'pension', {...next.details.pension, pkShare:value});
   }
   function remove(state, value) {
     if (value === Number(state.details.pension?.pkShare ?? 0)) throw Error('Der aktuelle Plan bleibt gespeichert.');
@@ -81,7 +106,7 @@
     validate(state);
     return {...record, state};
   }
-  const api = {normalize, validate, changeMode, variants, remember, activate, remove, decode, routes};
+  const api = {normalize, validate, changeMode, variants, slots, remember, activate, remove, decode, routes};
   root.CheckV3State = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(globalThis);
