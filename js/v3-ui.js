@@ -105,9 +105,7 @@
   let planScrollY = 0;
   const variantShares = () => V3State.variants(state);
   let previewShare = null;
-  // Zuletzt gespeicherte Quote (Abzeichen «Neu» und Bestätigungszeile im Plan).
-  let variantNotice = null;
-  // Platz der Variante, deren Wert gerade im PK-Bezug geladen ist (Klick auf die Zeile).
+  // Platz der Variante, deren Wert gerade im PK-Bezug geladen ist (Klick auf die Karte).
   let editSlot = null;
   // Auswahl im Variantenvergleich und Zustand der standardmässig eingeklappten Grafik.
   let compareShare = null;
@@ -438,28 +436,57 @@
     const total = rows.reduce((sum, [, value]) => sum + value, 0);
     return {rows, total};
   }
-  function p3Section(item) {
-    if (!item || item.plan.person.mode !== 'pre') return '';
-    const {rows, total} = furtherCapital(state, item);
-    if (!rows.length) return '';
-    const body = `${rows.map(([label, value]) => yearLine(label, money(value))).join('')}${yearLine('Gesamt', money(total), {total:true})}<p class="v3-year-note">Dieses Kapital steht zusätzlich zu deinem PK-Bezug für deine Planung zur Verfügung.</p>`;
-    return infoMarkup({label:`Weiteres Kapital ${money(total)}`, aria:'Weiteres Kapital aufschlüsseln', body});
-  }
   function marker(index) { return index === 0 ? '●' : index === 1 ? '■' : '◆'; }
   const splitLabel = share => share === 0 ? 'Nur PK-Rente' : share === 100 ? 'Keine PK-Rente' : `${share} % Kapital · ${100 - share} % Rente`;
-  /* «···»-Menü: wählt ausschliesslich, ob diese Variante der aktuelle Plan ist.
-     Alle Varianten sehen identisch aus – kein Sonderzustand, kein Entfernen. */
-  function variantMenu(share) {
+  /* Sichtbare Aktion je Variante: der aktuelle Plan ist bezeichnet, die anderen
+     lassen sich mit «Übernehmen» austauschen. */
+  function variantActions(share) {
     const current = share === chosenShare();
-    return `<details class="v3-variant-menu"><summary aria-label="Aktionen für ${share} Prozent Kapital">···</summary><div><button type="button" data-adopt-variant="${share}"${current ? ' disabled aria-current="true"' : ''}>${current ? 'Aktueller Plan' : 'Als aktuellen Plan übernehmen'}</button></div></details>`;
+    return `<div class="v3-variant-actions">${current
+      ? `<span class="v3-variant-state">${Icons.icon('circleCheck', {size:18})} Aktueller Plan</span>`
+      : `<button type="button" class="v3-variant-adopt" data-adopt-variant="${share}">Übernehmen</button>`}</div>`;
   }
-  /* Kompakte Variantenzeile: für alle Varianten identisch aufgebaut (Quote, Kennzahlen, ···). */
-  function variantCards() {
+  /* Eine Darstellung für alle Varianten (Plan und Vergleich): dieselben fünf Kennzahlen,
+     damit auf einen Blick sichtbar ist, dass sich nur die PK-Angaben unterscheiden –
+     die Gesamtsicht (Total-Rente, Startkapital, Vermögen) bleibt immer sichtbar. */
+  function metricInfo(key, targetAge) {
+    const body = {
+      totalRent: '<p>AHV und alle Renten zusammen, pro Monat und vor Steuern.</p>',
+      start: '<p>Alles, was dir zum Start der Pensionierung zur Verfügung steht: PK-Kapital netto plus weiteres Kapital (Säule 3a, Wertschriften, Bank und weitere Mittel).</p>',
+      target: `<p>Verfügbares Kapital am Ende des Planungshorizonts (Alter ${targetAge}), in heutiger Kaufkraft und ohne gebundenes Immobilienkapital.</p>`,
+      rent: '<p>Laufende Rente aus dem nicht bezogenen PK-Anteil, pro Monat und vor Steuern.</p>',
+      pkNet: '<p>Bezogenes PK-Kapital nach der geschätzten Kapitalbezugssteuer. Bestehendes freies Vermögen wird nicht damit belastet.</p>'
+    }[key];
+    const aria = {totalRent:'Total-Rente erklären', start:'Startkapital erklären', target:'Vermögen am Zielalter erklären', rent:'PK-Rente erklären', pkNet:'PK-Kapital netto erklären'}[key];
+    return infoMarkup({iconOnly:true, aria, body});
+  }
+  function variantMetrics(item, targetAge) {
+    const capital = Calculator.calculateAvailableCapital(item.plan, item.share);
+    const sources = Calculator.incomeSourcesAtStart(item.plan).reduce((map, entry) => ({...map, [entry.id]:entry.annualIncome}), {});
+    const values = {
+      totalRent: ((sources.ahv ?? 0) + (sources.pk ?? 0) + (sources.other ?? 0)) / 12,
+      start: item.result.availableCapital,
+      target: item.result.capitalAtTargetAge,
+      rent: item.pension.rent / 12,
+      pkNet: capital.netPkCapitalWithdrawal
+    };
+    const metric = (key, label) => `<div class="v3-compare-metric"><span>${label} ${metricInfo(key, targetAge)}</span><strong>${money(values[key])}</strong></div>`;
+    return `<div class="v3-compare-metrics">${metric('totalRent', 'Total-Rente / Monat')}${metric('start', 'Startkapital')}${metric('target', `Vermögen mit ${targetAge}`)}${metric('rent', 'PK-Rente / Monat')}${metric('pkNet', 'PK-Kapital netto')}</div>`;
+  }
+  /* Dieselbe Karte in beiden Ansichten; nur die Auswahl unterscheidet sich
+     (Plan: Klick lädt den Wert in den PK-Bezug · Vergleich: Auswahlkreis). */
+  function variantCard(item, {mode = 'plan', index = 0, targetAge, selected = false} = {}) {
+    const current = item.share === chosenShare();
+    const title = `<span class="v3-compare-main"><span class="v3-compare-title"><strong>${item.share} % Kapital</strong></span><small>${splitLabel(item.share)}</small></span>`;
+    if (mode === 'compare') {
+      return `<li class="v3-compare-card${selected ? ' selected' : ''}${current ? ' current' : ''}"><div class="v3-compare-head"><button type="button" class="v3-compare-select" data-compare-share="${item.share}" role="radio" aria-checked="${selected}"><span class="v3-compare-check" aria-hidden="true">${selected ? '✓' : ''}</span>${title}</button><span class="v3-compare-chevron" aria-hidden="true">${Icons.icon('chevronRight', {size:18})}</span></div>${variantMetrics(item, targetAge)}</li>`;
+    }
+    return `<li class="v3-variant-row${current ? ' current' : ''}${item.share === (previewShare ?? chosenShare()) ? ' editing' : ''}"><button type="button" class="v3-variant-select" data-variant-index="${index}"${current ? ' aria-current="true"' : ''}>${title}</button>${variantMetrics(item, targetAge)}${variantActions(item.share)}</li>`;
+  }
+  function variantCards(targetAge) {
     return `<ul class="v3-variant-list">${variantShares().map((share, index) => {
-      const item = evaluated(share);
-      const cap = item ? Calculator.calculateAvailableCapital(item.plan, share) : null;
-      const detail = item ? `<small class="v3-variant-values">PK-Rente ${money(item.pension.rent / 12)} · Startkapital ${money(item.result.availableCapital)}</small><small class="v3-variant-values">PK-Kapital netto ${money(cap.netPkCapitalWithdrawal)}</small>` : '';
-      return `<li class="v3-variant-row${share === (previewShare ?? chosenShare()) ? ' editing' : ''}"><button type="button" class="v3-variant-select" data-variant-index="${index}"${share === chosenShare() ? ' aria-current="true"' : ''}><span class="v3-variant-main"><strong>${share} % Kapital</strong>${detail}</span></button>${variantMenu(share)}</li>`;
+      const evaluatedShare = evaluated(share);
+      return evaluatedShare ? variantCard({share, ...evaluatedShare}, {mode:'plan', index, targetAge}) : '';
     }).join('')}</ul>`;
   }
   // Kompakte Achsenbeschriftung (Mio./k) und reine Wertangabe für die Endlabels.
@@ -550,21 +577,8 @@
     const chosenItem = benchmark.find(item => item.share === selected) ?? benchmark[0];
     /* Gleiche Kennzahlen und gleiche Reihenfolge in jeder Variantenkarte (Spec: identische Darstellung).
        Jede Kennzahl ist über ⓘ erklärt; die Erklärung ist für alle Karten dieselbe. */
-    const metricInfo = {
-      totalRent: infoMarkup({iconOnly:true, aria:'Total-Rente erklären', body:'<p>AHV und alle Renten zusammen, pro Monat und vor Steuern.</p>'}),
-      start: infoMarkup({iconOnly:true, aria:'Startkapital erklären', body:'<p>Alles, was dir zum Start der Pensionierung zur Verfügung steht: PK-Kapital netto plus weiteres Kapital (Säule 3a, Wertschriften, Bank und weitere Mittel).</p>'}),
-      target: infoMarkup({iconOnly:true, aria:'Vermögen am Zielalter erklären', body:`<p>Verfügbares Kapital am Ende des Planungshorizonts (Alter ${targetAge}), in heutiger Kaufkraft und ohne gebundenes Immobilienkapital.</p>`}),
-      rent: infoMarkup({iconOnly:true, aria:'PK-Rente erklären', body:'<p>Laufende Rente aus dem nicht bezogenen PK-Anteil, pro Monat und vor Steuern.</p>'}),
-      pkNet: infoMarkup({iconOnly:true, aria:'PK-Kapital netto erklären', body:'<p>Bezogenes PK-Kapital nach der geschätzten Kapitalbezugssteuer. Bestehendes freies Vermögen wird nicht damit belastet.</p>'})
-    };
-    const metric = (label, value, info) => `<div class="v3-compare-metric"><span>${label} ${info}</span><strong>${money(value)}</strong></div>`;
-    const comparison = benchmark.map(item => {
-      const current = item.share === share;
-      const capital = Calculator.calculateAvailableCapital(item.plan, item.share);
-      const sources = Calculator.incomeSourcesAtStart(item.plan).reduce((map, entry) => ({...map, [entry.id]: entry.annualIncome}), {});
-      const totalRent = ((sources.ahv ?? 0) + (sources.pk ?? 0) + (sources.other ?? 0)) / 12;
-      return `<li class="v3-compare-card${item.share === selected ? ' selected' : ''}${current ? ' current' : ''}"><div class="v3-compare-head"><button type="button" class="v3-compare-select" data-compare-share="${item.share}" role="radio" aria-checked="${item.share === selected}"><span class="v3-compare-check" aria-hidden="true">${item.share === selected ? '✓' : ''}</span><span class="v3-compare-main"><span class="v3-compare-title"><strong>${item.share} % Kapital</strong>${current ? '<span class="v3-compare-badge">Aktueller Plan</span>' : ''}</span><small>${splitLabel(item.share)}</small></span></button><span class="v3-compare-chevron" aria-hidden="true">${Icons.icon('chevronRight', {size:18})}</span></div><div class="v3-compare-metrics">${metric('Total-Rente / Monat', totalRent, metricInfo.totalRent)}${metric('Startkapital', item.result.availableCapital, metricInfo.start)}${metric(`Vermögen mit ${targetAge}`, item.result.capitalAtTargetAge, metricInfo.target)}${metric('PK-Rente / Monat', item.pension.rent / 12, metricInfo.rent)}${metric('PK-Kapital netto', capital.netPkCapitalWithdrawal, metricInfo.pkNet)}</div></li>`;
-    }).join('');
+    // Dieselbe Kartendarstellung wie auf «Mein Plan» – nur mit Auswahlkreis.
+    const comparison = benchmark.map(item => variantCard(item, {mode:'compare', targetAge, selected:item.share === selected})).join('');
     const chartInfo = infoMarkup({iconOnly:true, aria:'Kapitalentwicklung erklären', body:`<p>Verfügbares Kapital über die Ruhestandsjahre ab Alter ${startAge}. Der Anfangsbetrag hängt vom gewählten PK-Kapitalanteil ab. Die Beträge zeigen Kaufkraft zu Beginn deiner Pensionierung. Immobilien bleiben getrennt. Die stärkere Linie kennzeichnet ausschliesslich deinen aktuellen Plan.</p>`});
     const buckets = chosenItem ? chosenItem.result.bucketAllocation : [0, 0, 0];
     const chosenCapital = chosenItem ? Calculator.calculateAvailableCapital(chosenItem.plan, selected) : null;
@@ -601,7 +615,7 @@
     app.querySelectorAll('[data-chart-toggle]').forEach(button => button.addEventListener('click', () => { chartOpen = !chartOpen; renderCompare(); }));
     app.querySelectorAll('[data-compare-share]').forEach(button => button.addEventListener('click', () => { compareShare = numeric(button.dataset.compareShare); renderCompare(); }));
     app.querySelector('[data-adopt-compare]')?.addEventListener('click', () => {
-      try { state = V3State.activate(state, compareShare); variantNotice = null; previewShare = null; markDirty(); renderCompare(); }
+      try { state = V3State.activate(state, compareShare); previewShare = null; markDirty(); renderCompare(); }
       catch(error) { message(error.message); }
     });
   }
@@ -770,25 +784,24 @@
     const share = previewShare ?? chosenShare(), item = evaluated(share) ?? evaluated(chosenShare());
     const preview = share !== chosenShare();
     const meta = `${pre ? `Pensionierung mit ${item.plan.retirement.age}` : 'Planungsstart heute'} · Planung bis ${item.plan.retirement.targetAge}`;
-    const notice = variantNotice !== null && variantShares().includes(variantNotice) ? `<p class="v3-notice" role="status"><span aria-hidden="true">✓</span> Variante «${variantNotice} % Kapital» gespeichert.</p>` : '';
-    const decision = pre ? `<section class="v3-decision"><h2>PK-Bezug wählen</h2>${known.pension ? `<div class="v3-share-row"><label class="v3-share-field" for="shareNumber"><span class="v3-share-caption">Kapitalanteil</span><span class="v3-share-entry"><input id="shareNumber" type="number" inputmode="numeric" min="0" max="100" step="1" value="${share}" aria-describedby="shareReadout"><span class="v3-share-unit" aria-hidden="true">%</span></span></label><p class="v3-share-readout" id="shareReadout"><strong id="shareValue">${share}</strong> % Kapital · <strong id="rentShare">${100 - share}</strong> % Rente</p></div><input id="shareRange" class="v3-range" type="range" min="0" max="100" step="1" value="${share}" aria-label="PK-Kapitalanteil"><div class="v3-range-labels"><span>0 % Kapital</span><span>100 % Kapital</span></div><div class="v3-preview" data-preview="${preview ? 'draft' : 'current'}"><span class="v3-preview-caption" id="previewStatus">${preview ? 'Vorschau (noch nicht gespeichert)' : 'Dein aktueller Plan'}</span><div id="previewReadout">${readout(item)}</div></div><div class="v3-actions v3-decision-actions"><button type="button" class="primary" data-remember${preview ? '' : ' hidden'}>+ Als Variante speichern</button><div class="v3-decision-links"><button type="button" data-adopt${preview ? '' : ' hidden'}>Variante übernehmen</button><button type="button" data-preview-cancel${preview ? '' : ' hidden'}>Zurück zum aktuellen Plan</button></div></div>${notice}<p id="v3Error" class="v3-error" role="alert"></p>` : '<p>Rente, Kapital oder eine Mischung? Erfasse deine PK-Grunddaten, um die Wirkung auf deinen Ruhestand zu sehen.</p><button type="button" class="primary" data-v3-next="pension">PK-Angaben erfassen</button>'}</section>` : (!known.pension ? '<section class="v3-decision"><h2>Deine laufende PK-Rente</h2><button type="button" data-v3-next="pension">PK-Rente erfassen</button></section>' : '');
-    const variants = pre && known.pension ? `<section class="v3-section v3-variants-section"><div class="v3-variants-head"><h2>Meine Varianten</h2><button type="button" class="v3-link" data-compare>Varianten vergleichen ${Icons.icon('chevronRight', {size:18})}</button></div><div class="v3-cards">${variantCards()}</div></section>` : '';
+    const decision = pre ? `<section class="v3-decision"><h2>PK-Bezug wählen</h2>${known.pension ? `<div class="v3-share-row"><label class="v3-share-field" for="shareNumber"><span class="v3-share-caption">Kapitalanteil</span><span class="v3-share-entry"><input id="shareNumber" type="number" inputmode="numeric" min="0" max="100" step="1" value="${share}" aria-describedby="shareReadout"><span class="v3-share-unit" aria-hidden="true">%</span></span></label><p class="v3-share-readout" id="shareReadout"><strong id="shareValue">${share}</strong> % Kapital · <strong id="rentShare">${100 - share}</strong> % Rente</p></div><input id="shareRange" class="v3-range" type="range" min="0" max="100" step="1" value="${share}" aria-label="PK-Kapitalanteil"><div class="v3-range-labels"><span>0 % Kapital</span><span>100 % Kapital</span></div><div class="v3-preview" data-preview="${preview ? 'draft' : 'current'}"><span class="v3-preview-caption" id="previewStatus">${preview ? 'Vorschau (noch nicht gespeichert)' : 'Dein aktueller Plan'}</span><div id="previewReadout">${readout(item)}</div></div><div class="v3-actions v3-decision-actions"><button type="button" class="primary" data-remember${preview ? '' : ' hidden'}>${Icons.icon('circleCheck', {size:18})} Speichern</button></div><p id="v3Error" class="v3-error" role="alert"></p>` : '<p>Rente, Kapital oder eine Mischung? Erfasse deine PK-Grunddaten, um die Wirkung auf deinen Ruhestand zu sehen.</p><button type="button" class="primary" data-v3-next="pension">PK-Angaben erfassen</button>'}</section>` : (!known.pension ? '<section class="v3-decision"><h2>Deine laufende PK-Rente</h2><button type="button" data-v3-next="pension">PK-Rente erfassen</button></section>' : '');
+    const variants = pre && known.pension ? `<section class="v3-section v3-variants-section"><div class="v3-variants-head"><h2>Meine Varianten</h2><button type="button" class="v3-link" data-compare>Varianten vergleichen ${Icons.icon('chevronRight', {size:18})}</button></div><div class="v3-cards">${variantCards(item.plan.retirement.targetAge)}</div></section>` : '';
     const status = known.ready ? `<details class="v3-plan-status"><summary>Planstatus und Renten</summary><div id="planProjection">${compactReadySummary(item)}</div></details>` : '';
-    app.innerHTML = `<button type="button" class="v3-plan-meta" data-v3-next="personal">${meta}<span aria-hidden="true"> ›</span></button>${pageHeader('Mein Plan')}<p class="v3-plan-sub">Passe den PK-Bezug an und sieh die Auswirkungen.</p>${state.exampleValues ? '<p class="v3-hint">Beispielwerte – bitte durch deine persönlichen Angaben ersetzen.</p>' : ''}${state.p3MigrationNotice ? '<p class="v3-hint">Dein bisheriges 3a-Guthaben wird neu vollständig zum Ruhestandsstart berücksichtigt, ohne modellierte 3a-Bezugssteuer. Bitte prüfe die Annahmen.</p>' : ''}<div class="v3-plan-grid v3-plan-compact"><section>${known.ready ? '' : planSummary(evaluated(chosenShare()))}${decision}${variants}${pre && known.ready ? p3Section(item) : ''}${status}</section><aside>${saveRow()}</aside></div>`;
+    app.innerHTML = `<button type="button" class="v3-plan-meta" data-v3-next="personal">${meta}<span aria-hidden="true"> ›</span></button>${pageHeader('Mein Plan')}<p class="v3-plan-sub">Passe den PK-Bezug an und sieh die Auswirkungen.</p>${state.exampleValues ? '<p class="v3-hint">Beispielwerte – bitte durch deine persönlichen Angaben ersetzen.</p>' : ''}${state.p3MigrationNotice ? '<p class="v3-hint">Dein bisheriges 3a-Guthaben wird neu vollständig zum Ruhestandsstart berücksichtigt, ohne modellierte 3a-Bezugssteuer. Bitte prüfe die Annahmen.</p>' : ''}<div class="v3-plan-grid v3-plan-compact"><section>${known.ready ? '' : planSummary(evaluated(chosenShare()))}${decision}${variants}${status}</section><aside>${saveRow()}</aside></div>`;
     bindPlan(); renderSaveState();
     if (restore) window.scrollTo(0, planScrollY);
   }
   function bindPlan() {
     const range = document.getElementById('shareRange'), number = document.getElementById('shareNumber');
-    const remember = app.querySelector('[data-remember]'), adopt = app.querySelector('[data-adopt]'), cancel = app.querySelector('[data-preview-cancel]');
+    const remember = app.querySelector('[data-remember]');
     const update = value => {
       if (String(value).trim() === '' || !Number.isInteger(Number(value)) || Number(value) < 0 || Number(value) > 100) {
         message('Bitte eine ganze Zahl von 0 bis 100 eingeben.');
-        if (adopt) adopt.disabled = true; if (remember) remember.disabled = true;
+        if (remember) remember.disabled = true;
         return;
       }
       previewShare = Number(value); message();
-      if (adopt) adopt.disabled = false; if (remember) remember.disabled = false;
+      if (remember) remember.disabled = false;
       const preview = previewShare !== chosenShare();
       if (range) range.value = previewShare; if (number) number.value = previewShare;
       document.getElementById('shareValue').textContent = previewShare;
@@ -799,19 +812,17 @@
       document.getElementById('previewReadout').innerHTML = readout(item);
       const projection = document.getElementById('planProjection');
       if (projection) projection.innerHTML = compactReadySummary(item);
-      if (adopt) adopt.hidden = !preview;
-      if (cancel) cancel.hidden = !preview;
       if (remember) remember.hidden = !preview;
-      // Die geladene Variante wird auch in der Liste sichtbar (identische Zeilen, nur der Zustand wechselt).
+      // Die geladene Variante wird auch in der Liste sichtbar (identische Karten, nur der Zustand wechselt).
       const cards = app.querySelector('.v3-cards');
-      if (cards) cards.innerHTML = variantCards();
+      if (cards) cards.innerHTML = variantCards(item.plan.retirement.targetAge);
     };
     range?.addEventListener('input', event => update(event.target.value));
     number?.addEventListener('input', event => update(event.target.value));
     app.querySelector('.v3-cards')?.addEventListener('click', event => {
       const button = event.target.closest('[data-variant-index]');
       if (!button) return;
-      // Klick auf eine Variante lädt genau diesen Wert in den PK-Bezug (Preview).
+      // Klick auf eine Variante lädt genau diesen Wert in den PK-Bezug (Vorschau).
       editSlot = Number(button.dataset.variantIndex);
       update(variantShares()[editSlot]);
       focusTarget('shareNumber');
@@ -820,20 +831,14 @@
       try { state = V3State.activate(state, numeric(button.dataset.adoptVariant)); previewShare = null; editSlot = null; markDirty(); renderPlan(true); }
       catch (error) { message(error.message); }
     }));
-    cancel?.addEventListener('click', () => { previewShare = null; editSlot = null; renderPlan(true); });
-    adopt?.addEventListener('click', () => {
-      try { state = V3State.activate(state, previewShare, editSlot); previewShare = null; editSlot = null; markDirty(); renderPlan(true); }
-      catch (error) { message(error.message); }
-    });
     remember?.addEventListener('click', () => {
       try {
         const saved = previewShare;
-        // Ohne Klick auf eine Zeile wird der erste Platz mutiert, der nicht der aktuelle Plan ist.
-        const target = editSlot !== null && variantShares()[editSlot] !== chosenShare()
-          ? editSlot
-          : variantShares().findIndex(entry => entry !== chosenShare());
+        // Ohne Klick auf eine Karte wird der aktuelle Plan selbst gespeichert;
+        // mit Klick der geladene Platz – auch wenn das der aktuelle Plan ist.
+        const target = editSlot ?? Math.max(0, variantShares().indexOf(chosenShare()));
         state = V3State.remember(state, saved, target);
-        variantNotice = saved; editSlot = null; markDirty(); renderPlan(true);
+        previewShare = null; editSlot = null; markDirty(); renderPlan(true);
       }
       catch (error) { message(error.message); }
     });

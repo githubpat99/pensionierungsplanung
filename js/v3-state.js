@@ -10,11 +10,19 @@
     const existing = Array.isArray(source.v3Variants)
       ? source.v3Variants.map(Number).filter(value => Number.isInteger(value) && value >= 0 && value <= 100)
       : [];
-    let values = existing.length === 3 ? [...existing] : [...defaultVariants];
-    if (existing.length && existing.length !== 3) existing.forEach((value, index) => { values[index] = value; });
     const current = Number(source.details?.pension?.pkShare ?? 0);
-    if (!values.includes(current)) values[1] = current;
-    return values;
+    const values = [];
+    const push = value => { if (Number.isInteger(value) && value >= 0 && value <= 100 && !values.includes(value)) values.push(value); };
+    // Neue Planung: 0 / 50 / 100; ein abweichender aktueller Anteil besetzt den mittleren Platz.
+    if (!existing.length) return defaultVariants.includes(current) ? [...defaultVariants] : [defaultVariants[0], current, defaultVariants[2]];
+    // Bestehende Plätze behalten ihre Reihenfolge und werden nie doppelt geführt.
+    existing.forEach(push);
+    if (!values.includes(current)) {
+      if (values.length >= 3) values[1] = current;
+      else values.splice(Math.min(1, values.length), 0, current);
+    }
+    defaultVariants.forEach(push);
+    return values.slice(0, 3);
   }
   function normalize(source) {
     const state = copy(source), position = state.position;
@@ -42,21 +50,26 @@
     return value;
   }
   function variants(state) { return state.v3Variants ?? slots(state); }
-  /* Einen Platz mit dem neuen Wert belegen. Ist der Wert schon vorhanden, bleibt alles
-     unverändert; der Platz des aktuellen Plans wird nie überschrieben. */
+  /* Speichert einen Wert auf einen Variantenplatz.
+     - Der Platz wird mutiert; war es der Platz des aktuellen Plans, wandert der
+       aktuelle Plan mit (der aktuelle Plan ist also veränderbar).
+     - Existiert der Wert bereits auf einem anderen Platz, wird dieser zum aktuellen
+       Plan, statt einen doppelten Wert zu führen. */
   function remember(state, value, slot = null) {
     share(value);
     const next = copy(state), values = [...variants(next)];
-    if (values.includes(value)) return next;
     const current = Number(next.details?.pension?.pkShare ?? 0);
+    const adopt = share => next.mode === 'pre' && next.details.pension?.pk !== undefined
+      ? base.apply(next, 'pension', {...next.details.pension, pkShare:share})
+      : next;
+    const existing = values.indexOf(value);
+    if (existing >= 0) return value === current ? next : adopt(value);
     const requested = Number.isInteger(slot) && slot >= 0 && slot < values.length ? slot : -1;
-    const target = requested >= 0 && values[requested] !== current
-      ? requested
-      : values.findIndex(entry => entry !== current);
-    if (target < 0) return next;
+    const target = requested >= 0 ? requested : Math.max(0, values.findIndex(entry => entry !== current));
+    const movesCurrentPlan = values[target] === current;
     values[target] = value;
     next.v3Variants = values;
-    return next;
+    return movesCurrentPlan ? adopt(value) : next;
   }
   function activate(state, value, slot = null) {
     const next = remember(state, value, slot);

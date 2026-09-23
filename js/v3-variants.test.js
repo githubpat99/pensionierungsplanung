@@ -35,9 +35,14 @@ assert.equal(share(s), 50, 'das Speichern lässt den aktuellen Plan unberührt')
 assert.equal(JSON.stringify(C.evaluatePlan(planFor(s, 50))), before, 'das Speichern verändert keine Rechenwerte');
 assert.deepEqual(V.variants(V.remember(s, 0, 2)), [0,50,61], 'kein doppelter Wert');
 assert.deepEqual(V.variants(V.remember(s, 61, 1)), [0,50,61], 'ein bereits vorhandener Wert wird nicht erneut gespeichert');
-const guarded = V.remember(s, 7, 1);
-assert.equal(V.variants(guarded)[1], 50, 'der Platz des aktuellen Plans wird nie überschrieben');
-assert.ok(V.variants(guarded).includes(50), 'der aktuelle Plan bleibt in den Varianten');
+// Der aktuelle Plan ist selbst veränderbar: sein Platz wird mutiert und der Plan wandert mit.
+const movedPlan = V.remember(s, 7, 1);
+assert.equal(V.variants(movedPlan)[1], 7, 'der Platz des aktuellen Plans wird mutiert');
+assert.equal(share(movedPlan), 7, 'der aktuelle Plan übernimmt den gespeicherten Wert');
+assert.ok(V.variants(movedPlan).includes(7), 'der aktuelle Plan bleibt in den Varianten');
+const adopted = V.remember(s, 61, 1);
+assert.deepEqual(V.variants(adopted), [0,50,61], 'ein bestehender Wert erzeugt keinen zweiten Platz');
+assert.equal(share(adopted), 61, 'die bestehende Variante wird zum aktuellen Plan');
 for (const invalid of [-1, 101, 1.5, NaN, '35']) assert.throws(() => V.remember(s, invalid), undefined, 'ungültige Anteile werden abgelehnt');
 
 const activated = V.activate(s, 61);

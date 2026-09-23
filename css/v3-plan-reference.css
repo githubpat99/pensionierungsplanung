@@ -93,7 +93,6 @@ button.v3-plan-meta:hover .v3-plan-meta-chevron,button.v3-plan-meta:focus-visibl
 .v3-p3-rows dt small{display:block;color:var(--v3-muted);font-size:12px;margin-top:2px}
 .v3-p3-rows .v3-info-sub>summary{min-height:32px;margin:-7px 0}
 .v3-p3-rows dd{margin:0;font-size:16px;font-weight:550;font-variant-numeric:tabular-nums;text-align:right;white-space:nowrap}
-.v3-p3-section .v3-compare-button{margin-top:12px}
 .v3-p3-list{display:grid;gap:10px;margin-top:16px}
 .v3-p3-tools{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}
 /* Kontenliste: skaliert von einem bis zehn Konten ohne Umbau. */
@@ -204,26 +203,21 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-variants-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .v3-variants-head h2{margin:0}
 .v3-link{border:0;background:transparent;color:var(--v3-green);font:14px system-ui,sans-serif;padding:0;min-height:44px}
-.v3-variant-list{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:8px}
-.v3-variant-row{display:flex;align-items:stretch;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);overflow:hidden}
-.v3-variant-row .v3-variant-select{flex:1;display:grid;grid-template-columns:minmax(0,1fr);align-items:center;gap:0;border:0;background:transparent;text-align:left;padding:12px;min-height:56px;color:var(--v3-ink)}
+/* «Meine Varianten» auf «Mein Plan»: dieselbe Kartendarstellung wie im Vergleich. */
+.v3-variant-list{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:10px}
+.v3-variant-row{display:block;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);overflow:hidden}
+.v3-variant-row .v3-variant-select{display:block;width:100%;border:0;background:transparent;text-align:left;padding:12px 12px 0;color:var(--v3-ink);min-height:0}
 .v3-variant-main{min-width:0}
 .v3-variant-main strong{display:block;font-size:16px;font-weight:550}
 .v3-variant-main small{display:block;font:13px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px}
 .v3-variant-badge{font:12px system-ui,sans-serif;padding:3px 9px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);white-space:nowrap}
-.v3-variant-badge.new{background:#ece9f6;color:#4c3f86}
-.v3-variant-menu{position:relative;border-left:1px solid var(--v3-line)}
-.v3-variant-menu summary{list-style:none;cursor:pointer;display:grid;place-items:center;width:44px;height:100%;color:var(--v3-muted);font-size:18px;letter-spacing:1px}
-.v3-variant-menu summary::-webkit-details-marker{display:none}
-.v3-variant-menu[open] summary{color:var(--v3-green)}
-.v3-variant-menu>div{position:absolute;right:0;top:100%;z-index:5;min-width:230px;background:var(--v3-surface);border:1px solid var(--v3-line);border-radius:6px;box-shadow:0 6px 18px #142b3420;padding:6px;display:grid}
-.v3-variant-menu button{border:0;background:transparent;text-align:left;padding:10px 12px;font:14px system-ui,sans-serif;color:var(--v3-ink);min-height:44px}
-.v3-variant-menu button:hover{background:var(--v3-soft);color:var(--v3-green)}
+/* Sichtbare Aktion: aktueller Plan bezeichnet, die anderen zum Übernehmen. */
+.v3-variant-actions{display:flex;align-items:center;justify-content:flex-end;border-top:1px solid var(--v3-line);margin-top:2px;min-height:46px;padding:0 12px}
+.v3-variant-state{display:inline-flex;align-items:center;gap:6px;font:600 13px system-ui,sans-serif;color:var(--v3-green)}
+.v3-variant-adopt{border:1px solid var(--v3-green);background:transparent;color:var(--v3-green);border-radius:999px;padding:7px 16px;font:600 13px system-ui,sans-serif;min-height:36px;cursor:pointer}
+.v3-variant-adopt:hover{background:var(--v3-soft)}
 .v3-plan-status{margin-top:20px;border-top:1px solid var(--v3-line);padding-top:8px}
 .v3-plan-status summary{font:14px system-ui,sans-serif;color:var(--v3-muted);min-height:44px;display:flex;align-items:center}
-.v3-compare-button{display:flex;align-items:center;gap:10px;width:100%;margin-top:18px;min-height:54px;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);color:var(--v3-ink);font:15px system-ui,sans-serif;padding:0 14px;text-align:left}
-.v3-compare-button:hover{border-color:var(--v3-green)}
-.v3-compare-button>span:last-child{margin-left:auto;color:var(--v3-green)}
 .v3-chart-icon{font-size:15px;color:var(--v3-green);flex:none}
 /* --- Variantenvergleich: Auswahl, Übernahme, eingeklappte Kapitalentwicklung --- */
 .v3-compare-sub{margin:0 0 14px;color:var(--v3-muted);font:14px system-ui,sans-serif;line-height:1.45}
@@ -257,7 +251,7 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-chart-body{padding:0 14px 14px}
 .v3-chart-foot{display:flex;align-items:center;gap:10px;width:100%;border:0;border-top:1px solid var(--v3-line);background:transparent;color:var(--v3-muted);min-height:48px;padding:0 14px;text-align:left;font:14px system-ui,sans-serif}
 .v3-chart-foot>span:last-child{margin-left:auto}
-@media(max-width:699px){.v3-plan-sub{margin-bottom:12px}.v3-decision .v3-readout .v3-readout-tile strong{font-size:19px}.v3-compare-values strong{font-size:17px}.v3-variant-menu>div{min-width:200px}.v3-compare-title strong{font-size:16px}}
+@media(max-width:699px){.v3-compare-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.v3-compare-metric strong{font-size:17px}.v3-plan-sub{margin-bottom:12px}.v3-decision .v3-readout .v3-readout-tile strong{font-size:19px}.v3-compare-values strong{font-size:17px}.v3-variant-menu>div{min-width:200px}.v3-compare-title strong{font-size:16px}}
 
 /* --- «Jahr für Jahr»: ein Jahr als kompaktes Dashboard --- */
 /* Topf-Identität appweit: Geldmarkt grün, Obligationen blau, Wertschöpfung violett. */

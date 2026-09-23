@@ -37,17 +37,25 @@ for(const width of [360,1280]) describe(`V3 standalone at ${width}px`,()=>{
    stored(s=>expect(s.details.pension.pkShare).eq(0));
   }
   cy.get('#shareNumber').clear().type('35');cy.get('#shareRange').should('have.value','35');cy.get('[data-remember]').click();
-  cy.contains('Variante «35 % Kapital» gespeichert').should('exist');
+  // Kein Bestätigungstext: die geänderte Variantenkarte unten ist die Rückmeldung.
+  // Der aktuelle Plan selbst ist veränderbar (Platz 1 = aktueller Plan).
+  cy.get('.v3-variant-row').eq(0).find('.v3-compare-title strong').should('contain','35 %');
   // Drei feste Plätze: Speichern mutiert den Platz, es entsteht kein vierter.
   cy.get('[data-variant-index="2"]').click();cy.get('#shareNumber').clear().type('70');cy.get('[data-remember]').click();
   cy.get('.v3-variants-head').should('contain','Varianten vergleichen');
-  cy.get('.v3-variant-row').should('have.length',3).each(row=>expect(row.find('.v3-variant-menu').length).to.equal(1));
+  cy.get('.v3-variant-row').should('have.length',3).each(row=>{expect(row.find('.v3-compare-metric').length).to.equal(5);});
   cy.contains('Neu').should('not.exist');
-  cy.get('[data-variant-index="1"]').click();cy.get('[data-adopt]').click();cy.get('#previewStatus').should('have.text','Dein aktueller Plan');
+  cy.get('.v3-decision-actions button').should('have.length',1).and('contain','Speichern');
+  cy.contains('Variante übernehmen').should('not.exist');
+  cy.contains('Weiteres Kapital').should('not.exist');
+  // Sichtbare Aktionen: aktueller Plan bezeichnet, die anderen zum Übernehmen.
+  cy.get('.v3-variant-state').should('have.length',1).and('contain','Aktueller Plan');
+  cy.get('.v3-variant-adopt').should('have.length',2).each(button=>expect(button.text().trim()).to.equal('Übernehmen'));
+  cy.get('[data-adopt-variant="35"]').click();cy.get('#previewStatus').should('have.text','Dein aktueller Plan');
   cy.get('[data-save]').click();stored((s,w)=>{expect(s.details.pension.pkShare).eq(35);expect(s.v3Variants).deep.eq([0,35,70]);expect(w.localStorage.getItem('retirement-v2-plan')).eq('V2 remains untouched');});
   cy.get('#shareNumber').clear().type('99');cy.reload();cy.get('#shareNumber').should('have.value','35');
   cy.get('[data-compare]').click();cy.get('h1').should('have.text','Varianten vergleichen');
-  cy.get('.v3-compare-sub').should('contain','Ausgangslage deiner Töpfe');
+  cy.get('.v3-compare-sub').should('contain','Ausgangslage deiner Planung');
   cy.get('.v3-compare-chevron').should('have.length',3);
   cy.get('.v3-compare-start h3').should('contain','Ausgangslage zum Start der Pensionierung (Alter 65)');
   cy.get('.v3-compare-start .v3-pot-heading').should('contain','Total').and('contain','CHF');
@@ -69,7 +77,7 @@ for(const width of [360,1280]) describe(`V3 standalone at ${width}px`,()=>{
   cy.reload();cy.get('h1').should('have.text','Varianten vergleichen');
  });
  it('edits PK data in one place, recalculates all variants, cancels drafts, and opens the net breakdown',()=>{
-  seed();cy.get('#shareNumber').clear().type('35');cy.get('[data-adopt]').click();
+  seed();cy.get('#shareNumber').clear().type('35');cy.get('[data-remember]').click();
   let before;
   cy.window().then(w=>before=[0,35].map(s=>w.RetirementCalculator.evaluatePlan(w.V3.planFor(s)).availableCapital));
   cy.get('[data-pk-breakdown]').click();cy.get('#pkKapital').should('be.visible');cy.get('#pkShare').should('not.exist');

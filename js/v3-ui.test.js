@@ -65,9 +65,14 @@ s=V.remember(s,35,1);
 assert.deepEqual(V.variants(s),[0,35,100],'der gewählte Platz wird mutiert');
 assert.equal(s.details.pension.pkShare,0,'der aktuelle Plan bleibt unberührt');
 assert.deepEqual(V.variants(V.remember(s,0,2)),[0,35,100],'kein doppelter Wert');
-const protectedSlot=V.remember(s,7,0);
-assert.equal(V.variants(protectedSlot)[0],0,'der Platz des aktuellen Plans bleibt erhalten');
-assert.ok(V.variants(protectedSlot).includes(0),'der aktuelle Plan bleibt in den Varianten');
+// Der aktuelle Plan ist selbst veränderbar: sein Platz wird mutiert und der Plan wandert mit.
+const movedPlan=V.remember(s,7,0);
+assert.deepEqual(V.variants(movedPlan),[7,35,100],'der Platz des aktuellen Plans wird mutiert');
+assert.equal(movedPlan.details.pension.pkShare,7,'der aktuelle Plan übernimmt den neuen Wert');
+// Ein bereits vorhandener Wert wird übernommen statt doppelt geführt.
+const adopted=V.remember(s,100,0);
+assert.deepEqual(V.variants(adopted),[0,35,100],'bestehender Wert erzeugt keinen zweiten Platz');
+assert.equal(adopted.details.pension.pkShare,100,'die bestehende Variante wird zum aktuellen Plan');
 s=V.activate(s,35); assert.equal(s.details.pension.pkShare,35);
 assert.deepEqual(V.variants(s),[0,35,100],'Übernehmen verändert die Plätze nicht');
 assert.throws(()=>V.remove(s,35));
@@ -90,7 +95,11 @@ const record={version:2,savedAt:new Date().toISOString(),state:s};
 assert.deepEqual(V.decode(JSON.stringify(record)).state,V.normalize(s),'Laden füllt die drei Variantenplätze auf');
 assert.deepEqual(C.evaluatePlan(M.toPlan(V.decode(JSON.stringify(record)).state)),C.evaluatePlan(M.toPlan(s)));
 assert.deepEqual(V.variants(V.decode(JSON.stringify({...record,version:1})).state),[35]);
-for(const raw of ['{','null',JSON.stringify({...record,version:99}),JSON.stringify({...record,state:{...s,v3Variants:[35,35]}}),JSON.stringify({...record,savedAt:'bad'})]) assert.throws(()=>V.decode(raw));
+// Doppelte oder unvollständige Altstände werden beim Laden repariert statt verworfen.
+const repaired=V.decode(JSON.stringify({...record,state:{...s,v3Variants:[35,35]}})).state;
+assert.equal(new Set(V.variants(repaired)).size,3,'doppelte Plätze werden zu drei eindeutigen Plätzen');
+assert.ok(V.variants(repaired).includes(Number(s.details.pension.pkShare)),'der aktuelle Plan bleibt in den Varianten');
+for(const raw of ['{','null',JSON.stringify({...record,version:99}),JSON.stringify({...record,savedAt:'bad'})]) assert.throws(()=>V.decode(raw));
 for(const position of V.routes) V.validate({...s,position});
 const noAssets=M.fresh('pre'); noAssets.position='rents'; V.validate(noAssets);
 // Actual UI render functions, no additional financial implementation in the harness.
@@ -121,9 +130,13 @@ listeners['shareNumber:input']({target:{value:'35'}});
 assert.equal(ui.snapshot().state.details.pension.pkShare,0,'preview leaves active share unchanged');
 assert.equal(ui.snapshot().previewShare,35);
 assert.match(node('previewStatus').textContent,/Vorschau/);
-listeners['[data-adopt]:click']();
-assert.equal(ui.snapshot().state.details.pension.pkShare,35);
+// «Speichern» ohne Kartenklick aktualisiert den aktuellen Plan selbst.
+listeners['[data-remember]:click']();
+assert.equal(ui.snapshot().state.details.pension.pkShare,35,'Speichern aktualisiert den aktuellen Plan');
+assert.ok(V.variants(ui.snapshot().state).includes(35),'der neue Wert liegt auf einem Variantenplatz');
 assert.equal(JSON.parse(local.get('retirement-v3-plan')).state.details.pension.pkShare,35);
+// Zum aktuellen Plan wird eine Variante über das «···»-Menü bzw. den Vergleich.
+assert.equal(V.activate(ui.snapshot().state,35).details.pension.pkShare,35);
 ui.seed(seed('post'));ui.renderPlan();assert.doesNotMatch(node('app').innerHTML,/id="shareRange"/);
 ui.seed(s); const rows=ui.currentVariants(), svg=ui.chart(rows,340);
 assert.equal((svg.match(/data-chart-share=/g)||[]).length,3);
