@@ -1,0 +1,318 @@
+/* V4 – radikal vereinfachte Mobile UX.
+   Nutzt die bestehenden Design-Tokens (v3.css / v3-reference.css / v3-plan-reference.css)
+   und ergänzt nur die V4-spezifischen Bausteine: Statuskarte zuerst, 2×2-Kennzahlen,
+   ein Stellhebel, ein nächster Schritt, Detailzone als Accordion. */
+
+/* ---------- Hero-/Hintergrundbild (zwei verbindliche Assets, eine Komponente) ----------
+   `js/v4-hero.js` hängt das Bild einmal ein (Mobile: Background.png, ab 700 px:
+   Background_Desktop.png) und schaltet nur die Intensität (`data-mode`): «start» im
+   Schnellstart (Landschaft oben klar erkennbar), «calm» auf «Mein Plan» und allen
+   Detailseiten (dezenter Übergang). Die Bandhöhe folgt dem Seitenverhältnis des jeweiligen
+   Bildes (Mobile 940 × 1672 → 1,78 × Breite), damit nichts hart beschnitten wird; das
+   Mobile-Bild läuft unten bereits weich in Creme aus und wird nur leicht überblendet.
+   Das Bild liegt mit negativem z-index hinter sämtlichem Inhalt – es kann nie Text oder
+   Bedienelemente überdecken. Kein Parallax, kein Fixieren, keine Animation. */
+body{position:relative}
+.v4-hero{position:absolute;top:0;left:0;right:0;height:var(--v4-hero-height,180px);z-index:-1;overflow:hidden;pointer-events:none}
+.v4-hero-media{display:block;width:100%;height:100%}
+.v4-hero-image{display:block;width:100%;height:100%;object-fit:cover;object-position:center top;opacity:var(--v4-hero-image-opacity,1)}
+.v4-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(247,246,242,.06) 0%,rgba(247,246,242,.16) 42%,rgba(247,246,242,.55) 72%,var(--v3-bg) 100%)}
+/* Schnellstart: Landschaft klar erkennbar, weicher Auslauf in Creme. */
+.v4-hero[data-mode="start"]{--v4-hero-height:min(178vw,62vh);--v4-hero-image-opacity:1}
+.v4-hero[data-mode="start"]::after{background:linear-gradient(to bottom,rgba(247,246,242,.13) 0%,rgba(247,246,242,.16) 42%,rgba(247,246,242,.45) 74%,var(--v3-bg) 96%)}
+/* Plan und Detailseiten: derselbe Bildaufbau, deutlich zurückgenommen. */
+.v4-hero[data-mode="calm"]{--v4-hero-height:min(74vw,26vh);--v4-hero-image-opacity:.9}
+.v4-hero[data-mode="calm"]::after{background:linear-gradient(to bottom,rgba(247,246,242,.56) 0%,rgba(247,246,242,.7) 46%,rgba(247,246,242,.92) 82%,var(--v3-bg) 100%)}
+@media(min-width:700px){
+  /* Desktop-Panorama 2172 × 724 → 0,333 × Breite. */
+  .v4-hero[data-mode="start"]{--v4-hero-height:min(33vw,42vh);--v4-hero-image-opacity:1}
+  .v4-hero[data-mode="calm"]{--v4-hero-height:min(13vw,17vh);--v4-hero-image-opacity:.85}
+}
+
+/* ---------- PageTitle: die eine verbindliche Titelzeile (jeder V4-Screen) ----------
+   Genau EINE horizontale Zeile: Haupttitel links, Kontextzeile rechts daneben – auf
+   Mobile genauso. Der Titel schrumpft und bricht nie um; der Kontext nutzt höchstens
+   zwei kurze Zeilen in seiner rechten Spalte und springt nie unter den Titel.
+   Gerendert ausschliesslich von `js/v4-pagetitle.js` (PageTitle). */
+.v4-head{display:flex;flex-direction:row;align-items:baseline;gap:4px 12px;margin:0 0 10px}
+.v4-head .v4-page-title{margin:0;flex:0 0 auto;font-family:Georgia,"Times New Roman",serif;font-size:26px;font-weight:500;line-height:1.15;letter-spacing:-.035em;color:var(--v3-ink);white-space:nowrap}
+.v4-head .v4-page-context{flex:1 1 auto;min-width:0;margin:0;text-align:right;font:13px/1.35 system-ui,sans-serif;color:var(--v3-muted);overflow-wrap:anywhere}
+@media(max-width:430px){.v4-head .v4-page-title{font-size:24px}.v4-head .v4-page-context{font-size:12.5px}}
+/* Detailseiten: unter der Titelzeile links der runde Rückweg-Pfeil, rechts das runde «✕» –
+   beide mit demselben Ziel («Mein Plan») und demselben Bedienpfad. Ausserhalb der Titelzeile,
+   damit der Kontext seine zwei Zeilen behält. */
+.v4-detailbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
+.v4-head-back{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px 0 10px;border:0;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);font:600 13px system-ui,sans-serif;cursor:pointer}
+.v4-head-close{display:grid;place-items:center;flex:none;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:var(--v3-soft);color:var(--v3-green);cursor:pointer}
+.v4-head-back:hover,.v4-head-close:hover,.v4-head-back:focus-visible,.v4-head-close:focus-visible{box-shadow:inset 0 0 0 1px var(--v3-green)}
+
+/* ---------- Planstatus: die wichtigste Karte ---------- */
+.v4-verdict{border:1px solid var(--v3-line);border-radius:14px;padding:14px;margin:0 0 12px;background:var(--v3-surface)}
+.v4-verdict.covered{border-color:#cfe3d6;background:#f2f8f3}
+.v4-verdict.watch{border-color:#f0e0be;background:#fdf8ee}
+.v4-verdict.gap{border-color:#f2cfcb;background:#fdf3f2}
+.v4-verdict h2{margin:0;font:600 20px/1.25 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-verdict p{margin:6px 0 0;font:14.5px/1.45 system-ui,sans-serif;color:var(--v3-ink)}
+.v4-verdict .v4-verdict-note{margin:6px 0 0;font:12px/1.4 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-verdict .v4-verdict-icon{display:inline-flex;align-items:center;gap:8px;font:600 12px system-ui,sans-serif;color:var(--v3-muted);text-transform:none}
+
+/* ---------- Vier Kennzahlen ---------- */
+.v4-tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 0 12px}
+@media(max-width:359px){.v4-tiles{grid-template-columns:1fr}}
+.v4-tile{border:1px solid var(--v3-line);border-radius:12px;padding:10px;background:var(--v3-surface)}
+.v4-tile span{display:flex;align-items:center;gap:6px;font:12px/1.3 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-tile strong{display:block;margin-top:6px;font:600 20px/1.2 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-tile small{display:block;margin-top:4px;font:11px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-tile.warn{background:#fdf3f2;border-color:#f2cfcb}
+
+/* ---------- Stellhebel PK-Bezug ---------- */
+.v4-lever{margin:0 0 12px}
+.v4-lever .v4-lever-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+.v4-lever h2{margin:0;font:600 17px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-lever .v4-lever-value{font:600 17px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-lever input[type="range"]{width:100%;margin:10px 0 2px}
+.v4-lever .v4-lever-labels{display:flex;justify-content:space-between;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-lever-state{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
+
+/* ---------- Ein nächster Schritt: GENAU EINE Card zu «Plan verbessern» ---------- */
+.v4-next{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;margin:0 0 8px;padding:12px;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);text-align:left;cursor:pointer;font-family:system-ui,sans-serif}
+.v4-next:hover,.v4-next:focus-visible{border-color:var(--v3-green)}
+.v4-next-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--v3-soft);color:var(--v3-green)}
+.v4-next strong{display:block;font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-next small{display:block;margin-top:2px;font:12px/1.4 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-next svg{color:var(--v3-muted)}
+
+/* ---------- Sekundäre Aktionen: maximal zwei kompakte Zeilen ---------- */
+.v4-rows{list-style:none;margin:0 0 4px;padding:0}
+.v4-row{display:flex;align-items:center;justify-content:space-between;gap:10px;width:100%;min-height:38px;padding:0;border:0;border-top:1px solid var(--v3-line);background:transparent;text-align:left;cursor:pointer;font:600 14px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-row span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v4-row svg{flex:none;color:var(--v3-muted)}
+.v4-row:hover span,.v4-row:focus-visible span{color:var(--v3-green)}
+
+/* ---------- «Plan verbessern»: offene bzw. geschätzte Angaben ---------- */
+.v4-section{margin:6px 0 8px;font:600 13px system-ui,sans-serif;color:var(--v3-muted);text-transform:none}
+.v4-open-list{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
+.v4-open{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface)}
+.v4-open-body{flex:1 1 auto;min-width:0}
+.v4-open-body strong{display:block;font:600 14px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-open-body small{display:block;margin-top:2px;font:12px/1.35 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-open-body small.done{color:var(--v3-green)}
+.v4-open-body small.estimated{color:#8a6100}
+.v4-open-cta{flex:none;min-height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--v3-green);background:var(--v3-surface);color:var(--v3-green);font:600 13px system-ui,sans-serif;cursor:pointer}
+
+/* ---------- Detailzone (nur noch Zustandslabels) ---------- */
+.v4-detail-icon{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;border-radius:9px;background:var(--v3-soft);color:var(--v3-green)}
+.v4-detail-state{font:600 12px system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap}
+.v4-detail-state.estimated{color:#8a6100}
+.v4-detail-state.open{color:var(--v3-muted)}
+.v4-detail-state.done{color:var(--v3-green)}
+
+/* ---------- Schnellstart ---------- */
+.v4-start{display:grid;gap:12px;margin:14px 0 0}
+@media(min-width:700px){.v4-start{grid-template-columns:1fr 1fr}}
+.v4-start-card{border:1px solid var(--v3-line);border-radius:12px;padding:14px;background:var(--v3-surface)}
+.v4-start-card label{display:block;margin:8px 0 8px;font:600 16px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-start-card input{width:100%;min-height:48px;padding:8px 10px;border:1px solid var(--v3-line);border-radius:10px;background:transparent;color:var(--v3-ink);font:22px Georgia,"Times New Roman",serif}
+.v4-start-card input:focus-visible{outline:2px solid var(--v3-green);outline-offset:1px}
+.v4-start-unit{margin-top:6px;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-start-hint{margin:0 0 10px;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-segments{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.v4-segment{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--v3-line);background:var(--v3-surface);font:600 14px system-ui,sans-serif;color:var(--v3-green);cursor:pointer}
+.v4-segment[aria-pressed="true"]{background:var(--v3-green);border-color:var(--v3-green);color:#fff}
+.v4-assumptions{margin:16px 0 0;font:13px/1.5 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-cta{width:100%;margin:16px 0 0}
+@media(min-width:700px){.v4-cta{width:auto;min-width:280px}}
+
+/* ---------- Varianten ---------- */
+.v4-variant{border:1px solid var(--v3-line);border-radius:12px;padding:14px;background:var(--v3-surface);margin-bottom:10px}
+.v4-variant.current{border-color:var(--v3-green)}
+.v4-variant-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.v4-variant-head strong{font:600 17px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-variant-head .v4-badge{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font:600 12px system-ui,sans-serif;color:var(--v3-green)}
+.v4-variant-status{margin:8px 0 0;font:600 13px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-variant-status.covered{color:var(--v3-green)}
+.v4-variant-status.watch{color:#8a6100}
+.v4-variant-status.gap{color:#a0443c}
+.v4-variant dl{display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;margin:12px 0 0}
+.v4-variant dl>div{display:flex;flex-direction:column}
+.v4-variant dt{font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-variant dd{margin:2px 0 0;font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-variant-actions{margin-top:12px}
+.v4-variant-actions button{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--v3-green);background:var(--v3-surface);color:var(--v3-green);font:600 14px system-ui,sans-serif;cursor:pointer}
+
+/* ---------- Detail-Editoren als Tabelle (Label links, Wert rechts) ----------
+   Eine ruhige Tabelle statt gestapelter Karten: gleiche Zeilenhöhe, gemeinsame
+   Spaltenkanten, Beträge rechtsbündig mit Tabellenziffern, Einheit als eigene Spalte. */
+.v4-form{margin:0}
+.v4-form-table{display:grid;grid-template-columns:minmax(0,1fr) auto;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);overflow:hidden}
+.v4-form-table>*{padding:10px;min-width:0}
+.v4-form-table>*:nth-child(n+3){border-top:1px solid var(--v3-line)}
+.v4-form-table label{display:flex;align-items:center;gap:4px;font:600 14px/1.3 system-ui,sans-serif;color:var(--v3-ink);hyphens:auto;overflow-wrap:break-word}
+.v4-form-value{display:flex;align-items:center;justify-content:flex-end;gap:6px}
+.v4-form-value input{width:84px;max-width:38vw;padding:2px 0;border:0;border-bottom:1px solid var(--v3-line);background:transparent;text-align:right;font:600 17px/1.2 Georgia,"Times New Roman",serif;font-variant-numeric:tabular-nums;color:var(--v3-ink)}
+.v4-form-value input:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px;border-radius:4px}
+.v4-form-value .v4-form-unit{flex:none;min-width:40px;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-form-value select{max-width:52vw;padding:6px 8px;border:1px solid var(--v3-line);border-radius:8px;background:var(--v3-surface);color:var(--v3-ink);font:14px system-ui,sans-serif}
+.v4-form-value .canton-picker{width:100%}
+.v4-form-value .canton-trigger{min-height:32px;padding:0;border:0;background:transparent;justify-content:flex-end;gap:6px;font:600 15px system-ui,sans-serif}
+.v4-form-value .canton-trigger img{width:16px;height:20px}
+.v4-form-value .canton-trigger span:not(.canton-chevron){flex:0 1 auto;font-weight:600;color:var(--v3-ink)}
+.v4-form-hint{margin:10px 0 0;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-form-submit{width:100%;margin-top:12px;min-height:46px}
+.v4-lead{margin:0 0 12px;font:14px/1.5 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-dev{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:0 0 10px;padding:8px 10px;border:1px dashed var(--v3-line);border-radius:8px;background:#f4f1e8;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-dev button{border:1px solid var(--v3-green);background:var(--v3-surface);color:var(--v3-green);border-radius:6px;min-height:30px;padding:0 10px;font:600 12px system-ui,sans-serif;cursor:pointer}
+.v4-year-nav{display:grid;gap:6px;margin:0 0 14px}
+.v4-year-nav .v4-year-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.v4-year-nav strong{font:600 16px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-year-block{border-top:1px solid var(--v3-line);padding:12px 0}
+.v4-year-block h3{margin:0 0 8px;font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-year-strategy{display:flex;align-items:center;gap:6px;margin:0 0 8px;font:600 13px system-ui,sans-serif;color:var(--v3-green)}
+.v4-year-strategy .v3-modal-icon{color:var(--v3-green)}
+.v4-year-carry{margin:0 0 8px;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-year-line{display:flex;justify-content:space-between;gap:12px;font:13px system-ui,sans-serif;color:var(--v3-muted);padding:3px 0}
+.v4-year-line strong{color:var(--v3-ink)}
+
+/* Wohnkanton direkt im Schnellstart (ein Klick, Steuern geklärt). */
+.v4-canton{display:grid;gap:4px;margin:16px 0 0}
+.v4-canton label{font:600 13px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-canton select{min-height:48px;padding:8px 10px;border:1px solid var(--v3-line);border-radius:10px;background:var(--v3-surface);color:var(--v3-ink);font:16px system-ui,sans-serif}
+
+/* Situationswahl in einer Zeile: zwei gleich breite Pillen, auch bei 390 px. */
+.v4-segments{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:14px 0 0}
+.v4-segment{justify-content:center;min-width:0;padding:0 10px;font-size:14px;white-space:nowrap}
+.v4-segment span{overflow:hidden;text-overflow:ellipsis}
+@media(max-width:430px){.v4-segment{font-size:13px;gap:6px;padding:0 10px}.v4-segment svg{width:16px;height:16px}}
+/* Kleine Screens: Regel bleibt (eine Zeile), aber ohne Kürzung – Beschriftungen sind kurz. */
+.v4-segment span{overflow:visible;text-overflow:clip}
+
+/* Kompakter Schnellstart: Einheit im Feld, auf einem Mobilbildschirm ohne Scrollen. */
+.v4-start{gap:8px;margin:10px 0 0}
+.v4-start-card{padding:12px}
+.v4-start-head{display:flex;align-items:center;gap:6px}
+.v4-start-head .v4-detail-icon{width:24px;height:24px;border-radius:7px}
+.v4-start-head label{display:flex;align-items:baseline;gap:6px;flex-wrap:wrap;margin:0;font:600 14px system-ui,sans-serif}
+.v4-start-head label small{font:11px system-ui,sans-serif;font-weight:400;color:var(--v3-muted)}
+.v4-start-head .v3-modal-icon{margin-left:auto}
+.v4-entry{position:relative;margin-top:8px}
+.v4-entry input{width:100%;min-height:44px;padding:6px 78px 6px 10px;border:1px solid var(--v3-line);border-radius:10px;background:transparent;color:var(--v3-ink);font:20px Georgia,serif}
+.v4-entry input:focus-visible{outline:2px solid var(--v3-green);outline-offset:1px}
+.v4-entry-unit{position:absolute;right:10px;top:50%;transform:translateY(-50%);pointer-events:none;font:12px system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap}
+.v4-canton{margin:12px 0 0}
+.v4-canton select{min-height:44px;font-size:15px}
+.v4-assumptions{margin:12px 0 0;font-size:12px}
+.v4-cta{margin-top:12px;min-height:50px}
+.v4-head{margin-bottom:10px}
+
+/* Feinschliff für einen Mobilbildschirm ohne Scrollen (390 × 844 als Referenz). */
+body{padding-bottom:18px}
+.masthead{min-height:44px}
+.v4-head{margin-bottom:8px}
+.v4-segments{margin:8px 0 0}
+.v4-canton{margin:10px 0 0}
+.v4-canton select{min-height:42px}
+.v4-start{gap:6px}
+.v4-start-card{padding:10px}
+.v4-start-head label{font-size:13.5px}
+.v4-entry{margin-top:6px}
+.v4-assumptions{margin:8px 0 0}
+.v4-cta{margin-top:8px;min-height:46px}
+
+/* Kompaktheitsregel für Eingaben (V4-Spec):
+   genau zwei Zeilen je Karte (Label + Feld), kein Umbruch, gleiche Höhe und Rhythmik.
+   Erklärungen stehen im Feld (Placeholder) oder hinter dem ⓘ – nie darunter. */
+.v4-start{min-width:0}
+.v4-start .v4-start-card{display:flex;flex-direction:column;justify-content:flex-start;min-width:0;min-height:0}
+.v4-start-head{flex:none;flex-wrap:nowrap}
+.v4-start-head label{flex:1 1 auto;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.25}
+.v4-entry{flex:none}
+.v4-entry input{height:42px;min-height:42px;line-height:1.2;text-overflow:ellipsis}
+.v4-entry input::placeholder{font:13px system-ui,sans-serif;color:var(--v3-muted);opacity:1}
+.v4-start-card select{height:42px;min-height:42px;width:100%;margin-top:6px;text-overflow:ellipsis}
+/* Wohnkanton im Feld kompakt: nur der Code links, kurzer Hinweis rechts im Feld. */
+.v4-start-card .canton-trigger{height:42px;min-height:42px;margin-top:6px;padding:6px 10px;border-radius:10px;gap:8px}
+.v4-start-card .canton-trigger img{width:18px;height:22px}
+.v4-start-card .canton-trigger .canton-trigger-hint{flex:0 0 auto;font:12px system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap}
+.v4-start-card .v4-start-head+.v4-entry,
+.v4-start-card .v4-start-head+select{margin-top:6px}
+/* Auf Desktop gleichmässige Karten; der Kanton läuft als fünfte Karte mit. */
+@media(min-width:700px){.v4-start{align-items:stretch}}
+/* ---------- «Plan verbessern»: drei Hebel ---------- */
+.v4-hebel{border:1px solid var(--v3-line);border-radius:14px;background:var(--v3-surface);padding:14px;margin:0 0 12px}
+.v4-hebel-head{display:flex;gap:10px;align-items:flex-start}
+.v4-hebel-num{flex:none;width:28px;height:28px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);font:600 14px system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center}
+.v4-hebel-intro{min-width:0}
+.v4-hebel-intro h2{display:flex;align-items:center;gap:6px;margin:0;font:600 17px/1.25 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-hebel-intro p{margin:4px 0 0;font:13px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-hebel-list{list-style:none;margin:12px 0 0;padding:0;border-top:1px solid var(--v3-line)}
+.v4-hebel-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;padding:10px 0;border:0;border-bottom:1px solid var(--v3-line);background:transparent;text-align:left;cursor:pointer;font-family:system-ui,sans-serif}
+.v4-hebel-row:last-child{border-bottom:0}
+.v4-hebel-copy{display:grid;gap:2px;min-width:0}
+.v4-hebel-line{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+.v4-hebel-line strong{font:600 14px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-hebel-line small{font:12px system-ui,sans-serif;color:var(--v3-muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.v4-hebel-value{font:600 13px system-ui,sans-serif;color:var(--v3-ink);white-space:nowrap}
+.v4-hebel-row svg{color:var(--v3-muted)}
+.v4-badge-tone{flex:none;padding:3px 8px;border-radius:999px;font:600 11px system-ui,sans-serif;white-space:nowrap;background:#f0efeb;color:var(--v3-muted)}
+.v4-badge-tone.estimated{background:#fdf3e3;color:#8a6100}
+.v4-badge-tone.done{background:var(--v3-soft);color:var(--v3-green)}
+.v4-block-action{width:100%;margin-top:12px;min-height:44px;font:600 14px system-ui,sans-serif}
+.v4-strategy-head{margin:12px 0 4px;font:12px system-ui,sans-serif;color:var(--v3-muted);text-align:right}
+.v4-strategy-list{list-style:none;margin:0;padding:0}
+.v4-strategy{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:6px 8px;padding:8px 0;border-top:1px solid var(--v3-line)}
+.v4-strategy:first-child{border-top:0}
+.v4-strategy-mark{width:14px;height:14px;border-radius:999px;border:2px solid var(--v3-line);flex:none}
+.v4-strategy.current .v4-strategy-mark{border-color:var(--v3-green);background:var(--v3-green);box-shadow:inset 0 0 0 2px var(--v3-surface)}
+.v4-strategy-name{font:600 14px system-ui,sans-serif;color:var(--v3-ink);white-space:nowrap}
+.v4-strategy-rate{font:12px system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap}
+.v4-strategy-bar{display:block;grid-column:2 / -1;height:8px;border-radius:999px;background:#ecebe6;overflow:hidden;min-width:32px}
+.v4-strategy-bar span{display:block;height:100%;border-radius:999px;background:#3f6fa8}
+.v4-strategy-value{font:600 14px system-ui,sans-serif;color:var(--v3-ink);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.v4-need-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin:12px 0 0}
+.v4-need-amount{font:600 26px/1.15 Georgia,"Times New Roman",serif;color:var(--v3-ink);font-variant-numeric:tabular-nums}
+.v4-need-amount small{font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-chips{display:flex;flex-wrap:wrap;gap:6px}
+.v4-chip{min-height:34px;padding:0 12px;border-radius:999px;border:1px solid var(--v3-line);background:var(--v3-surface);color:var(--v3-ink);font:600 13px system-ui,sans-serif;cursor:pointer}
+.v4-chip[aria-pressed="true"]{border-color:var(--v3-green);background:var(--v3-soft);color:var(--v3-green)}
+.v4-impact{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--v3-soft);font:13px/1.45 system-ui,sans-serif;color:var(--v3-ink)}
+
+/* Strategie-Szenarien: ganze Zeile antippbar, Auswahl sichtbar, Wirkung darunter. */
+.v4-strategy{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:6px 8px;width:100%;padding:8px;border:1px solid transparent;border-radius:10px;background:transparent;text-align:left;cursor:pointer;font-family:system-ui,sans-serif}
+.v4-strategy-list{display:grid;gap:4px;margin:6px 0 0;padding:0;border:0}
+.v4-strategy.selected{border-color:var(--v3-green);background:var(--v3-soft)}
+.v4-block-action[disabled]{opacity:.6;cursor:default}
+.v4-hebel-done{padding:0}
+.v4-hebel-summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:14px;cursor:pointer;list-style:none}
+.v4-hebel-summary::-webkit-details-marker{display:none}
+.v4-hebel-summary .v4-hebel-intro strong{display:block;font:600 17px/1.25 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-hebel-summary .v4-hebel-intro small{display:block;margin-top:2px;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-hebel-summary svg{color:var(--v3-muted);transition:none}
+.v4-hebel-done[open] .v4-hebel-summary svg{transform:rotate(90deg)}
+.v4-hebel-done .v4-hebel-list{margin:0 14px}
+.v4-hebel-done .v4-block-action{width:calc(100% - 28px);margin:12px 14px 14px}
+.v4-formed-note{margin:14px 0 0}
+.v4-readonly{display:grid;margin:0;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);overflow:hidden}
+.v4-readonly>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:10px 12px;border-top:1px solid var(--v3-line)}
+.v4-readonly>div:first-child{border-top:0}
+.v4-readonly dt{font:600 14px/1.3 system-ui,sans-serif;color:var(--v3-ink);min-width:0}
+.v4-readonly dd{margin:0;font:600 14px/1.3 system-ui,sans-serif;color:var(--v3-ink);text-align:right;white-space:nowrap}
+.v4-readonly .v4-readonly-note{grid-column:1 / -1;margin:2px 0 0;font:12px/1.4 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-formed-note .v4-form-table label small{display:block;font-weight:400}
+.v4-formed-note strong{font:600 14px system-ui,sans-serif;color:var(--v3-ink);text-align:right}
+.v4-warning{margin:10px 0 0;padding:10px 12px;border:1px solid #f0e0be;border-radius:10px;background:#fdf8ee;font:13px/1.5 system-ui,sans-serif;color:#8a6100}
+.v4-warning + .v4-chip{margin-top:8px}
+
+/* ---------- Info-Dialoge: Betrag prominent, Herkunft klein, Werte als Tabelle ---------- */
+.v4-info-amount{margin:0 0 10px;font:600 26px/1.15 Georgia,"Times New Roman",serif;color:var(--v3-ink);font-variant-numeric:tabular-nums}
+.v4-info-amount small{font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-info-source{margin:10px 0 0;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-info-detail{margin:10px 0 0}
+.v3-modal-body .v3-info-list dd{font-variant-numeric:tabular-nums}
+/* Vermögen: eine Tabelle, Gruppenzeile für die optionalen Immobilienangaben. */
+.v4-form-group{grid-column:1 / -1;padding:8px 10px;background:var(--v3-soft);font:600 12px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-form-group small{font-weight:400;color:var(--v3-muted)}
+.v4-asset-form .v4-form-table label{font-size:13.5px}
+.v4-form-value input::placeholder{font:13px system-ui,sans-serif;color:var(--v3-muted);opacity:1}
+/* Info-Dialoge: derselbe runde «✕»-Knopf wie im Kopf der Detailseiten. */
+#v4Modal .v3-modal-close{border:0;background:var(--v3-soft);color:var(--v3-green)}
+#v4Modal .v3-modal-close:hover,#v4Modal .v3-modal-close:focus-visible{box-shadow:inset 0 0 0 1px var(--v3-green)}

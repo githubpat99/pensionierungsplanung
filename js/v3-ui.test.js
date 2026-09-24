@@ -27,17 +27,22 @@ for(const mode of ['pre','post']) for(const canton of ['ZH','BE','']) {
   const cap=C.calculateAvailableCapital(p), pk=C.calculatePension(p), result=C.evaluatePlan(p);
   assert.deepEqual(C.simulationInput(p).capitalInjections,{});
   assert.equal(cap.boundP3Capital,0);
-  assert.equal(result.p3Planning,null);
   near(cap.boundCapital,500000);
   if(mode==='pre') {
    const start=C.calculateRetirementStart(p);
+   const p3=cap.p3;
    near(start.cash,80000);
    near(start.p3,100000*1.045**5+7000*((1.045**5-1)/.045));
    near(pk.cap,start.pk*share/100);
    near(pk.rent,(start.pk-pk.cap)*M.defaults.uws/100);
    near(pk.capitalTax??0,Tax.calculateCapitalWithdrawalTax(canton,pk.cap)??0);
-   near(cap.totalInvestableCapital,start.cash+start.sec+start.p3+pk.netCap);
-   assert.ok(C.capitalWithdrawalEvents(p).every(e=>e.items.every(i=>i.id==='pk')));
+   // Der 3a-Bezug liegt ein Jahr vor dem PK-Bezug, ist netto im Startkapital und wird getrennt besteuert.
+   assert.equal(p3.withdrawalAge,64);
+   near(p3.netAtStart,p3.grossAtStart-(p3.taxAtStart??0));
+   assert.ok(p3.grossAtStart<start.p3,'ein Jahr früher bedeutet weniger Aufbau');
+   near(cap.totalInvestableCapital,start.cash+start.sec+p3.netAtStart+pk.netCap);
+   near(cap.existingFreeCapital,start.cash+start.sec+p3.netAtStart);
+   assert.ok(C.capitalWithdrawalEvents(p).some(e=>e.items.some(i=>i.id!=='pk')),'der 3a-Bezug ist ein eigenes Ereignis');
    assert.equal(C.simulationInput(p).phases[0].need,6500*12,'no inflation before retirement');
   } else { near(cap.totalInvestableCapital,230000); near(pk.capitalTax,0); }
   near(result.availableCapital,cap.totalInvestableCapital);
@@ -106,26 +111,40 @@ const noAssets=M.fresh('pre'); noAssets.position='rents'; V.validate(noAssets);
 const listeners={}, nodes=new Map();
 function node(id='') { if(nodes.has(id)) return nodes.get(id); const n={innerHTML:'',hidden:false,value:'',style:{setProperty(){}},classList:{add(){},remove(){}},addEventListener(event,fn){listeners[`${id}:${event}`]=fn;},setAttribute(){},querySelectorAll:()=>[],querySelector:sel=>node(sel),getBoundingClientRect:()=>({width:360}),focus(){},scrollIntoView(){}};nodes.set(id,n);return n; }
 const local=new Map();
-const context=vm.createContext({CheckV2State:M,CheckV3State:V,RetirementCalculator:C,TaxModel:Tax,Icons:require('./icons.js'),structuredClone,ResizeObserver:class{observe(){}disconnect(){}},
+const context=vm.createContext({CheckV2State:M,CheckV3State:V,RetirementCalculator:C,TaxModel:Tax,Icons:require('./icons.js'),Estimates:require('./estimates.js'),structuredClone,ResizeObserver:class{observe(){}disconnect(){}},
  document:{getElementById:node,querySelector:node,querySelectorAll:()=>[],addEventListener(){}},window:{scrollTo(){},addEventListener(){}},localStorage:{getItem:k=>local.get(k)??null,setItem:(k,v)=>local.set(k,v)}});
 let source=fs.readFileSync(require.resolve('./v3-ui.js'),'utf8');
-source=source.replace('window.V3 = {save, load, planFor};',`window.test={seed(s){state=V3State.normalize(s);previewShare=null;},snapshot(){return {state,previewShare};},planFor,evaluated,renderPlan,renderCompare,renderDetail,pensionBreakdown,assetComposition,chart,currentVariants,editorFields,load,save};`);
-source=source.replace("  setRentDraft(); renderForm('rents');\n  load();",'');
+source=source.replace('window.V3 = {save, load, planFor};',`window.test={seed(s){state=V3State.normalize(s);previewShare=null;},tip(){state.tipDismissed=true;},snapshot(){return {state,previewShare};},planFor,evaluated,renderPlan,renderDetail,pensionBreakdown,assetComposition,chart,currentVariants,editorFields,furtherCapital,startCapitalInfo,planSteps,startFields,load,save};`);
+source=source.replace("  setStartDraft(); renderStart();\n  load();",'');
 vm.runInContext(source,context);
 const ui=context.window.test;
 for(const canton of ['ZH','']) {
  ui.seed(seed('pre',canton));
  assert.ok(ui.planFor(35));
  assert.equal(ui.planFor(35).assets.pre.p3Plan,undefined);
- ui.renderPlan(); assert.match(node('app').innerHTML,/shareNumber/);
- assert.match(ui.assetComposition(seed('pre',canton)),/3a-Bezugssteuer wird nicht modelliert/);
- assert.doesNotMatch(ui.assetComposition(seed('pre',canton)),/Säule 3a netto/);
- assert.match(ui.pensionBreakdown(),canton?/data-pk-net>CHF/:/Steuern offen/);
+ ui.tip();ui.renderPlan(); assert.match(node('app').innerHTML,/shareNumber/);
+ // Die 3a-Erklärung nennt die gerechneten Werte und den verwendeten Satz.
+ assert.match(ui.assetComposition(seed('pre',canton)),/Säule 3a netto/);
+ assert.match(ui.assetComposition(seed('pre',canton)),canton?/kantonalen Durchschnittssteuersatz/:/Ohne Wohnkanton schätzen wir noch keine Bezugssteuer/);
+ assert.match(ui.assetComposition(seed('pre',canton)),/netto<\/strong> zur Verfügung/);
+ assert.doesNotMatch(ui.assetComposition(seed('pre',canton)),/3a-Bezugssteuer wird nicht modelliert/);
+ // Ohne Wohnkanton rechnet der erste Check mit geschätzter Steuerannahme: Netto statt «Steuern offen».
+ assert.match(ui.pensionBreakdown(),/data-pk-net>CHF/,'Netto wird auch ohne Wohnkanton ausgewiesen');
  ui.renderDetail('pension3a'); assert.doesNotMatch(node('app').innerHTML,/p3Mode|p3Accounts|Bezugsalter/);
  assert.equal(ui.editorFields('pension').some(f=>f.key==='pkShare'),false);
  assert.equal(ui.editorFields('assumptions').some(f=>f.key==='pkInterest'),false);
 }
-ui.seed(seed());ui.renderPlan();
+ui.seed(seed());ui.tip();ui.renderPlan();
+// Die Aufschlüsselung des weiteren Kapitals muss exakt das weitere Kapital des Rechenkerns ergeben
+// (I-05: Startkapital-Herleitung) – inklusive Hochrechnung der Wertschriften.
+for(const share of [0,35,100]) {
+ const item=ui.evaluated(share), plan=item.plan, cap=C.calculateAvailableCapital(plan,share);
+ const {rows,total}=ui.furtherCapital(ui.snapshot().state,item);
+ near(total,cap.existingFreeCapital);
+ assert.equal(rows.length>0,true,'die Aufschlüsselung hat Positionen');
+ assert.match(ui.startCapitalInfo(item),/PK-Kapital netto .* \+ weiteres Kapital .* = /);
+ near(cap.existingFreeCapital+cap.netPkCapitalWithdrawal,cap.totalInvestableCapital);
+}
 listeners['shareNumber:input']({target:{value:'35'}});
 assert.equal(ui.snapshot().state.details.pension.pkShare,0,'preview leaves active share unchanged');
 assert.equal(ui.snapshot().previewShare,35);
@@ -137,11 +156,39 @@ assert.ok(V.variants(ui.snapshot().state).includes(35),'der neue Wert liegt auf 
 assert.equal(JSON.parse(local.get('retirement-v3-plan')).state.details.pension.pkShare,35);
 // Zum aktuellen Plan wird eine Variante über das «···»-Menü bzw. den Vergleich.
 assert.equal(V.activate(ui.snapshot().state,35).details.pension.pkShare,35);
-ui.seed(seed('post'));ui.renderPlan();assert.doesNotMatch(node('app').innerHTML,/id="shareRange"/);
-ui.seed(s); const rows=ui.currentVariants(), svg=ui.chart(rows,340);
+ui.seed(seed('post'));ui.tip();ui.renderPlan();assert.doesNotMatch(node('app').innerHTML,/id="shareRange"/);
+ui.tip();ui.seed(s); const rows=ui.currentVariants(), svg=ui.chart(rows,340);
 assert.equal((svg.match(/data-chart-share=/g)||[]).length,3);
 assert.match(svg,/stroke-dasharray="9 6"/);assert.match(svg,/stroke-dasharray="2 6"/);
 assert.match(svg,/<circle/);assert.match(svg,/<rect/);assert.match(svg,/<path/);
 assert.match(svg,/data-chart-tick-age="95"/);
 const protectedRaw=JSON.stringify({...record,version:99});local.set('retirement-v3-plan',protectedRaw);ui.load();ui.save();assert.equal(local.get('retirement-v3-plan'),protectedRaw);
+// Schnelleinstieg: Ohne AHV-Angabe rechnet der Plan mit der Pauschale, eine Eingabe ersetzt sie.
+const Est=require('./estimates.js');
+let quick=M.fresh('pre');
+for(const [group,value] of [['time',{age:60,retirement:65}],['pension',{pk:600000,pkContrib:0,pkShare:0}],['need',{need:6500}]]) quick=M.apply(quick,group,value);
+quick.position='plan';
+assert.ok(!(M.toPlan(V.normalize(quick)).income.ahv>0),'ohne Eingabe liefert der Rechenkern keine AHV');
+const ahvAnnual=plan=>(C.incomeSourcesAtStart(plan).find(source=>source.id==='ahv')||{}).annualIncome||0;
+ui.seed(quick);
+assert.equal(Est.ahvOf(quick).origin,'estimated');
+assert.equal(ahvAnnual(ui.planFor(0)),36000,"der Plan rechnet mit der Pauschale von CHF 3'000 pro Monat");
+assert.ok(!(ui.snapshot().state.details.income?.ahv>0),'die Pauschale verändert den gespeicherten Stand nicht');
+assert.match(ui.planSteps(),/Plan genauer machen/);
+assert.match(ui.planSteps(),/AHV-Rente/);
+assert.match(ui.planSteps(),/Umwandlungssatz von 5,2 %/);
+assert.match(ui.planSteps(),/Wohnkanton/);
+assert.match(ui.planSteps(),/Weiteres Kapital und Säule 3a/);
+assert.match(ui.planSteps(),/PK-Ausweis/);
+assert.deepEqual([...ui.planSteps().matchAll(/data-v3-next="(\w+)"/g)].map(m=>m[1]),['ahv','personal','assets','pension'],'Reihenfolge der Verfeinerung');
+assert.equal(ui.startFields().map(f=>f.key).join(','),'age,retirement,pk,need','vier Fragen im Schnelleinstieg');
+const withAhv=M.apply(quick,'regular',{canton:'ZH',ahv:2500,other:0,additional:0});
+ui.seed(withAhv);
+assert.equal(Est.ahvOf(withAhv).origin,'user');
+assert.equal(ahvAnnual(ui.planFor(0)),30000,'eine erfasste AHV-Rente ersetzt die Pauschale');
+// Erledigte Punkte verschwinden; die Nummerierung rückt nach (AHV und Kanton sind erfasst).
+const remaining=ui.planSteps();
+assert.deepEqual([...remaining.matchAll(/data-v3-next="(\w+)"/g)].map(m=>m[1]),['assets','pension'],'nur noch offene Punkte');
+assert.doesNotMatch(remaining,/AHV-Rente/);
+assert.doesNotMatch(remaining,/Wohnkanton/);
 console.log('V3: capital, 3a migration, all PK boundaries, variants, storage, preview and UI regression checks passed.');

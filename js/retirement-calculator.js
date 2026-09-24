@@ -33,9 +33,13 @@
  }
  function p3AccountSelection(p,s){
   const balance=Math.max(0,num(s.assets.p3)),retirementAge=s.retirementAge;
-  const fallback={name:'Säule 3a',amount:balance,age:retirementAge};
+  /* Modellannahme für die Säule 3a: Bezug alles auf einmal ein Jahr vor dem PK-Bezug.
+     Das entlastet gegenüber einem Bezug im selben Jahr (getrennte Steuerbasis) und wird
+     als approximative Rechnung ausgewiesen; eine weitergehende Staffelung ist nicht modelliert. */
+  const withdrawalAge=Math.max(s.currentAge,retirementAge-1);
+  const fallback={name:'Säule 3a',amount:balance,age:withdrawalAge};
   const plan=p3PlanOf(p);
-  if(!plan||plan.mode==='retirement')return {planned:false,accounts:[fallback],reason:plan?'retirement':'none'};
+  if(!plan||plan.mode==='retirement')return {planned:false,accounts:[fallback],reason:plan?'retirement':'default'};
   const entries=(Array.isArray(plan.accounts)?plan.accounts:[]).map((account,index)=>({
    name:String((account&&account.name)||'').trim()||`3a Konto ${index+1}`,
    amount:Math.max(0,num(account&&account.amount)),
@@ -80,7 +84,9 @@
   const s=toState(p);if(s.mode==='post')return [];
   const items=[],pk=pensionCapitalGross(p,share);
   if(pk>0)items.push({id:'pk',name:'PK-Kapital',gross:pk,age:s.retirementAge});
-  if(p3PlanOf(p))p3Schedule(p).withdrawals.forEach((withdrawal,index)=>items.push({id:`p3-${index}`,name:withdrawal.name,gross:withdrawal.gross,age:withdrawal.age}));
+  // Der 3a-Bezug gehört immer zu den Kapitalbezügen (Standard: ein Jahr vor dem PK-Bezug);
+  // ein leeres 3a-Guthaben erzeugt keinen Bezug.
+  p3Schedule(p).withdrawals.filter(withdrawal=>withdrawal.gross>0).forEach((withdrawal,index)=>items.push({id:`p3-${index}`,name:withdrawal.name,gross:withdrawal.gross,age:withdrawal.age}));
   const byAge=new Map();
   items.forEach(item=>{if(!byAge.has(item.age))byAge.set(item.age,[]);byAge.get(item.age).push(item);});
   return [...byAge.entries()].sort((a,b)=>a[0]-b[0]).map(([age,list])=>{
@@ -107,18 +113,24 @@
   const pkEvent=events.find(event=>event.age===s.retirementAge),pkItem=pkEvent&&pkEvent.items.find(item=>item.id==='pk');
   const p3Items=atStart.flatMap(event=>event.items.filter(item=>item.id!=='pk'));
   const p3Gross=p3Items.reduce((sum,item)=>sum+item.gross,0),p3Tax=p3Items.reduce((sum,item)=>sum+item.tax,0),p3Net=p3Items.reduce((sum,item)=>sum+item.net,0);
-  const schedule=plan?p3Schedule(p):null;
-  const existingFreeCapital=(plan?0:v.p3)+v.sec+v.cash;
+  const schedule=p3Schedule(p);
+  /* Verbindliche Kapitalbasis: weiteres Kapital (Wertschriften, Bank, 3a **netto** nach
+     Bezugssteuer) plus PK-Kapital netto. Der 3a-Betrag kommt ausschliesslich über den Bezug. */
+  const pkNet=pkItem?pkItem.net:0;
+  const existingFreeCapital=v.sec+v.cash+p3Net;
   const netAtStart=atStart.reduce((sum,event)=>sum+event.net,0);
-  return {existingFreeCapital,grossPkCapitalWithdrawal:pkItem?pkItem.gross:0,pkWithdrawalTax:pkItem?pkItem.tax:0,netPkCapitalWithdrawal:pkItem?pkItem.net:0,
-   totalInvestableCapital:existingFreeCapital+netAtStart,boundCapital:v.re-v.mort,
-   boundP3Capital:schedule?schedule.boundAtRetirement:0,
-   p3:plan?{planned:schedule.planned,consistent:schedule.consistent,reason:schedule.reason,mode:p3PlanOf(p).mode,accounts:schedule.accounts,withdrawals:schedule.withdrawals,
+  const p3Withdrawal=schedule.withdrawals.find(withdrawal=>withdrawal.age<=s.retirementAge);
+  return {existingFreeCapital,grossPkCapitalWithdrawal:pkItem?pkItem.gross:0,pkWithdrawalTax:pkItem?pkItem.tax:0,netPkCapitalWithdrawal:pkNet,
+   totalInvestableCapital:existingFreeCapital+pkNet,netAtStart,boundCapital:v.re-v.mort,
+   boundP3Capital:schedule.boundAtRetirement,
+   p3:{planned:schedule.planned,consistent:schedule.consistent,reason:schedule.reason,mode:plan?plan.mode:'default',accounts:schedule.accounts,withdrawals:schedule.withdrawals,
+    withdrawalAge:p3Withdrawal?p3Withdrawal.age:(schedule.withdrawals[0]?schedule.withdrawals[0].age:null),
+    projectedAtRetirement:v.p3,
     grossAtStart:p3Gross,taxAtStart:p3Tax,netAtStart:p3Net,boundAtRetirement:schedule.boundAtRetirement,
     grossTotal:schedule.withdrawals.reduce((sum,withdrawal)=>sum+withdrawal.gross,0),
     grossLater:later.flatMap(event=>event.items.filter(item=>item.id!=='pk')).reduce((sum,item)=>sum+item.gross,0),
     taxTotal:events.flatMap(event=>event.items.filter(item=>item.id!=='pk')).reduce((sum,item)=>sum+item.tax,0),
-    netTotal:events.flatMap(event=>event.items.filter(item=>item.id!=='pk')).reduce((sum,item)=>sum+item.net,0)}:null};
+    netTotal:events.flatMap(event=>event.items.filter(item=>item.id!=='pk')).reduce((sum,item)=>sum+item.net,0)}};
  }
  function simulationInput(p,share=p.pensionDecision.capitalShare){
   const s=toState(p),start=s.mode==='post'?s.currentAge:s.retirementAge,pk=calculatePension(p,share),a=s.mode==='post'?s.post:s.income;
@@ -144,7 +156,12 @@
   const yearlyProjection=simulateCapitalDevelopment(p),first=yearlyProjection[0],last=yearlyProjection.at(-1),gap=yearlyProjection.find(r=>r.gap>.01);
   const stressGap=simulateCapitalDevelopment(p,'weak').find(r=>r.gap>.01);
   const capitalBreakdown=calculateAvailableCapital(p);
-  return {incomeGross:first.grossIncome,incomeTax:first.estimatedIncomeTax,incomeNet:first.rent,annualGap:first.withdrawal,monthlyIncomeNet:first.rent/12,monthlyGap:first.withdrawal/12,monthlyNeed:first.need/12,availableCapital:first.free,restrictedCapital:first.bound,capitalAtTargetAge:last.free,capitalExhaustionAge:gap?.age,bucketAllocation:first.buckets,yearlyProjection,assessment:!tax.canton(p.person.canton)?'pending':gap?'red':stressGap?'amber':'green',stressGapAge:stressGap?.age,capitalWithdrawals:capitalWithdrawalEvents(p),p3Planning:capitalBreakdown.p3,boundP3Capital:capitalBreakdown.boundP3Capital};
+  return {incomeGross:first.grossIncome,incomeTax:first.estimatedIncomeTax,incomeNet:first.rent,annualGap:first.withdrawal,monthlyIncomeNet:first.rent/12,monthlyGap:first.withdrawal/12,monthlyNeed:first.need/12,availableCapital:first.free,restrictedCapital:first.bound,capitalAtTargetAge:last.free,
+   // Nominale Sicht: Beträge des Zieljahres in CHF dieses Jahres (eine Zahlenwelt im UI).
+   capitalAtTargetAgeNominal:(last.nominal??last).free,targetFactor:last.factor??1,
+   incomeGrossNominal:(first.nominal??first).grossIncome,incomeTaxNominal:(first.nominal??first).estimatedIncomeTax,incomeNetNominal:(first.nominal??first).rent,
+   monthlyIncomeNetNominal:(first.nominal??first).rent/12,monthlyGapNominal:(first.nominal??first).withdrawal/12,monthlyNeedNominal:(first.nominal??first).need/12,taxableAnnualIncomeNominal:(first.nominal??first).taxableAnnualIncome,
+   capitalExhaustionAge:gap?.age,bucketAllocation:first.buckets,yearlyProjection,assessment:!tax.canton(p.person.canton)?'pending':gap?'red':stressGap?'amber':'green',stressGapAge:stressGap?.age,capitalWithdrawals:capitalWithdrawalEvents(p),p3Planning:capitalBreakdown.p3,boundP3Capital:capitalBreakdown.boundP3Capital};
  }
  function incomeSourcesAtStart(p){
   const input=simulationInput(p);

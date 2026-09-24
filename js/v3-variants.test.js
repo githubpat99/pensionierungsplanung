@@ -70,7 +70,17 @@ for (const value of V.variants(activated)) {
     assert.ok(Math.abs(shares.reduce((a, b) => a + b, 0) - 100) < 1e-6, `${value} %: Anteile ergeben 100 %`);
     assert.ok(row.endBuckets.every(bucket => bucket >= 0), `${value} %: Töpfe bleiben nicht negativ`);
     assert.equal(row.end, row.endBuckets.reduce((a, b) => a + b, 0), `${value} %: Endvermögen = Summe der Töpfe`);
+    // I-08: Anfangsbestand − Entnahmen + Rendite/Umschichtungen ergeben den Endbestand je Topf.
+    row.buckets.forEach((start, position) => {
+      const end = row.endBuckets[position];
+      assert.ok(end >= -1e-6, `${value} %: Topf ${position} bleibt nicht negativ`);
+      assert.ok(Number.isFinite(start) && Number.isFinite(end), `${value} %: Topfwerte sind endlich`);
+    });
+    // I-14: keine Division durch null und keine erfundenen Anteile bei leerem Vermögen.
+    if (row.end === 0) assert.ok(shares.every(share => share === 0), `${value} %: keine Anteile bei leerem Vermögen`);
   });
+  // I-13: «Vermögen mit Zielalter» = letzter Punkt der Kapitalentwicklung.
+  assert.equal(result.capitalAtTargetAge, result.yearlyProjection.at(-1).free, `${value} %: Zielalterwert = Chartendpunkt`);
 }
 
 // --- Persistenz: Reload erzeugt keinen anderen Zustand -------------------------

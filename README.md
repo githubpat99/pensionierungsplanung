@@ -1,18 +1,18 @@
 # Ruhestands-Check
 
-Lokale Browseranwendung zur Planung von Einkommen, Bedarf und verfügbarem Kapital im Ruhestand. Der produktive Einstieg ist `index.html` und führt auf `v2.html`. `v3.html` ist ein separater Entwurf und ersetzt V2 noch nicht.
+Lokale Browseranwendung zur Planung von Einkommen, Bedarf und verfügbarem Kapital im Ruhestand. Der Einstieg ist `index.html` und führt auf `v3.html`. V2 ist abgelöst: die Dateien bleiben als Historie im Repo, sind aber nicht mehr verlinkt.
 
 ## Start
 
 `index.html` im Browser öffnen. Für die Cypress-Tests einen lokalen Server an der Projektwurzel auf Port 8000 starten.
 
-Die App speichert bestätigte V2-Angaben im Browser auf diesem Gerät. V3 verwendet einen getrennten Speicherstand. Die historische Datei `Rentenberechnung.xlsx` ist keine Eingabe der aktuellen Oberfläche.
+Die App speichert den Plan im Browser auf diesem Gerät (`retirement-v3-plan`). Ein allfälliger V2-Stand unter `retirement-v2-plan` wird nicht mehr gelesen oder verändert. Die historische Datei `Rentenberechnung.xlsx` ist keine Eingabe der aktuellen Oberfläche.
 
 ## Aufbau
 
-- `v2.html`, `js/v2-ui.js`, `css/v2-ui.css`: aktuelle Oberfläche und Navigation.
-- `v3.html`, `js/v3-ui.js`, `css/v3*.css`: eigenständige V3 mit PK-Vorschauen, bis zu drei gespeicherten Varianten und eigenen Informationsseiten.
-- `js/v3-state.js`: eigener V3-Varianten-, Migrations- und Speicheradapter; nutzt den vorhandenen reinen Eingabeadapter `js/v2-state.js` unverändert. V2-Dateien und V2-Browserdaten bleiben unverändert.
+- `css/v2-ui.css`: Basisschicht, die `v3.html` mitlädt. Abgelöste V2-Oberfläche: `v2.html`, `js/v2-ui.js` (nur noch Historie).
+- `v3.html`, `js/v3-ui.js`, `css/v3*.css`: Oberfläche, Navigation und Jahresansicht mit PK-Varianten und dem Schnelleinstieg in vier Fragen.
+- `js/v3-state.js`: Varianten-, Migrations- und Speicheradapter; `js/v2-state.js` ist der reine Eingabeadapter, `js/estimates.js` hält die Schätzwerte (AHV-Pauschale CHF 3'000, PK-Umwandlungssatz 5,2 %).
 - `js/retirement-calculator.js`, `js/retirement-engine.js`, `js/tax-model.js`: gemeinsamer Rechenkern und Steuerberechnung.
 - `docs/MASTER_SPEC.md`, `docs/PRODUCT_RULES.md`: verbindlicher Sollzustand und Produktregeln.
 - `docs/USE_CASES.md`, `docs/TEST_CASES.md`: aktuelle Use Cases und Testzuordnung.

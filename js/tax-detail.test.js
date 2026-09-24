@@ -87,11 +87,16 @@ assert.ok(variants[2].t.once.pkTax>variants[0].t.once.pkTax,'more capital means 
 assert.equal(variants[0].t.once.pkTax,0,'a pure pension draws no capital');
 assert.ok(variants[2].t.once.startCapital>variants[0].t.once.startCapital);
 
-// --- Säule 3a: vorhandenes Guthaben wird gekennzeichnet, aber nicht besteuert ---
+// --- Säule 3a: Bezug ein Jahr vor dem PK-Bezug, approximative Bezugssteuer wird abgezogen ---
 const with3a=M.apply(state(),'pension3a',{p3:120000,p3Contrib:7000});
-assert.equal(summary(with3a).t.threeA.has3a,true);
-assert.equal(summary(with3a).t.threeA.withdrawalTaxModelled,false,'the missing 3a withdrawal tax stays declared');
-assert.equal(summary(state()).t.threeA.has3a,false,'no 3a hint without 3a capital');
+const threeA=summary(with3a).t.threeA;
+assert.equal(threeA.has3a,true);
+assert.equal(threeA.withdrawalTaxModelled,true,'die 3a-Bezugssteuer wird modelliert');
+assert.equal(threeA.withdrawalAge,64,'Bezug ein Jahr vor dem PK-Bezug');
+assert.ok(threeA.gross>0&&threeA.tax>0,'Bruttobetrag und geschätzte Steuer sind ausgewiesen');
+assert.ok(Math.abs(threeA.net-(threeA.gross-threeA.tax))<1e-6,'netto = brutto minus Bezugssteuer');
+assert.ok(threeA.net<summary(with3a).t.once.startCapital,'3a ist nur netto im Startkapital enthalten');
+assert.equal(summary(state()).t.threeA.has3a,false,'kein 3a-Hinweis ohne 3a-Guthaben');
 const post=summary(state('post',{canton:'ZH'}));
 assert.equal(post.t.once,null,'after retirement there is no future capital withdrawal');
 assert.equal(post.t.threeA.has3a,false);

@@ -1,1 +1,21 @@
+# Persönliche Speicherstände des Ruhestands-Checks bleiben lokal – nicht committen.
+# Die App sichert im Browser; ein Stand als JSON-Datei ist eine private Sicherung.
+tests/testdata/statePIN.json
+state*.json
+stand.json
+stand-*.json
+ruhestands-check-*.json
 
+# Temporäre Dateien des lokalen Entwicklungsservers und der Prüfskripte.
+stand.json.tmp
+_dev-*.html
+_weg-*.html
+_start-*.html
+_data-*.html
+_v3-*.html
+_*.tmp
+
+# System- und Editor-Krümel.
+Thumbs.db
+desktop.ini
+.DS_Store

@@ -148,7 +148,7 @@ function renderMore() {
    const previous=!state.details.income&&state.values.regular!==undefined?`<p class="hint">Bisher als Gesamtsumme erfasst: ${cash(state.values.regular)} / Monat. Bitte auf die einzelnen Quellen aufteilen.</p>`:'';
    return previous+`<p class="hint">${state.details.pension?`PK-Rente aus deiner Vorsorge: ${cash(M.breakdown(state).income.pk/12)} / Monat vor Steuer.`:'Deine PK-Rente ergänzen wir im Bereich Vorsorge → Pensionskasse.'}</p>`;
   }
-  if(g==='assumptions')return `<p class="hint">Horizont ${state.horizonMode==='automatic'?'automatisch aus der Schweizer Restlebenserwartung abgeleitet':'manuell festgelegt'}. Eine Änderung des Zielalters schaltet auf manuell. ${state.riskProfile==='cautious'?'Vorsichtige Standardannahme':'Gespeicherte Anlageannahme'}: Wachstum ${String(C.getRiskProfile(M.toPlan(state)).expectedRealReturn*100).replace('.',',')} % real, Anleihen 1 %, Geldmarkt 0 %.</p><details class="model-notes"><summary>Grundlage und Grenzen</summary><p>BFS-Periodensterbetafeln 2023: mittlere Restlebenserwartung Frauen/Männer im heutigen Alter, aufgerundet; mindestens ein Ruhestandsjahr. Keine individuelle Lebensdauerprognose.</p><p>Ab Start konstante Kaufkraft; laufende Einnahmen ohne Indexierung. Vor Pensionierung keine Inflationierung des Bedarfs. Noch nicht aufgeteiltes verfügbares Kapital wird bis zum Start unverändert angesetzt. Bei Aufteilung projiziert der gemeinsame Rechenkern die Anlagen und Beiträge.</p><p>Die Steuerrechnung ist eine Modellrechnung, keine individuelle Steuerberechnung. Vermögenssteuer und allfällige 3a-Bezugssteuern fehlen; Zinsen und Dividenden werden nicht separat besteuert.</p></details>`;
+  if(g==='assumptions')return `<p class="hint">Horizont ${state.horizonMode==='automatic'?'automatisch aus der Schweizer Restlebenserwartung abgeleitet':'manuell festgelegt'}. Eine Änderung des Zielalters schaltet auf manuell. ${state.riskProfile==='cautious'?'Vorsichtige Standardannahme':'Gespeicherte Anlageannahme'}: Wachstum ${String(C.getRiskProfile(M.toPlan(state)).expectedRealReturn*100).replace('.',',')} % real, Anleihen 1 %, Geldmarkt 0 %.</p><details class="model-notes"><summary>Grundlage und Grenzen</summary><p>BFS-Periodensterbetafeln 2023: mittlere Restlebenserwartung Frauen/Männer im heutigen Alter, aufgerundet; mindestens ein Ruhestandsjahr. Keine individuelle Lebensdauerprognose.</p><p>Ab Start steigt der Bedarf mit der Inflationsannahme; laufende Einnahmen ohne Indexierung. Vor Pensionierung keine Inflationierung des Bedarfs. Noch nicht aufgeteiltes verfügbares Kapital wird bis zum Start unverändert angesetzt. Bei Aufteilung projiziert der gemeinsame Rechenkern die Anlagen und Beiträge.</p><p>Die Steuerrechnung ist eine Modellrechnung, keine individuelle Steuerberechnung. Vermögenssteuer und allfällige 3a-Bezugssteuern fehlen; Zinsen und Dividenden werden nicht separat besteuert.</p></details>`;
   return '';
  }
  function plainInput(f){
@@ -240,7 +240,7 @@ function renderMore() {
    ${row('Verfügbares Einkommen',y.net,{total:true,unit:' / Jahr'})}
    ${row('= pro Monat',y.net/12,{unit:' / Monat'})}</dl>`;
   const note=c?`<p>Für ${esc(c.name)} verwendet das vereinfachte kantonale Modell ${esc(TaxModel.config.version)} je nach Höhe des steuerbaren Einkommens ${String(c.incomeTaxPct.low).replace('.',',')} %, ${String(c.incomeTaxPct.medium).replace('.',',')} % oder ${String(c.incomeTaxPct.high).replace('.',',')} %; der Satz gilt jeweils für den gesamten Betrag.</p>`:'';
-  const threeA=t.threeA.has3a?'<p>Säule-3a-Bezugssteuer ist in dieser Planung derzeit noch nicht separat berücksichtigt.</p>':'';
+  const threeA=t.threeA.has3a?`<p>Säule 3a: ${cash(t.threeA.gross)} brutto, Bezug ${t.threeA.withdrawalAge===null?'':`mit ${t.threeA.withdrawalAge}`} (alles auf einmal ein Jahr vor dem PK-Bezug), geschätzte Bezugssteuer ${cash(t.threeA.tax)}, netto ${cash(t.threeA.net)}. Eine weitergehende Staffelung der 3a-Bezüge ist nicht modelliert und könnte die Steuer reduzieren.</p>`:'';
   return `<details class="model-notes tax-details"><summary><span class="tax-info" aria-hidden="true">ⓘ</span>So rechnen wir mit Steuern</summary>${once}${yearly}${note}${threeA}<p><strong>Planungsannahme:</strong> Die Steuerwerte sind vereinfachte Schätzwerte für die langfristige Planung. Persönliche Faktoren wie Gemeinde, Zivilstand, Konfession, individuelle Abzüge und weitere steuerbare Einkünfte werden nicht vollständig berücksichtigt.</p></details>`;
  }
  function incomeComposition(s){
@@ -271,14 +271,15 @@ function renderMore() {
  }
  function assetComposition(s){
   const b=M.breakdown(s),pre=s.mode==='pre',projection='voraussichtlich zum Pensionierungszeitpunkt';
+  const p3Hint=b.assets.p3===null?projection:`Bezug ${b.assets.p3Age===null?'':`mit ${b.assets.p3Age}`} · ${cash(b.assets.p3Gross)} brutto minus ${cash(b.assets.p3Tax)} geschätzte Bezugssteuer`;
   const pkHint=`gemäss deiner PK-Entscheidung${b.assets.pk===null?'':` · ${b.pk.capitalTax===null?'PK-Kapital brutto, Steuer noch offen':'PK-Kapital netto nach Bezugssteuer'}`}`;
   return `<p class="hint">${pre?`Verfügbare Mittel ab Pensionierung mit ${s.values.retirement}`:`Verfügbare Mittel ab Alter ${s.values.age}`}</p><div class="asset-sources">
    ${assetRow(s,'cash','Bank / liquide Mittel',b.assets.cash,{part:'cash'})}
    ${assetRow(s,'securities','Wertschriften',b.assets.securities,{part:'securities',hint:pre?projection:''})}
-   ${pre?assetRow(s,'p3-assets','Säule 3a',b.assets.p3,{source:'pension3a',hint:projection})+assetRow(s,'pk-assets','PK-Kapital',b.assets.pk,{source:'pension',hint:pkHint}):''}
+   ${pre?assetRow(s,'p3-assets','Säule 3a netto',b.assets.p3,{source:'pension3a',hint:p3Hint})+assetRow(s,'pk-assets','PK-Kapital',b.assets.pk,{source:'pension',hint:pkHint}):''}
    ${assetRow(s,'other-assets','Weitere verfügbare Vermögenswerte',b.assets.other,{part:'otherAssets'})}
    ${b.assets.unallocated===null?'':assetRow(s,'unallocated-assets','Noch nicht aufgeteiltes verfügbares Vermögen',b.assets.unallocated,{part:'unallocated'})}
-  </div><dl class="detail-list" aria-live="polite">${detailRow('assets-total','Verfügbares Vermögen total',b.result.availableCapital,{total:true})}</dl>${pre?'<p class="hint">Noch nicht erfasste Vorsorgebeträge sind nicht eingerechnet. Eine separate 3a-Bezugssteuer ist noch nicht berücksichtigt.</p>':'<p class="hint">Bereits bezogenes PK- und 3a-Kapital ist in deinen verfügbaren Mitteln enthalten und wird nicht nochmals hinzugezählt.</p>'}
+  </div><dl class="detail-list" aria-live="polite">${detailRow('assets-total','Verfügbares Vermögen total',b.result.availableCapital,{total:true})}</dl>${pre?'<p class="hint">Noch nicht erfasste Vorsorgebeträge sind nicht eingerechnet. Die 3a-Bezugssteuer wird mit dem vereinfachten kantonalen Modell geschätzt: Bezug alles auf einmal ein Jahr vor dem PK-Bezug, approximativ und ohne weitere Staffelung.</p>':'<p class="hint">Bereits bezogenes PK- und 3a-Kapital ist in deinen verfügbaren Mitteln enthalten und wird nicht nochmals hinzugezählt.</p>'}
   <section class="bound-assets" aria-label="Gebundenes Vermögen"><h2>Gebundenes Vermögen</h2>${assetRow(s,'bound-assets','Immobilien netto',b.assets.bound,{part:'property',hint:'Immobilienwert abzüglich Hypotheken'})}<p class="hint">Dieses Vermögen ist aktuell nicht für laufende Entnahmen eingeplant.</p></section>`;
  }
  function showDetail(view){
@@ -289,8 +290,9 @@ function renderMore() {
   focusHeading();
  }
  function render3a(s){
-  const valid=!M.error('pension3a',draft,state),p=valid?M.toPlan(s):null,value=p?C.calculateRetirementStart(p).p3:null;
-  document.getElementById('livePlan').innerHTML=`<section class="p3-projection"><span>Voraussichtlich zum Pensionierungszeitpunkt</span><strong>${value===null?'Noch offen':cash(value)}</strong><p class="hint">Mit Alter ${state.values.retirement} · ergänzt dein verfügbares Vermögen.</p><details class="model-notes"><summary>So wird die Säule 3a berücksichtigt</summary><p>Guthaben und jährliche Beiträge werden mit der 3a-Rendite aus deinen Annahmen bis zur Pensionierung hochgerechnet. Eine separate 3a-Bezugssteuer ist noch nicht berücksichtigt.</p></details></section>`;
+  const valid=!M.error('pension3a',draft,state),p=valid?M.toPlan(s):null,value=p?C.calculateRetirementStart(p).p3:null,breakdown=p?C.calculateAvailableCapital(p).p3:null;
+  const p3Tax=breakdown&&breakdown.grossAtStart>0?`<p>Guthaben und jährliche Beiträge werden mit der 3a-Rendite aus deinen Annahmen hochgerechnet. Angenommen wird ein Bezug alles auf einmal ein Jahr vor dem PK-Bezug (Alter ${breakdown.withdrawalAge}): ${cash(breakdown.grossAtStart)} brutto minus ${cash(breakdown.taxAtStart)} geschätzte Bezugssteuer ergibt ${cash(breakdown.netAtStart)} netto. Die Rechnung ist approximativ; eine Staffelung der Bezüge könnte die Steuer reduzieren.</p>`:'<p>Guthaben und jährliche Beiträge werden mit der 3a-Rendite aus deinen Annahmen hochgerechnet.</p>';
+  document.getElementById('livePlan').innerHTML=`<section class="p3-projection"><span>Voraussichtlich zum Pensionierungszeitpunkt</span><strong>${value===null?'Noch offen':cash(value)}</strong><p class="hint">Mit Alter ${state.values.retirement} · ergänzt dein verfügbares Vermögen.</p><details class="model-notes"><summary>So wird die Säule 3a berücksichtigt</summary>${p3Tax}</details></section>`;
  }
  function assetFunding(s,r){
   if(!r)return '<p class="hint">Für die Finanzierung fehlen noch Angaben.</p>';

@@ -22,6 +22,10 @@
     select.setAttribute('aria-hidden', 'true');
     const label = document.querySelector(`label[for="${select.id}"]`);
     const title = label?.textContent?.trim() || 'Wohnkanton';
+    /* Kompakte Feldanzeige (V4-Schnellstart): nur der Kantonscode plus kurzer Hinweis im
+       Feld, z. B. «AR – für deine Steuerschätzung». Die Auswahlliste bleibt ausführlich. */
+    const compact = select.dataset.cantonCompact === '1';
+    const hint = select.dataset.cantonHint || '';
     if (label) { label.removeAttribute('for'); label.id ||= `${select.id}-label`; }
     const trigger = document.createElement('button');
     trigger.type = 'button';
@@ -88,8 +92,14 @@
         trigger.append(image);
       }
       const text = document.createElement('span');
-      text.textContent = code ? `${code} · ${TaxModel.config.cantons[code].name}` : (select.options[0]?.textContent?.trim() || select.dataset.emptyLabel || 'Noch offen');
+      text.textContent = code ? (compact ? code : `${code} · ${TaxModel.config.cantons[code].name}`) : (compact ? 'Bitte wählen' : (select.options[0]?.textContent?.trim() || select.dataset.emptyLabel || 'Noch offen'));
       trigger.append(text);
+      if (compact && hint) {
+        const hintNode = document.createElement('span');
+        hintNode.className = 'canton-trigger-hint';
+        hintNode.textContent = hint;
+        trigger.append(hintNode);
+      }
       const chevron = document.createElement('span');
       chevron.className = 'canton-chevron';
       chevron.setAttribute('aria-hidden', 'true');

@@ -5,6 +5,8 @@
 .v3-bottom-action{margin-top:14px}.v3-bottom-action button{width:100%}
 .v3-menu:not([hidden]){display:grid;min-width:220px;max-width:calc(100vw - 28px)}
 .v3-menu button{text-align:left}
+/* «Mein Plan» ist die wichtigste Seite und bleibt im Menü hervorgehoben. */
+.v3-menu [data-menu-page="plan"]{font-weight:600}
 .v3-capital-link{border:0;border-top:1px solid var(--v3-line);background:transparent;text-align:left;padding:8px 0 0;color:var(--v3-ink);min-width:0}
 .v3-capital-link small{display:block;color:var(--v3-green);font-size:13px;margin-top:5px}
 .v3-capital-link:hover strong{text-decoration:underline}
@@ -66,12 +68,11 @@
 @media(max-width:699px){.v3-pk-cards{grid-template-columns:1fr;gap:10px}.v3-pk-card{padding:10px}.v3-pk-value strong{font-size:21px}.v3-heading{padding-top:16px}}
 @media(prefers-reduced-motion:reduce){.v3-focus-target{animation:none}}
 /* Nur noch eine kleine, rechtsbündige Zeitangabe statt Seitentitel und Eyebrow */
-button.v3-plan-meta{display:block;max-width:540px;margin:8px auto 14px;border:0;background:transparent;text-align:right;padding:0;color:var(--v3-muted);font-size:13px;font-family:inherit;line-height:1.4;white-space:nowrap}
-button.v3-plan-meta span{white-space:nowrap}
-button.v3-plan-meta-chevron{color:var(--v3-muted);padding-left:4px}
-button.v3-plan-meta:hover,button.v3-plan-meta:focus-visible{color:var(--v3-green)}
-button.v3-plan-meta:hover .v3-plan-meta-chevron,button.v3-plan-meta:focus-visible .v3-plan-meta-chevron{color:var(--v3-green)}
-@media(max-width:699px){button.v3-plan-meta{font-size:12px}}
+.v3-plan-meta{display:block;border:0;background:transparent;text-align:right;padding:0;color:var(--v3-muted);font-size:13px;font-family:inherit;line-height:1.4;white-space:nowrap}
+.v3-plan-meta span{white-space:nowrap}
+/* Die Statuszeile ist reine Information – kein Link, kein Zeiger, kein Hover-Effekt. */
+.v3-plan-meta-chevron{display:none}
+@media(max-width:699px){.v3-plan-meta{font-size:12px}}
 .v3-actions-back{margin-top:12px}
 .v3-actions-back button{width:100%}
 .v3-visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -174,7 +175,7 @@ button.v3-plan-meta:hover .v3-plan-meta-chevron,button.v3-plan-meta:focus-visibl
 .v3-compare .v3-comparison-card.chosen{border-color:#54636a;background:#f1f2f0}.v3-compare .v3-comparison-head small,.v3-compare .v3-chosen-line strong{color:#39474f}
 
 /* --- «Mein Plan»: PK-Entscheid, Vorschau, gespeicherte Varianten --- */
-button.v3-plan-meta{margin:10px auto 2px}
+.v3-plan-meta{margin:0}
 .v3-plan-sub{max-width:540px;margin:0 auto 16px;color:var(--v3-muted);font-size:14px;line-height:1.45;font-family:system-ui,sans-serif}
 .v3-share-row{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .v3-share-field{display:flex;flex-direction:column;gap:4px}
@@ -188,10 +189,15 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-preview-caption{display:block;font:13px system-ui,sans-serif;color:var(--v3-muted);margin-bottom:10px}
 .v3-preview[data-preview=draft] .v3-preview-caption{color:var(--v3-green)}
 .v3-decision .v3-readout{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:0}
-.v3-decision .v3-readout .v3-readout-tile{display:block;padding:0;border:0;text-align:left;background:transparent;min-height:0}
-.v3-decision .v3-readout .v3-readout-tile span{font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-decision .v3-readout .v3-readout-tile{display:block;padding:8px;border:1px solid var(--v3-line);border-radius:7px;text-align:left;background:var(--v3-surface);min-height:0}
+.v3-decision .v3-readout .v3-readout-tile span{display:flex;align-items:center;gap:6px;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-decision .v3-readout .v3-readout-tile span .v3-info{margin-left:auto}
 .v3-decision .v3-readout .v3-readout-tile strong{font-size:21px;margin:2px 0 0;white-space:normal;overflow-wrap:anywhere}
 .v3-decision .v3-readout .v3-readout-tile small{text-align:left;margin:2px 0 0;font:13px system-ui,sans-serif}
+/* Fehlbetrag: Warnfarbe wie im Screen, Betrag bleibt die betonte Zahl. */
+.v3-decision .v3-readout .v3-readout-gap{background:#fdeceb;border-color:#f0c9c6}
+.v3-decision .v3-readout .v3-readout-gap span,.v3-decision .v3-readout .v3-readout-gap strong{color:var(--v3-warn,#b3261e)}
+.v3-readout-tile button.v3-readout-link{padding:0;border:0;background:transparent;text-align:left;color:inherit;font:inherit}
 .v3-readout-tile:hover strong{text-decoration:underline}
 .v3-decision-actions{display:grid;gap:10px;margin-top:16px}
 .v3-decision-actions .primary{width:100%}
@@ -203,19 +209,26 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-variants-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .v3-variants-head h2{margin:0}
 .v3-link{border:0;background:transparent;color:var(--v3-green);font:14px system-ui,sans-serif;padding:0;min-height:44px}
-/* «Meine Varianten» auf «Mein Plan»: dieselbe Kartendarstellung wie im Vergleich. */
+/* «Meine Varianten» auf «Mein Plan»: dieselbe Kartendarstellung wie im Vergleich.
+   Oben links der Auswahlkreis des aktuellen Plans, oben rechts «Aktueller Plan» bzw. «Übernehmen». */
 .v3-variant-list{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:10px}
 .v3-variant-row{display:block;border:1px solid var(--v3-line);border-radius:7px;background:var(--v3-surface);overflow:hidden}
-.v3-variant-row .v3-variant-select{display:block;width:100%;border:0;background:transparent;text-align:left;padding:12px 12px 0;color:var(--v3-ink);min-height:0}
+/* Die ganze Kachel lädt die Quote in den PK-Bezug: Zeiger und Hover machen das sichtbar. */
+.v3-variant-row{cursor:pointer}
+.v3-variant-row:hover{border-color:var(--v3-green)}
+.v3-variant-row .v3-variant-select:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-variant-row .v3-modal-icon,.v3-variant-row .v3-variant-adopt,.v3-variant-row .v3-variant-badge{cursor:pointer}
+.v3-variant-head{display:flex;align-items:flex-start;gap:8px;padding:12px 12px 0}
+.v3-variant-head .v3-variant-select{flex:1;display:block;border:0;background:transparent;text-align:left;padding:0;color:var(--v3-ink);min-height:0;min-width:0}
+.v3-variant-head .v3-compare-check{flex:none;margin-top:2px}
 .v3-variant-main{min-width:0}
 .v3-variant-main strong{display:block;font-size:16px;font-weight:550}
 .v3-variant-main small{display:block;font:13px system-ui,sans-serif;color:var(--v3-muted);margin-top:3px}
-.v3-variant-badge{font:12px system-ui,sans-serif;padding:3px 9px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);white-space:nowrap}
-/* Sichtbare Aktion: aktueller Plan bezeichnet, die anderen zum Übernehmen. */
-.v3-variant-actions{display:flex;align-items:center;justify-content:flex-end;border-top:1px solid var(--v3-line);margin-top:2px;min-height:46px;padding:0 12px}
-.v3-variant-state{display:inline-flex;align-items:center;gap:6px;font:600 13px system-ui,sans-serif;color:var(--v3-green)}
-.v3-variant-adopt{border:1px solid var(--v3-green);background:transparent;color:var(--v3-green);border-radius:999px;padding:7px 16px;font:600 13px system-ui,sans-serif;min-height:36px;cursor:pointer}
+.v3-variant-badge{flex:none;font:12px system-ui,sans-serif;padding:4px 10px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);white-space:nowrap}
+.v3-variant-adopt{flex:none;border:1px solid var(--v3-green);background:transparent;color:var(--v3-green);border-radius:999px;padding:6px 14px;font:600 13px system-ui,sans-serif;min-height:34px;cursor:pointer}
 .v3-variant-adopt:hover{background:var(--v3-soft)}
+/* Fehlbetrag als Warnwert in der Kennzahlenzeile. */
+.v3-compare-gap strong{color:var(--v3-warn,#b3261e)}
 .v3-plan-status{margin-top:20px;border-top:1px solid var(--v3-line);padding-top:8px}
 .v3-plan-status summary{font:14px system-ui,sans-serif;color:var(--v3-muted);min-height:44px;display:flex;align-items:center}
 .v3-chart-icon{font-size:15px;color:var(--v3-green);flex:none}
@@ -236,6 +249,8 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-compare-metric:nth-child(4),.v3-compare-metric:nth-child(5){border-top:1px solid var(--v3-line)}
 .v3-compare-check{width:22px;height:22px;border:2px solid #bdc5c2;border-radius:50%;display:grid;place-items:center;color:#fff;font:12px system-ui,sans-serif;margin-top:2px}
 .v3-compare-card.selected .v3-compare-check{border-color:var(--v3-green);background:var(--v3-green)}
+/* Der aktuelle Plan trägt den gefüllten Auswahlkreis. */
+.v3-compare-check-on{border-color:var(--v3-green);background:var(--v3-green)}
 .v3-compare-main{display:block;min-width:0}
 .v3-compare-title{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .v3-compare-title strong{font-size:17px;font-weight:550}
@@ -363,3 +378,308 @@ button.v3-plan-meta{margin:10px auto 2px}
 .v3-year-foot .v3-year-play{grid-column:1/-1;border:0;background:transparent;color:var(--v3-green);min-height:42px}
 @media(max-width:699px){.v3-pot-tiles{gap:6px}.v3-pot-tile{padding:8px}.v3-pot-tile strong{font-size:13px}.v3-pot-name{font-size:11px}.v3-pot-share{font-size:10px}.v3-pot-total strong{font-size:16px}.v3-year-foot{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.v3-year-foot button{font-size:12px;padding:0 6px}}
 @media(max-width:699px){.v3-year-block{padding:10px}.v3-year-block-head h3{font-size:16px}.v3-pot-cards{gap:6px}.v3-pot-card{padding:7px}.v3-pot-line strong{font-size:13px}.v3-year-wealth>strong{font-size:24px}.v3-year-legend strong{font-size:12px}.v3-year-foot button{font-size:12px}}
+/* Lange Erklärungen als Dialog statt Textwand im Seitenfluss. */
+.v3-modal-link{display:inline-flex;align-items:center;gap:6px;border:0;background:transparent;padding:0;color:var(--v3-green);font:13px system-ui,sans-serif;text-align:left;cursor:pointer}
+.v3-modal-link .v3-icon{flex:none;color:var(--v3-muted)}
+.v3-modal-link:hover{text-decoration:underline}
+.v3-plan-note{margin:10px 0 0}
+.v3-modal{border:1px solid var(--v3-line);border-radius:10px;padding:0;max-width:min(560px,92vw);width:100%;background:var(--v3-surface);color:var(--v3-ink);box-shadow:0 18px 48px #142b3430}
+.v3-modal::backdrop{background:#142b3466}
+.v3-modal-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--v3-line)}
+.v3-modal-head h2{margin:0;font-size:17px;font-weight:550;flex:1}
+.v3-modal-close{display:grid;place-items:center;width:36px;height:36px;border:1px solid var(--v3-line);border-radius:50%;background:transparent;color:var(--v3-muted);cursor:pointer}
+.v3-modal-body{padding:14px 16px;font:15px/1.55 system-ui,sans-serif;max-height:70vh;overflow:auto}
+.v3-modal-body p{margin:0 0 10px}
+.v3-modal-body p:last-child{margin-bottom:0}
+/* Anfang und Ende eines Jahres im gleichen Rahmen: Kopfzeile, Total, Balken, Legende. */
+.v3-year-start .v3-year-wealth{margin-top:10px}
+/* ⓘ in engen Rastern: öffnet den Dialog, kein Panel im Fluss. */
+.v3-modal-icon{display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;padding:0;margin:0;min-height:0;color:var(--v3-muted);cursor:pointer;line-height:1}
+.v3-modal-icon:hover{color:var(--v3-green)}
+/* Sicherheitsnetz: eine Erklärung in Zeile oder Raster darf nie überlappen. */
+.v3-compare-metric>span{flex-wrap:wrap}
+.v3-compare-metric .v3-info,.v3-readout-tile .v3-info{position:static}
+.v3-compare-metric .v3-info-panel,.v3-readout-tile .v3-info-panel{max-width:100%;width:100%}
+/* §9 Töpfe-Modell als Dialog, §8.5 Einstiege, §5.8 Weiteres Kapital, §16 Renditezeile. */
+.v3-modal-lead{margin:0 0 12px}
+.v3-donut-wrap{position:relative;display:grid;place-items:center;margin:8px 0 14px}
+.v3-donut{width:190px;height:190px}
+.v3-donut-total{position:absolute;display:grid;justify-items:center;gap:2px}
+.v3-donut-total span{font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-donut-total strong{font-size:19px;font-weight:600;font-variant-numeric:tabular-nums}
+.v3-donut-legend{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:6px}
+.v3-donut-legend li{display:grid;grid-template-columns:24px minmax(0,1fr) auto auto;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--v3-line)}
+.v3-donut-legend li:last-child{border-bottom:0}
+.v3-donut-legend strong{font-variant-numeric:tabular-nums}
+.v3-donut-legend small{font:12px system-ui,sans-serif;color:var(--v3-muted);min-width:34px;text-align:right}
+.v3-pot-notes{display:grid;gap:10px;margin-bottom:14px}
+.v3-pot-note{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px}
+.v3-pot-note strong{display:block;font:600 14px system-ui,sans-serif}
+.v3-pot-note p{margin:2px 0 0;font:13px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-modal-action{width:100%}
+.v3-entry-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.v3-entry{display:grid;justify-items:center;gap:6px;padding:14px 10px;border:1px solid var(--v3-line);border-radius:8px;background:var(--v3-surface);color:var(--v3-ink);font:14px system-ui,sans-serif;cursor:pointer;text-align:center}
+.v3-entry:hover{border-color:var(--v3-green);color:var(--v3-green)}
+.v3-entry-icon{color:var(--v3-green);display:grid;place-items:center}
+.v3-start-capital{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin:8px 0 0}
+.v3-start-capital span{font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-start-capital strong{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.v3-year-rendite{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin:0;padding:10px 12px;border:1px solid var(--v3-line);border-radius:8px;background:var(--v3-surface);font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-year-rendite strong{color:var(--v3-ink);font-variant-numeric:tabular-nums}
+.v3-year-rendite small{font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-detail-list{margin:0 0 10px}
+.v3-detail-list>div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px solid var(--v3-line)}
+.v3-detail-list dt{min-width:0;color:var(--v3-muted)}
+.v3-detail-list dd{margin:0;font-variant-numeric:tabular-nums}
+.v3-detail-total{margin-top:4px;padding-top:8px;border-top:1px solid var(--v3-ink)}
+.v3-detail-total dd{font-weight:600}
+/* §19.1: sechs Kennzahlen als 3 + 3 auch auf Mobile. */
+@media(max-width:699px){.v3-compare-metrics{grid-template-columns:repeat(3,minmax(0,1fr))}.v3-compare-metric strong{font-size:15px}.v3-compare-metric>span{font-size:11px}}
+/* Startkapital-Dialog (Designvorlage): Hero-Kachel, Positionszeilen, aufklappbares «Weiteres Kapital». */
+.v3-cap-hero{display:grid;gap:10px;padding:14px;border:1px solid var(--v3-line);border-radius:9px;background:var(--v3-soft);margin-bottom:12px}
+.v3-cap-hero-main{display:flex;align-items:flex-start;gap:12px}
+.v3-cap-hero-main>div{display:grid;gap:2px}
+.v3-cap-icon{color:var(--v3-green);flex:none}
+.v3-cap-label{display:inline-flex;align-items:center;gap:4px;font:600 14px system-ui,sans-serif;color:var(--v3-ink)}
+.v3-cap-total{font-size:27px;font-weight:600;font-variant-numeric:tabular-nums;letter-spacing:-.4px}
+.v3-cap-hero small{display:inline-flex;align-items:center;gap:4px;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-cap-note{margin:0;font:13px/1.5 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-cap-row{display:grid;grid-template-columns:26px minmax(0,1fr) auto;align-items:center;gap:10px;padding:12px;border:1px solid var(--v3-line);border-radius:9px;background:var(--v3-surface)}
+.v3-cap-row+.v3-cap-row{margin-top:8px}
+.v3-cap-body{min-width:0;display:grid;gap:2px}
+.v3-cap-body small{font:12px/1.4 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-cap-row strong{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-cap-more{margin-top:8px;border:1px solid var(--v3-line);border-radius:9px;background:var(--v3-surface)}
+.v3-cap-more>summary{display:grid;grid-template-columns:26px minmax(0,1fr) auto 20px;align-items:center;gap:10px;padding:12px;cursor:pointer;list-style:none}
+.v3-cap-more>summary::-webkit-details-marker{display:none}
+.v3-cap-more>summary strong{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-cap-chevron{color:var(--v3-muted);display:grid;place-items:center}
+.v3-cap-more[open] .v3-cap-chevron .v3-icon{transform:rotate(0deg)}
+.v3-cap-more:not([open]) .v3-cap-chevron .v3-icon{transform:rotate(180deg)}
+.v3-cap-rows{padding:0 12px 4px}
+.v3-cap-rows .v3-cap-row{border:0;border-top:1px solid var(--v3-line);border-radius:0;padding:10px 0;background:transparent}
+/* Jahresrechnung: nummerierte Abschnitte mit Kopfzeile, Zeilen und ⓘ. */
+.v3-calc-section .v3-year-block-icon{color:var(--v3-muted)}
+.v3-calc-rows{display:grid;gap:2px}
+.v3-calc-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 10px;padding:7px 0;border-bottom:1px solid var(--v3-line)}
+.v3-calc-row:last-child{border-bottom:0}
+.v3-calc-row>span{display:inline-flex;align-items:center;gap:4px;min-width:0;color:var(--v3-muted);font:13px system-ui,sans-serif}
+.v3-calc-row>strong{font-size:15px;font-weight:550;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-calc-row>small{grid-column:1/-1;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-calc-row.v3-calc-total{background:var(--v3-soft);margin:2px 0 0;padding:8px;border-radius:6px;border-bottom:0}
+.v3-calc-row.v3-calc-total>span{color:var(--v3-ink);font-weight:600}
+.v3-calc-row.v3-calc-total>strong{color:var(--v3-green);font-size:17px;font-weight:600}
+.v3-calc-row.v3-calc-alert{background:#fdeceb;margin:2px 0 0;padding:8px;border-radius:6px;border-bottom:0}
+.v3-calc-row.v3-calc-alert>span,.v3-calc-row.v3-calc-alert>strong{color:var(--v3-warn,#b3261e);font-weight:600}
+.v3-calc-foot{display:flex;gap:8px;margin-top:12px;padding-top:10px;border-top:1px solid var(--v3-line);font:12px/1.5 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-calc-foot .v3-icon{flex:none;color:var(--v3-muted)}
+.v3-calc-close{width:100%;margin-top:12px}
+.v3-calc-toggle{border:1px solid var(--v3-line);background:transparent;color:var(--v3-green);border-radius:999px;padding:4px 10px;font:12px system-ui,sans-serif;margin-left:auto;cursor:pointer}
+/* «Mein Plan» nach Designvorlage: Tipp, Statusbox, Kartenstatus, Einstiegskacheln, Fusszeile. */
+.v3-tip{display:grid;grid-template-columns:20px minmax(0,1fr) 28px;gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--v3-line);border-radius:9px;background:var(--v3-soft);margin-bottom:12px}
+.v3-tip .v3-icon{color:var(--v3-green);margin-top:2px}
+.v3-tip strong{display:block;font:600 13px system-ui,sans-serif}
+.v3-tip p{margin:2px 0 0;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-tip button{border:0;background:transparent;color:var(--v3-muted);cursor:pointer;padding:0;display:grid;place-items:center}
+.v3-decision-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+.v3-decision-head h3{margin:0;font:600 15px system-ui,sans-serif}
+.v3-decision-head .primary{min-height:36px;padding:0 12px;font-size:13px}
+.v3-outcome{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:10px;align-items:center;margin-top:10px;padding:12px;border-radius:9px;border:1px solid #f0c9c6;background:#fdeceb}
+.v3-outcome.watch{border-color:#f2ddb0;background:#fdf6e6}
+.v3-outcome.covered{border-color:#bfe0cd;background:var(--v3-soft)}
+.v3-outcome.pending{border-color:var(--v3-line);background:var(--v3-surface)}
+.v3-outcome strong{display:block;font:600 14px system-ui,sans-serif;color:var(--v3-warn,#b3261e)}
+.v3-outcome.watch strong{color:#8a6100}
+.v3-outcome.covered strong{color:var(--v3-green)}
+.v3-outcome.pending strong{color:var(--v3-ink)}
+.v3-outcome p{margin:2px 0 0;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-outcome-icon{color:var(--v3-warn,#b3261e);display:grid;place-items:center}
+.v3-outcome.watch .v3-outcome-icon{color:#8a6100}
+.v3-outcome.covered .v3-outcome-icon{color:var(--v3-green)}
+.v3-outcome-link{border:1px solid var(--v3-green);background:var(--v3-surface);color:var(--v3-green);border-radius:7px;min-height:36px;padding:0 12px;font:600 13px system-ui,sans-serif;cursor:pointer;white-space:nowrap}
+.v3-section-sub{margin:2px 0 10px;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-variant-status{flex:none;display:inline-flex;align-items:center;gap:4px;font:600 12px system-ui,sans-serif;padding:4px 10px;border-radius:999px;white-space:nowrap}
+.v3-variant-status.gap{background:#fdeceb;color:var(--v3-warn,#b3261e)}
+.v3-variant-status.watch{background:#fdf6e6;color:#8a6100}
+.v3-variant-status.covered{background:var(--v3-soft);color:var(--v3-green)}
+.v3-variant-status.pending{background:var(--v3-line);color:var(--v3-muted)}
+.v3-variant-head .v3-compare-check{width:22px;height:22px;flex:none}
+.v3-entry-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:18px 0 0}
+.v3-entry{display:flex;align-items:center;gap:10px;padding:14px 12px;border:1px solid var(--v3-line);border-radius:9px;background:var(--v3-surface);color:var(--v3-ink);font:14px system-ui,sans-serif;cursor:pointer;text-align:left}
+.v3-entry:hover{border-color:var(--v3-green)}
+.v3-entry-copy{display:grid;gap:2px;min-width:0}
+.v3-entry-copy strong{font:600 14px system-ui,sans-serif}
+.v3-entry-copy small{font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-plan-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:12px;border-top:1px solid var(--v3-line)}
+.v3-plan-footer .v3-save{width:auto;margin:0}
+/* Space-Optimierung: Titel und Meta in einer Zeile, straffer Kopfbereich. */
+/* Verbindliche Header-Regel: derselbe Kopf in jedem Zustand (leer, Schnellstart, Plan).
+   Mobil Titel oben, Status darunter (gleicher Block); ab 700 px beide in einer Zeile.
+   Der Scrollbar-Graben ist reserviert, damit der Titel beim Zustandswechsel nicht seitlich springt. */
+html{scrollbar-gutter:stable}
+.masthead{min-height:58px}
+.v3-heading.v3-heading-plan{display:flex;flex-direction:column;align-items:flex-start;gap:0;padding-top:0;padding-bottom:0;margin:0 0 2px;max-width:none;width:100%}
+.v3-heading.v3-heading-plan h1{margin:0;line-height:1.1;flex:0 0 auto;width:auto;max-width:none;white-space:nowrap}
+.v3-heading.v3-heading-plan .v3-plan-meta{margin:2px 0 0;min-height:0;max-width:none;text-align:left;flex:none;width:max-content;max-width:100%}
+.v3-decision{padding-top:14px;padding-bottom:14px}
+.v3-section+.v3-section{margin-top:16px}/* Enge Displays: Statusbox und Aktionsknopf untereinander statt gequetscht. */
+@media(min-width:460px){
+  /* Sobald Titel und Statuszeile nebeneinander passen, stehen sie in einer Zeile. */
+  .v3-heading.v3-heading-plan{flex-direction:row;align-items:flex-end;justify-content:space-between;gap:0 10px}
+  .v3-heading.v3-heading-plan .v3-plan-meta{margin:0;text-align:right}
+}
+@media(max-width:699px){
+  .v3-outcome{grid-template-columns:22px minmax(0,1fr)}
+  .v3-outcome-link{grid-column:1/-1;width:100%;justify-content:center;display:inline-flex;align-items:center;gap:6px}
+}
+@media(max-width:459px){
+  /* Schmale Displays: Statuszeile unter dem Titel, beide bündig links. */
+  .v3-heading.v3-heading-plan{gap:2px 8px}
+  .v3-heading.v3-heading-plan .v3-plan-meta{font-size:12px}
+}/* Einstiegskacheln: auf schmalen Displays einspaltig und ohne Textüberlauf. */
+.v3-entry-copy strong,.v3-entry-copy small{overflow-wrap:anywhere}
+@media(max-width:430px){.v3-entry-grid{grid-template-columns:1fr}}
+/* Tipp direkt unter dem Hamburger: aus dem Textfluss gelöst, oben rechts verankert. */
+.shell{position:relative}.v3-tip{position:static;max-width:none;margin:0 0 12px;background:var(--v3-surface)}
+@media(max-width:699px){.v3-tip{margin:0 0 10px}}
+/* Jahresverlauf: Abschnitte und Totale sind aufklappbar, standardmässig eingeklappt. */
+.v3-calc-section{border-bottom:1px solid var(--v3-line);padding:0}
+.v3-calc-section:last-of-type{border-bottom:0}
+.v3-calc-section>summary{display:flex;align-items:center;gap:8px;padding:12px 0;cursor:pointer;list-style:none;min-height:44px}
+.v3-calc-section>summary::-webkit-details-marker{display:none}
+.v3-calc-section>summary h4{margin:0;font:600 15px system-ui,sans-serif;flex:1}
+.v3-calc-chevron{display:grid;place-items:center;color:var(--v3-muted);transition:transform .15s ease}
+details[open]>summary .v3-calc-chevron{transform:rotate(180deg)}
+.v3-calc-total-row{border:1px solid var(--v3-line);border-radius:8px;background:var(--v3-surface);margin:0 0 8px}
+.v3-calc-total-row>summary{display:grid;grid-template-columns:minmax(0,1fr) auto 18px;align-items:center;gap:8px;padding:11px 12px;cursor:pointer;list-style:none;min-height:44px}
+.v3-calc-total-row>summary::-webkit-details-marker{display:none}
+.v3-calc-total-row>summary>span{display:inline-flex;align-items:center;gap:4px;font:600 14px system-ui,sans-serif;color:var(--v3-ink)}
+.v3-calc-total-row>summary>strong{font-size:16px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--v3-green)}
+.v3-calc-total-row>div{padding:0 12px 4px}
+.v3-calc-total-row.v3-calc-alert{border-color:#f0c9c6;background:#fdeceb}
+.v3-calc-total-row.v3-calc-alert>summary>span,.v3-calc-total-row.v3-calc-alert>summary>strong{color:var(--v3-warn,#b3261e)}
+/* Abschnittskopf im Jahresverlauf: Beträge auch eingeklappt sichtbar. */
+.v3-calc-amounts{display:inline-flex;align-items:baseline;gap:8px;margin-left:auto;padding-right:4px}
+.v3-calc-amounts strong{font-size:15px;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v3-calc-amounts strong.muted{font-size:12px;font-weight:500;color:var(--v3-muted)}
+.v3-calc-amounts strong.alert{color:var(--v3-warn,#b3261e)}
+@media(max-width:430px){.v3-calc-amounts strong.muted{display:none}}
+/* Kopfzeile «Mein Plan»: Zeitangabe rechtsbündig auf Höhe des Titels. */
+.v3-heading.v3-heading-plan{flex-wrap:wrap;align-items:flex-start;gap:2px 12px}
+.v3-heading.v3-heading-plan h1{flex:0 0 auto;min-width:0;white-space:nowrap}
+.v3-heading.v3-heading-plan .v3-plan-meta{flex:0 0 auto;margin-left:0;white-space:nowrap}
+@media(min-width:460px){
+  /* In der Zeile: Statuszeile rechts, Titel bleibt links oben stehen. */
+  .v3-heading.v3-heading-plan{align-items:flex-end}
+  .v3-heading.v3-heading-plan .v3-plan-meta{margin-left:auto}
+}
+/* Testmodus-Leiste: nur sichtbar, wenn sie gerendert wird (Development). */
+.v3-dev{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:0 0 10px;padding:8px 10px;border:1px dashed var(--v3-line);border-radius:8px;background:#f4f1e8;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-dev strong{font:600 12px system-ui,sans-serif;color:var(--v3-ink)}
+.v3-dev span{flex:1;min-width:140px}
+.v3-dev button{border:1px solid var(--v3-green);background:var(--v3-surface);color:var(--v3-green);border-radius:6px;min-height:30px;padding:0 10px;font:600 12px system-ui,sans-serif;cursor:pointer}
+.v3-dev .v3-dev-status{flex:1 0 100%;color:var(--v3-green);min-width:0}
+/* Jahresrechnung über die volle Breite der Karte; kein «Alle einblenden» mehr. */
+.v3-year-detail .v3-info-panel{max-width:none}
+.v3-year-detail>summary .v3-info-glyph{margin-left:auto}
+.v3-calc-toggle{display:none}
+/* «Plan genauer machen»: vier Schritte in fester Reihenfolge mit Herkunft/Stand. */
+.v3-steps{margin:18px 0 0}
+.v3-steps h2{font:600 17px system-ui,sans-serif;margin:0 0 8px}
+.v3-step-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.v3-step{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--v3-surface);border:1px solid var(--v3-line);border-radius:10px;padding:10px 12px;min-height:52px;font-family:system-ui,sans-serif;color:var(--v3-ink);cursor:pointer}
+.v3-step:hover,.v3-step:focus-visible{border-color:var(--v3-green)}
+.v3-step-index{flex:none;width:22px;height:22px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);display:flex;align-items:center;justify-content:center;font:600 12px system-ui,sans-serif}
+.v3-step-copy{flex:1;min-width:0}
+.v3-step-copy strong{display:block;font-size:15px}
+.v3-step-copy small{display:block;margin-top:2px;font-size:12px;color:var(--v3-muted)}
+.v3-step-state{flex:none;padding:3px 9px;border-radius:999px;font:600 12px system-ui,sans-serif;white-space:nowrap}
+.v3-step-state.done{background:var(--v3-soft);color:var(--v3-green)}
+.v3-step-state.estimated{background:#fdf6e6;color:#8a6100}
+.v3-step-state.open{background:var(--v3-line);color:var(--v3-muted)}
+/* Herkunft einer Zahl: Schätzungen sind sichtbar als solche benannt (AHV-Schritt, AHV-Editor). */
+@media(max-width:430px){.v3-step{padding:10px}.v3-step-copy small{font-size:11px}}
+/* Daten und Sicherung (Annahmen): sichern, laden, löschen – immer sichtbar. */
+.v3-data{margin-top:18px;border:1px solid var(--v3-line);border-radius:10px;padding:14px;background:var(--v3-surface)}
+.v3-data h2{font:600 16px system-ui,sans-serif;margin:0 0 6px}
+.v3-data .v3-hint{margin:0}
+.v3-data-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.v3-data-actions button{min-height:44px;padding:0 14px;border-radius:8px;background:transparent;font:600 14px system-ui,sans-serif;cursor:pointer}
+.v3-data-load{border:1px solid var(--v3-green);color:var(--v3-green)}
+.v3-data-load:hover,.v3-data-load:focus-visible{background:var(--v3-soft)}
+.v3-data-clear{border:1px solid #b3261e;color:#b3261e}
+.v3-data-clear[data-confirmed="true"]{background:#b3261e;color:#fff}
+.v3-data-status{margin:8px 0 0;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-data-status:empty{display:none}
+/* Schnellstart: vier Eingabekarten (Desktop 2×2, mobil untereinander), kompakte Situationswahl. */
+.v3-situation{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0 4px}
+.v3-situation-label{font:600 13px system-ui,sans-serif;color:var(--v3-muted);width:100%}
+.v3-segments{display:flex;flex-wrap:wrap;gap:8px}
+/* Aktive Situation: gefüllte grüne Pille mit weisser Schrift; inaktiv hell mit Rand. */
+.v3-segment{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--v3-line);background:var(--v3-surface);font:600 14px system-ui,sans-serif;color:var(--v3-green);cursor:pointer}
+.v3-segment svg{flex:none}
+.v3-segment[aria-pressed="true"]{background:var(--v3-green);border-color:var(--v3-green);color:#fff}
+.v3-segment:hover:not([aria-pressed="true"]),.v3-segment:focus-visible{border-color:var(--v3-green)}
+.v3-segment:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v3-start{display:grid;gap:12px;margin:16px 0 0}
+@media(min-width:700px){.v3-start{grid-template-columns:1fr 1fr}}
+.v3-start-card{position:relative;border:1px solid var(--v3-line);border-radius:10px;background:var(--v3-surface);padding:14px}
+.v3-start-card:focus-within{border-color:var(--v3-green)}
+.v3-start-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.v3-start-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:var(--v3-soft);color:var(--v3-green);flex:none}
+.v3-start-index{display:inline-flex;align-items:center;justify-content:center;width:22px;height:22px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);font:600 12px system-ui,sans-serif}
+.v3-start-card label{display:block;margin:8px 0 10px;font:600 16px system-ui,sans-serif;color:var(--v3-ink)}
+.v3-start-entry{display:flex;align-items:baseline;gap:8px}
+.v3-start-entry input{flex:1;min-width:0;min-height:44px;padding:6px 10px;border:1px solid var(--v3-line);border-radius:8px;background:transparent;color:var(--v3-ink);font:24px Georgia,serif}
+.v3-start-entry input:focus-visible{outline:2px solid var(--v3-green);outline-offset:1px}
+.v3-start-entry span{flex:none;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-start form>.v3-actions{margin-top:16px}
+.v3-start form .primary{width:100%}
+@media(min-width:700px){.v3-start form .primary{width:auto;min-width:280px}}
+.v3-start-note{margin:14px 0 0;font:13px/1.5 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-start-note .v3-modal-icon{vertical-align:-3px}
+/* Was der erste Check leistet: drei ruhige Zeilen mit Icons aus dem lokalen Set. */
+.v3-start-benefits{list-style:none;margin:16px 0 0;padding:0;display:grid;gap:8px}
+.v3-start-benefits li{display:flex;align-items:center;gap:10px;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-start-benefits .v3-start-icon{width:28px;height:28px;border-radius:8px}
+/* Vorläufige Beurteilung (erster Check) und geschätzte Steuern. */
+.v3-outcome-note{margin:6px 0 0;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-tax-estimate{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:10px 0 0;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-tax-estimate span{font-weight:600;color:var(--v3-ink)}
+/* Kleiner Hinweis unter der Frage (Schnellstart). */
+.v3-start-hint{display:block;margin:-4px 0 10px;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-start-hint .v3-modal-icon{vertical-align:-4px}
+
+/* «So kannst du deinen Plan verbessern»: Massnahmen mit berechneter Wirkung. */
+.v3-actions-plan{margin:14px 0 0;border-top:1px solid var(--v3-line);padding-top:12px}
+.v3-actions-plan h3{margin:0 0 8px;font:600 16px system-ui,sans-serif;color:var(--v3-ink)}
+.v3-actions-plan ul{list-style:none;margin:0;padding:0;display:grid;gap:10px}
+.v3-actions-plan li{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;border:1px solid var(--v3-line);border-radius:10px;padding:12px;background:var(--v3-surface)}
+.v3-action-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:var(--v3-soft);color:var(--v3-green);flex:none}
+.v3-action-body strong{display:block;font:600 15px system-ui,sans-serif}
+.v3-action-body p{margin:4px 0 0;font:13px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v3-action-impact{margin:8px 0 0;font:600 13px system-ui,sans-serif;color:var(--v3-ink)}
+.v3-action-note{font-size:12px}
+.v3-action-cta{grid-column:2;justify-self:start;border:1px solid var(--v3-green);background:transparent;color:var(--v3-green);border-radius:999px;min-height:40px;padding:0 14px;font:600 13px system-ui,sans-serif;cursor:pointer}
+.v3-action-cta:hover,.v3-action-cta:focus-visible{background:var(--v3-soft)}
+.v3-action-profiles{list-style:none;margin:8px 0 0;padding:0;display:grid;gap:4px}
+.v3-action-profiles li{display:flex;align-items:baseline;gap:8px;border:0;padding:0;background:transparent;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-action-profiles li strong{color:var(--v3-ink)}
+.v3-action-profiles li.current span{font-weight:600;color:var(--v3-ink)}
+@media(min-width:700px){.v3-actions-plan li{grid-template-columns:auto minmax(0,1fr) auto;align-items:center}.v3-action-cta{grid-column:3;grid-row:1}}
+
+/* Herleitungen im Dialog: Label links, Betrag rechts. */
+.v3-info-list{margin:12px 0 0;display:grid;gap:6px}
+.v3-info-list>div{display:flex;justify-content:space-between;align-items:baseline;gap:12px;border-bottom:1px solid var(--v3-line);padding-bottom:6px}
+.v3-info-list>div:last-child{border-bottom:0}
+.v3-info-list dt{margin:0;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-info-list dd{margin:0;font:600 14px system-ui,sans-serif;color:var(--v3-ink);text-align:right;white-space:nowrap}
+.v3-info-list dt small{margin-left:4px;font-weight:400;color:var(--v3-muted)}
+
+/* Verbesserungs-Einstieg auf «Mein Plan» und eigener Screen. */
+.v3-improve-entry{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;margin:12px 0 0;padding:12px;border:1px solid var(--v3-line);border-radius:10px;background:var(--v3-surface);text-align:left;cursor:pointer;font-family:system-ui,sans-serif}
+.v3-improve-entry:hover,.v3-improve-entry:focus-visible{border-color:var(--v3-green)}
+.v3-improve-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:var(--v3-soft);color:var(--v3-green)}
+.v3-improve-copy strong{display:block;font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
+.v3-improve-copy small{display:block;margin-top:2px;font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v3-improve-chevron{color:var(--v3-muted)}

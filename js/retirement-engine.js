@@ -38,6 +38,11 @@
       const injection=Math.max(0,Number(injections[age]??0));
       capital+=injection;
       const c=cashflow(age), reserve=cashflow(age+1).withdrawal+cashflow(age+2).withdrawal;
+      /* Preisbasis: intern wird in heutiger Kaufkraft gerechnet (Bedarf real konstant,
+         nominal feste Einnahmen verlieren an Kaufkraft). Für die Anzeige wird jede Zeile
+         mit genau diesem Faktor in nominale CHF ihres Jahres umgerechnet – eine Zahlenwelt,
+         eine Quelle. */
+      const factor=Math.pow(1+inflation,age-p.start);
       const cash=Math.min(capital,c.withdrawal), bonds=Math.min(Math.max(0,capital-cash),reserve);
       const buckets=[cash,bonds,Math.max(0,capital-cash-bonds)];
       const transfers=buckets.map((v,i)=>v-previous[i]);
@@ -55,13 +60,23 @@
       const gains=after.map((v,i)=>v*rates[i]);
       const endBuckets=after.map((v,i)=>Math.max(0,v+gains[i]));
       const end=endBuckets.reduce((a,b)=>a+b,0);
+      const sum=gains.reduce((a,b)=>a+b,0);
+      /* Nominale Sicht derselben Zeile: jeder Betrag dieses Jahres in CHF des Jahres. */
+      const nominal={factor,free:capital*factor,bound:p.bound,end:end*factor,
+        buckets:buckets.map(v=>v*factor),endBuckets:endBuckets.map(v=>v*factor),
+        takes:takes.map(v=>v*factor),gains:gains.map(v=>v*factor),transfers:transfers.map(v=>v*factor),
+        need:c.need*factor,rent:c.income*factor,grossIncome:c.grossIncome*factor,
+        estimatedIncomeTax:c.estimatedIncomeTax===null?null:c.estimatedIncomeTax*factor,
+        taxableAnnualIncome:c.taxableAnnualIncome,withdrawal:c.withdrawal*factor,special:c.special*factor,
+        ret:sum*factor,net:(end-capital)*factor,injection:injection*factor,
+        sources:c.sources.map(entry=>({...entry,gross:entry.gross*factor}))};
       rows.push({age,free:capital,bound:p.bound,total:capital+p.bound,need:c.need,rent:c.income,
         grossIncome:c.grossIncome,estimatedIncomeTax:c.estimatedIncomeTax,taxableAnnualIncome:c.taxableAnnualIncome,
-        sources:c.sources,ret:gains.reduce((a,b)=>a+b,0),gains,net:end-capital,gap,withdrawal:c.withdrawal,
-        special:c.special,buckets,takes,transfers,endBuckets,end,reserve,injection});
+        sources:c.sources,ret:sum,gains,net:end-capital,gap,withdrawal:c.withdrawal,
+        special:c.special,buckets,takes,transfers,endBuckets,end,reserve,injection,factor,nominal,currency:'nominal'});
       capital=end;previous=endBuckets;
     }
-    rows.push({age:horizon,free:capital,bound:p.bound,total:capital+p.bound,need:0,rent:0,ret:0,net:0,gap:0,withdrawal:0,buckets:previous,endBuckets:previous,end:capital,terminal:true});
+    rows.push({age:horizon,free:capital,bound:p.bound,total:capital+p.bound,need:0,rent:0,ret:0,net:0,gap:0,withdrawal:0,buckets:previous,endBuckets:previous,end:capital,terminal:true,factor:Math.pow(1+inflation,horizon-p.start),nominal:{factor:Math.pow(1+inflation,horizon-p.start),free:capital*Math.pow(1+inflation,horizon-p.start),end:capital*Math.pow(1+inflation,horizon-p.start),bound:p.bound,buckets:previous.map(v=>v*Math.pow(1+inflation,horizon-p.start)),endBuckets:previous.map(v=>v*Math.pow(1+inflation,horizon-p.start))}});
     return rows;
   }
   root.RetirementEngine={simulate};

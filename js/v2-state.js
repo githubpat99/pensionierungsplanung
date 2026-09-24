@@ -22,13 +22,13 @@
   const pre=s.mode==='pre';
   switch(group){
    case 'time':return [field('age','Alter heute','Jahre',18,100,1),...(pre?[field('retirement','Pensionierungsalter','Jahre',50,100,1)]:[])];
-   case 'need':return [field('need','Lebensbedarf','CHF / Monat')];
+   case 'need':return [field('need','Lebensbedarf netto','CHF / Monat')];
    case 'regular':return fields('income',s);
    case 'free':return [field('free','Frei verfügbares Vermögen','CHF')];
    case 'income':return [{key:'canton',label:'Dein Wohnsitzkanton',type:'canton'},field('ahv','AHV'),field('other','Weitere Renten'),field('additional','Weitere Einnahmen / Nettomiete')];
    case 'tax':return [{key:'canton',label:'Dein Wohnsitzkanton',type:'canton'}];
    case 'assets':return [field('cash','Bank / liquide Mittel','CHF'),field('securities','Wertschriften','CHF'),...(pre?[field('saving','Zusätzliche Anlage pro Jahr','CHF / Jahr')]:[]),{...field('otherAssets','Weitere verfügbare Vermögenswerte','CHF'),optional:true},{...field('propertyValue','Immobilienwert','CHF'),optional:true,section:'Gebundenes Vermögen (optional)'},{...field('mortgage','Hypotheken','CHF'),optional:true}];
-   case 'pension':return pre?[{...field('pk','PK-Guthaben heute','CHF'),section:'Pensionskasse'},field('pkContrib','Sparbeiträge zusammen','CHF / Jahr'),field('pkShare','Kapitalanteil','%',0,100)]:[field('pkRent','Laufende PK-Rente')];
+   case 'pension':return pre?[{...field('pk','PK-Guthaben heute','CHF'),section:'Pensionskasse'},field('pkContrib','Arbeitnehmer- und Arbeitgeberbeiträge','CHF / Jahr'),field('pkShare','Kapitalanteil','%',0,100)]:[field('pkRent','Laufende PK-Rente')];
    case 'pension3a':return pre?[field('p3','3a-Guthaben heute','CHF'),field('p3Contrib','Beiträge pro Jahr','CHF / Jahr')]:[];
    case 'assumptions':return [field('targetAge','Planung bis Alter','Jahre',19,110,1),field('inflation','Inflation','%',0,20),...(pre?[{...field('pkInterest','PK-Verzinsung','%',0,100),section:'Aufbau bis Pensionierung'},field('uws','PK-Umwandlungssatz','%',0,20),field('p3Return','3a-Rendite','%',0,100),field('secReturn','Wertschriftenrendite','%',0,100)]:[])];
    default:return [];
@@ -70,19 +70,23 @@
   const keepOptional=options?.keepOptional===true;
   return fields('assets',s).filter(f=>assetParts[part]?.includes(f.key)).map(f=>({...f,optional:keepOptional?!!f.optional:false,section:undefined}));
  }
+  // `allowEmpty` ist eine additive V4-Option: JEDES leere Feld gilt als nicht erfasst statt als
+  // Fehler. Die Rechnung bleibt unverändert: ein nicht erfasstes Feld zählt nicht als 0, sondern
+  // lässt den Plan unvollständig (dieselbe Semantik wie bei `keepOptional`).
+  const emptyAllowed=(f,values,options)=>options?.allowEmpty===true&&!entered(values[f.key]);
  function assetError(part,values,s,options){
   if(!assetParts[part])return {message:'Unbekannte Vermögenszeile.'};
-  const bad=assetFields(part,s,options).find(f=>!validField(f,values[f.key]));
+  const bad=assetFields(part,s,options).find(f=>!emptyAllowed(f,values,options)&&!validField(f,values[f.key]));
   return bad?{key:bad.key,message:`Bitte «${bad.label}» als gültigen Betrag ab 0 erfassen.`}:null;
  }
  function applyAsset(s,part,values,options){
   const problem=assetError(part,values,s,options);if(problem)throw Error(problem.message);
   const next=clone(s),a=next.details.assets??{partial:true,unallocated:num(s.values.free)};
   // Allocate newly identified sources from an existing aggregate; known sources change by delta.
-  if(['cash','securities','otherAssets'].includes(part)&&!entered(a[part]))a.unallocated=Math.max(0,num(a.unallocated)-num(values[part]));
+  if(['cash','securities','otherAssets'].includes(part)&&!entered(a[part])&&!emptyAllowed({key:part},values,options))a.unallocated=Math.max(0,num(a.unallocated)-num(values[part]));
   for(const f of assetFields(part,s,options)){
-   // Leer gelassene optionale Felder bleiben unbekannt statt als 0 zu gelten.
-   if(options?.keepOptional===true&&f.optional&&!entered(values[f.key]))delete a[f.key];
+   // Leer gelassene Felder bleiben unbekannt statt als 0 zu gelten (optional oder allowEmpty).
+   if(emptyAllowed(f,values,options)||(options?.keepOptional===true&&f.optional&&!entered(values[f.key])))delete a[f.key];
    else a[f.key]=num(values[f.key]);
   }
   next.details.assets=a;
@@ -134,7 +138,7 @@
    // Additive 3a-Aufschlüsselung für V3 (brutto/steuer/netto, gebundener Rest); assets.p3 bleibt unverändert.
    p3:pre?capital.p3:null,
    income:{ahv:i?sources.ahv:null,pk:s.details.pension?sources.pk:null,other:i?sources.other+sources.additional:null,unallocated:i?null:num(s.values.regular)*12},
-   assets:{cash:a&&entered(a.cash)?num(a.cash):null,securities:a&&entered(a.securities)?(pre?projected.sec:num(a.securities)):null,other:a&&entered(a.otherAssets)?num(a.otherAssets):null,p3:pre&&s.details.pension3a?projected.p3:null,pk:pre&&s.details.pension?capital.netPkCapitalWithdrawal:null,unallocated:a?(num(a.unallocated)>0?num(a.unallocated):null):num(s.values.free),bound:a&&entered(a.propertyValue)&&entered(a.mortgage)?capital.boundCapital:null,boundP3:pre?capital.boundP3Capital:0}
+   assets:{cash:a&&entered(a.cash)?num(a.cash):null,securities:a&&entered(a.securities)?(pre?projected.sec:num(a.securities)):null,other:a&&entered(a.otherAssets)?num(a.otherAssets):null,p3:pre&&s.details.pension3a?capital.p3.netAtStart:null,p3Gross:pre&&s.details.pension3a?capital.p3.grossAtStart:null,p3Tax:pre&&s.details.pension3a?capital.p3.taxAtStart:null,p3Age:pre&&s.details.pension3a?capital.p3.withdrawalAge:null,pk:pre&&s.details.pension?capital.netPkCapitalWithdrawal:null,unallocated:a?(num(a.unallocated)>0?num(a.unallocated):null):num(s.values.free),bound:a&&entered(a.propertyValue)&&entered(a.mortgage)?capital.boundCapital:null,boundP3:pre?capital.boundP3Capital:0}
   };
  }
  function validate(s){

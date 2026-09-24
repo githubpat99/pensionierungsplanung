@@ -14,9 +14,14 @@ assert.equal(r.availableCapital,650000);assert.equal(r.monthlyGap,4070);assert.e
 assert.equal(M.quality(s),0);
 let withPension=M.apply(s,'pension',pension);withPension=M.apply(withPension,'pension3a',pension3a);const p=M.toPlan(withPension),pk=C.calculatePension(p);
 assert.equal(C.evaluatePlan(p).incomeGross,3430*12+pk.rent,'the regular income total is now recorded without PK; the computed pension is added once');
-const firstCapital=C.calculateAvailableCapital(p);assert.equal(firstCapital.existingFreeCapital,650000+C.calculateRetirementStart(p).p3);
+// Weiteres Kapital = freies Vermögen plus 3a netto nach der geschätzten Bezugssteuer.
+const firstCapital=C.calculateAvailableCapital(p);
+assert.ok(Math.abs(firstCapital.existingFreeCapital-(650000+firstCapital.p3.netAtStart))<1e-6,'weiteres Kapital enthält 3a netto');
+assert.ok(firstCapital.p3.netAtStart<=C.calculateRetirementStart(p).p3,'3a fliesst netto ein');
+assert.equal(firstCapital.p3.withdrawalAge,64,'Standardbezug ein Jahr vor der Pensionierung');
 assert.equal(C.evaluatePlan(p).availableCapital,firstCapital.totalInvestableCapital);
 s=M.apply(withPension,'income',{canton:'AR',ahv:2350,other:80,additional:0});
+assert.ok(C.calculateAvailableCapital(M.toPlan(s)).p3.taxAtStart>0,'mit Kanton wird die geschätzte 3a-Bezugssteuer abgezogen');
 assert.equal(C.evaluatePlan(M.toPlan(s)).incomeGross,2430*12+C.calculatePension(M.toPlan(s)).rent);
 s=M.apply(s,'assets',{cash:50000,securities:600000,saving:10000});assert.equal(M.quality(s),1);
 s=M.apply(s,'assumptions',{...M.defaults,targetAge:s.targetAge,reviewed:true});assert.equal(M.quality(s),2);
@@ -141,4 +146,19 @@ M.validate(priorPost);assert.equal(priorPost.details.pension.pkRent,1500);assert
 assert.equal(M.breakdown(priorPost).income.pk,1500*12);
 const editedPost=M.apply(priorPost,'income',{canton:'SG',ahv:2400,other:0,additional:0,pkRent:9999});
 assert.equal(M.breakdown(editedPost).income.pk,1500*12);
+// Additive V4-Option `allowEmpty`: leere Vermögenszeilen gelten als nicht erfasst statt als Fehler.
+{
+  let empty = M.fresh('pre');
+  empty = M.applyAsset(empty, 'cash', {cash:10000}, {keepOptional:true, allowEmpty:true});
+  empty = M.applyAsset(empty, 'securities', {securities:'', saving:''}, {keepOptional:true, allowEmpty:true});
+  assert.equal(empty.details.assets.cash, 10000);
+  assert.equal(empty.details.assets.securities, undefined, 'leere Zeile bleibt nicht erfasst');
+  assert.equal(empty.details.assets.saving, undefined, 'leere Zeile bleibt nicht erfasst');
+  empty = M.applyAsset(empty, 'securities', {securities:50000, saving:''}, {keepOptional:true, allowEmpty:true});
+  assert.equal(empty.details.assets.securities, 50000);
+  assert.equal(empty.details.assets.saving, undefined, 'nur erfasste Felder werden gespeichert');
+  assert.throws(()=>M.applyAsset(empty, 'cash', {cash:'abc'}, {keepOptional:true, allowEmpty:true}), /Bank/, 'ungültige Eingabe bleibt ein Fehler');
+  // Ohne die Option bleibt die strenge V2/V3-Regel unverändert.
+  assert.throws(()=>M.applyAsset(empty, 'securities', {securities:'', saving:''}, {}), /Wertschriften/);
+}
 console.log('Passed: inline asset allocation, partial persistence, validation, exact totals and PK source migration.');

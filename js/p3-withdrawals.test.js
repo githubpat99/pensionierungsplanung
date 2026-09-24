@@ -24,15 +24,17 @@ const events = s => C.capitalWithdrawalEvents(M.toPlan(s));
 const capital = s => C.calculateAvailableCapital(M.toPlan(s));
 const p3Of = s => capital(s).p3;
 
-// 1) 3a CHF 100'000, Bezug bei Pensionierung: Steuer wird abgezogen, nur netto ist verfügbar.
+// 1) 3a CHF 100'000, Standardbezug ein Jahr vor dem PK-Bezug: Steuer wird abgezogen, nur netto ist verfügbar.
 {
   const s = state({p3:100000});
-  const [event] = events(s), plan = M.toPlan(s), projected = C.calculateRetirementStart(plan).p3;
-  const rate = Tax.getCapitalWithdrawalTaxRate('ZH', projected), tax = projected * rate / 100;
-  assert.equal(event.age, 65);
-  assert.equal(round(event.gross), round(projected), 'ohne Detailplanung entspricht der Bezug der bisherigen Hochrechnung');
+  const [event] = events(s), plan = M.toPlan(s), schedule = C.p3Schedule(plan).withdrawals[0];
+  const rate = Tax.getCapitalWithdrawalTaxRate('ZH', schedule.gross), tax = schedule.gross * rate / 100;
+  assert.equal(event.age, 64, 'Standardbezug ein Jahr vor der Pensionierung');
+  assert.equal(round(event.gross), round(schedule.gross), 'der Bezug ist die 3a-Hochrechnung im Bezugsjahr');
+  assert.ok(event.gross < C.calculateRetirementStart(plan).p3, 'ein Jahr früher bedeutet weniger Aufbau');
   assert.equal(round(event.tax), round(tax));
-  assert.equal(round(event.net), round(projected - tax));
+  assert.equal(round(event.net), round(schedule.gross - tax));
+  assert.equal(p3Of(s).withdrawalAge, 64, 'das Bezugsalter ist ausgewiesen');
   assert.equal(p3Of(s).netAtStart, event.net, 'nur der Nettobetrag ist bei Pensionierung verfügbar');
   assert.equal(capital(s).totalInvestableCapital, event.net, 'das verfügbare Kapital enthält 3a nur netto');
   assert.ok(p3Of(s).netAtStart < event.gross, 'der Bruttobetrag wird niemals verfügbar');
@@ -92,7 +94,7 @@ const p3Of = s => capital(s).p3;
   assert.equal(pension.sharedWithP3, true, 'die PK weist die gemeinsame Basis aus');
   assert.equal(round(pension.capitalTax), round(event.items.find(item => item.id === 'pk').tax));
   assert.ok(pension.capitalTax > Tax.calculateCapitalWithdrawalTax('ZH', pension.cap), 'keine Doppelbesteuerung, aber gemeinsame Basis');
-  assert.equal(capital(s).totalInvestableCapital, event.net, 'nur der Nettozufluss wird verfügbar');
+  assert.ok(Math.abs(capital(s).totalInvestableCapital - event.net) < 1e-6, 'nur der Nettozufluss wird verfügbar');
 }
 
 // 6) PK und 3a in unterschiedlichen Jahren: getrennte Kapitalbezugsereignisse.
@@ -112,7 +114,7 @@ const p3Of = s => capital(s).p3;
   const planning = p3Of(s), [event] = events(s);
   assert.equal(planning.planned, false);
   assert.equal(planning.reason, 'none');
-  assert.equal(event.age, 65, 'ohne Planung gilt der Bezug bei Pensionierung');
+  assert.equal(event.age, 64, 'ohne Planung gilt der Standardbezug ein Jahr vor der Pensionierung');
   assert.ok(event.tax > 0, 'die Steuer wird trotzdem berücksichtigt');
   assert.equal(planning.netAtStart, event.net);
 }
@@ -130,7 +132,7 @@ const p3Of = s => capital(s).p3;
   // Ohne Konten gilt weiterhin der Gesamtbetrag mit der Default-Annahme.
   const open = state({p3:240000, mode:'later', accounts:[]});
   assert.equal(p3Of(open).planned, false);
-  assert.deepEqual(events(open).map(event => event.age), [65], 'ohne Konten gilt der Bezug bei Pensionierung');
+  assert.deepEqual(events(open).map(event => event.age), [64], 'ohne Konten gilt der Standardbezug ein Jahr vor der Pensionierung');
 }
 
 // 9) Kein 3a-Betrag: bestehende Berechnung unverändert.
@@ -139,8 +141,8 @@ const p3Of = s => capital(s).p3;
   const legacy = state({pk:500000, pkShare:50});
   delete legacy.details.pension3a;
   const a = C.calculateAvailableCapital(M.toPlan(withZero)), b = C.calculateAvailableCapital(M.toPlan(legacy));
-  assert.equal(events(withZero).length, 1, 'ohne 3a entsteht nur das PK-Ereignis');
-  assert.equal(events(withZero)[0].age, 65);
+  assert.deepEqual(events(withZero).map(event => event.age), [65], 'ohne 3a-Guthaben entsteht nur das PK-Ereignis');
+  assert.ok(events(withZero).every(event => event.gross > 0), 'leere 3a erzeugt keinen Bezug');
   assert.equal(a.totalInvestableCapital, b.totalInvestableCapital, 'ohne 3a bleibt die Kapitalbasis gleich');
   assert.deepEqual(C.evaluatePlan(M.toPlan(withZero)).yearlyProjection.map(row => row.free), C.evaluatePlan(M.toPlan(legacy)).yearlyProjection.map(row => row.free));
 }
@@ -155,7 +157,8 @@ const p3Of = s => capital(s).p3;
   assert.equal(round(breakdown.boundP3Capital), round(planning.boundAtRetirement));
   assert.ok(planning.boundAtRetirement > 0 && planning.grossLater >= planning.boundAtRetirement, 'gebundenes Kapital wächst bis zum Bezug weiter');
   assert.equal(planning.withdrawals.filter(withdrawal => withdrawal.age <= 65).length, 2, 'zwei Konten werden vor der Pensionierung bezogen');
-  assert.equal(round(breakdown.totalInvestableCapital), round(breakdown.existingFreeCapital + planning.netAtStart), 'das verfügbare Kapital zählt nur die Nettozuflüsse');
+  assert.equal(round(breakdown.totalInvestableCapital), round(breakdown.existingFreeCapital + breakdown.netPkCapitalWithdrawal), 'weiteres Kapital inkl. 3a netto plus PK netto ergibt das Startkapital');
+  assert.equal(round(breakdown.existingFreeCapital), round(planning.netAtStart), 'das weitere Kapital enthält hier nur den 3a-Nettobetrag');
   assert.ok(!C.evaluatePlan(plan).yearlyProjection.some(row => row.free >= planning.boundAtRetirement + breakdown.totalInvestableCapital), 'gebundenes 3a-Kapital erhöht das verfügbare Kapital nie');
   // Ein Bezug im Alter 68 darf vorher keine Lücke schliessen.
   const paid = state({p3:120000, mode:'later', accounts:[{name:'Spät', amount:120000, age:75}], need:5000});

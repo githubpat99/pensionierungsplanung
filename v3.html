@@ -3,11 +3,11 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Ruhestands-Check · V3</title>
+  <title>Ruhestands-Check</title>
   <link rel="stylesheet" href="css/v2-ui.css">
   <link rel="stylesheet" href="css/v3.css?v=3">
   <link rel="stylesheet" href="css/v3-reference.css?v=2">
-  <link rel="stylesheet" href="css/v3-plan-reference.css?v=21">
+  <link rel="stylesheet" href="css/v3-plan-reference.css?v=61">
   <link rel="stylesheet" href="css/v3-chart-reference.css?v=5">
   <link rel="stylesheet" href="css/canton-picker.css">
 </head>
@@ -27,6 +27,10 @@
     <button type="button" data-menu-page="assumptions">Annahmen</button>
   </nav>
   <main id="app" class="shell"></main>
+  <dialog id="v3Modal" class="v3-modal" aria-labelledby="v3ModalTitle">
+    <div class="v3-modal-head"><h2 id="v3ModalTitle"></h2><button type="button" class="v3-modal-close" data-modal-close aria-label="Erklärung schliessen"></button></div>
+    <div class="v3-modal-body" id="v3ModalBody"></div>
+  </dialog>
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
   <script src="js/tax-config.js"></script>
   <script src="js/tax-model.js"></script>
@@ -36,9 +40,11 @@
   <script src="js/retirement-engine.js"></script>
   <script src="js/retirement-calculator.js"></script>
   <script src="js/v2-state.js"></script>
-  <script src="js/icons.js"></script>
+  <script src="js/icons.js?v=3"></script>
   <script src="js/canton-picker.js"></script>
   <script src="js/v3-state.js"></script>
-  <script src="js/v3-ui.js?v=16"></script>
+  <script src="js/estimates.js"></script>
+  <script src="js/dev-fixture.js"></script>
+  <script src="js/v3-ui.js?v=50"></script>
 </body>
 </html>

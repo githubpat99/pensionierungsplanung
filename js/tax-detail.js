@@ -22,9 +22,13 @@
       yearly:{sources,gross:result.incomeGross,taxable:year.taxableAnnualIncome,tax:result.incomeTax,net:result.incomeNet,
         rate:canton?tax.getIncomeTaxRate(canton,year.taxableAnnualIncome):null,canton,cantonName:canton?(tax.canton(canton)?.name??null):null,
         taxOpen:result.incomeTax===null},
-      // Säule 3a reaches the capital base at its full projected value; a separate
-      // withdrawal tax is not modelled. Only reported when 3a capital actually exists.
-      threeA:{has3a:!!(projected&&projected.p3>0),projected:projected?.p3??0,withdrawalTaxModelled:false}
+      // Säule 3a: angenommen wird ein Bezug alles auf einmal ein Jahr vor dem PK-Bezug.
+      // Die Bezugssteuer wird approximativ mit dem kantonalen Kapitalbezugsmodell geschätzt;
+      // eine weitergehende Staffelung der Bezüge ist nicht modelliert.
+      threeA:{has3a:!!(capital.p3&&capital.p3.grossTotal>0),projected:capital.p3?capital.p3.grossAtStart:0,
+        withdrawalAge:capital.p3?capital.p3.withdrawalAge:null,gross:capital.p3?capital.p3.grossAtStart:0,
+        tax:capital.p3?capital.p3.taxAtStart:0,net:capital.p3?capital.p3.netAtStart:0,
+        projectedAtRetirement:projected?projected.p3:0,withdrawalTaxModelled:true,taxOpen:capital.p3?capital.p3.taxAtStart===null:false}
     };
   }
   root.TaxDetail={summary};

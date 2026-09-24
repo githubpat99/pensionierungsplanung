@@ -115,7 +115,7 @@ it('shows the tax arithmetic and the tax details in the income view',()=>{
  cy.get('.tax-details').should('contain','Jährlich im Ruhestand').and('contain',"CHF 72'000").and('contain','13,5 %')
   .and('contain',"− CHF 9'720 / Jahr").and('contain',"CHF 62'280 / Jahr").and('contain',"CHF 5'190 / Monat")
   .and('contain','Planungsannahme');
- cy.get('.tax-details').should('not.contain','Säule-3a-Bezugssteuer');
+ cy.get('.tax-details').should('contain','Säule 3a').and('contain','geschätzte Bezugssteuer');
  cy.get('#app').should('not.contain','ESTV');
  cy.window().then(w=>expect(w.document.documentElement.scrollWidth).to.be.at.most(390));
  });

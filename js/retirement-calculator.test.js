@@ -26,8 +26,20 @@ for(const mode of ['pre','post'])for(const share of [0,50,100]){
  vm.runInContext(source+'\n'+adapter,context);
  const old=JSON.parse(JSON.stringify(vm.runInContext('planningInput()',context)));
  const plan=core.fromState(context.st),input=core.simulationInput(plan),before=structuredClone(plan);
- subset(JSON.parse(JSON.stringify(input)),old,`${mode}/${share}: same capital, income, tax inputs and periods`);
- assert.deepEqual(core.evaluatePlan(plan).yearlyProjection,engine.simulate(old));
+ /* Bewusste Modelländerung: Der 3a-Bezug erfolgt alles auf einmal ein Jahr vor dem PK-Bezug
+    und wird mit der approximativen Bezugssteuer belastet. Die Kapitalbasis ist deshalb um
+    genau «3a-Hochrechnung bei Pensionierung − 3a netto im Bezugsjahr» kleiner. */
+ const p3=core.calculateAvailableCapital(plan).p3,projected3a=core.calculateRetirementStart(plan)?.p3??0;
+ const delta=mode==='pre'?projected3a-(p3?.netAtStart??0):0;
+ assert.ok(delta>=0,`${mode}/${share}: 3a fliesst netto und höchstens gleich hoch ein`);
+ assert.ok(Math.abs(input.capital-(old.capital-delta))<1e-6,`${mode}/${share}: Kapitalbasis minus 3a-Differenz`);
+ assert.ok(Math.abs(input.capitalBreakdown.existingFreeCapital-(old.capitalBreakdown.existingFreeCapital-delta))<1e-6,`${mode}/${share}: weiteres Kapital minus 3a-Differenz`);
+ assert.ok(Math.abs(input.capitalBreakdown.totalInvestableCapital-(old.capitalBreakdown.totalInvestableCapital-delta))<1e-6,`${mode}/${share}: Startkapital minus 3a-Differenz`);
+ delete old.capital;
+ delete old.capitalBreakdown.existingFreeCapital;
+ delete old.capitalBreakdown.totalInvestableCapital;
+ subset(JSON.parse(JSON.stringify(input)),old,`${mode}/${share}: same income, tax inputs and periods`);
+ assert.deepEqual(core.evaluatePlan(plan).yearlyProjection,engine.simulate({...old,capital:input.capital,capitalBreakdown:input.capitalBreakdown,capitalInjections:input.capitalInjections,bound:input.bound}));
  assert.deepEqual(core.fromState(core.toState(plan)),plan);
  const restored=storage.decode(JSON.stringify({version:3,savedAt:'2026-09-11T12:00:00Z',plan}),defaults);
  assert.deepEqual(core.evaluatePlan(core.fromState(restored.state)),core.evaluatePlan(plan),'v3 complete result roundtrip');
