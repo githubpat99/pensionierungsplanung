@@ -127,7 +127,23 @@ PLAN VERSTEHEN            DETAILS
     Jahresverlauf
     Töpfe-Modell
     Annahmen & Berechnung
+───────────────────────────────  (dezent abgesetzt, keine Navigation)
+    Feedback geben
+    Plan zurücksetzen
 ```
+
+**Pilotbereich (Pilottesting):** Ganz unten stehen dezent abgesetzt **«Feedback geben»** und
+**«Plan zurücksetzen»** (`.v4-menu-quiet`, gedämpfte Schrift, Trennlinie darüber). Beide sind
+bewusst **keine** Menüdestinationen im Sinn der Informationsarchitektur, sondern Werkzeuge:
+
+- **Feedback geben** öffnet einen Dialog mit Freitextfeld und einer Vorlage («Was hat gut
+  funktioniert?», «Was war unklar oder hat gefehlt?», «Sonstiges:»). Der Versand erfolgt erst
+  auf Klick («E-Mail öffnen» → `mailto:`); **Plandaten werden nie automatisch mitgeschickt**.
+  Die Empfängeradresse pflegt das Team in `js/v4-ui.js` (`PILOT_FEEDBACK_EMAIL`); bleibt sie
+  leer, öffnet sich das E-Mail-Programm ohne Empfänger.
+- **Plan zurücksetzen** fragt zuerst nach («Plan zurücksetzen?» mit «Abbrechen») und entfernt
+  danach alle erfassten Angaben, Varianten und die Anlagestrategie aus diesem Browser; die App
+  startet wieder im **Schnellstart** (ohne Hamburger, weil kein Plan existiert).
 
 **Keine** eigenen Hauptnavigationseinträge für Steuern, AHV, PK, Säule 3a, Einkommen,
 Bedarf, Vermögen oder «Plan verbessern» – das sind Bestandteile einer Aufgabe, keine

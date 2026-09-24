@@ -919,6 +919,38 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (!available) closeMenu();
   }
   function returnToPlan() { closeMenu(); previewShare = null; markDirty(); renderPlan(); }
+  /* ---------------- Pilot: Feedback und Zurücksetzen (dezent unten im Menü) ----------------
+     Beide Einträge sind bewusst keine Navigationsziele der App, sondern Werkzeuge für das
+     Pilottesting: Rückmeldung geben und wieder bei null starten. */
+  const PILOT_FEEDBACK_EMAIL = '';
+  const feedbackTemplate = () =>
+    ['Was hat gut funktioniert?', '', '', 'Was war unklar oder hat gefehlt?', '', '', 'Sonstiges:', ''].join('\n');
+  function openFeedbackModal() {
+    const address = PILOT_FEEDBACK_EMAIL || (TaxModel?.config?.pilot?.feedbackEmail ?? '');
+    const body = `<p class="v3-modal-lead">Deine Rückmeldung hilft uns, den Ruhestands-Check zu verbessern.</p><label class="v4-feedback-label" for="v4Feedback">Deine Rückmeldung</label><textarea id="v4Feedback" class="v4-feedback" rows="7" spellcheck="true">${esc(feedbackTemplate())}</textarea><p class="v4-info-source">Deine Angaben aus dem Plan werden nicht automatisch mitgeschickt – es geht nur dieser Text.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-feedback-send>${address ? 'E-Mail öffnen' : 'E-Mail-Programm öffnen'} <span aria-hidden="true">→</span></button></div>`;
+    openModal({modalTitle:'Feedback geben', modalBody:body});
+  }
+  function sendFeedback() {
+    const address = PILOT_FEEDBACK_EMAIL || (TaxModel?.config?.pilot?.feedbackEmail ?? '');
+    const text = document.getElementById('v4Feedback')?.value ?? '';
+    const subject = encodeURIComponent('Ruhestands-Check: Feedback');
+    const bodyText = encodeURIComponent(text);
+    globalThis.location.href = `mailto:${address}?subject=${subject}&body=${bodyText}`;
+  }
+  function openResetModal() {
+    const body = `<p class="v3-modal-lead">Damit startest du wieder beim Schnellstart. Alle erfassten Angaben, Varianten und die Anlagestrategie werden aus diesem Browser entfernt.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-plan-reset>Plan zurücksetzen <span aria-hidden="true">→</span></button><button type="button" class="v4-chip" data-modal-close>Abbrechen</button></div>`;
+    openModal({modalTitle:'Plan zurücksetzen?', modalBody:body});
+  }
+  function resetPlan() {
+    closeModal();
+    try { localStorage.removeItem(storageKey); } catch (error) { /* Speicher nicht verfügbar */ }
+    state = State.fresh('pre');
+    state.riskProfile = 'balanced';
+    previewShare = null;
+    globalThis.__v4PersistError = undefined;
+    setStartDraft();
+    renderStart();
+  }
   function openPotsModal(trigger) {
     const item = evaluated(previewShare ?? chosenShare());
     if (!item) return;
@@ -1039,6 +1071,16 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       else openDetail(target, 'plan');
       return;
     }
+    /* Pilotwerkzeuge unten im Menü: Rückmeldung geben bzw. wieder bei null starten. */
+    const action = event.target.closest('[data-menu-action]');
+    if (action) {
+      closeMenu();
+      if (action.dataset.menuAction === 'feedback') openFeedbackModal();
+      else if (action.dataset.menuAction === 'reset') openResetModal();
+      return;
+    }
+    if (event.target.closest('[data-feedback-send]')) { sendFeedback(); return; }
+    if (event.target.closest('[data-plan-reset]')) { resetPlan(); return; }
   });
   document.querySelector('.menu-button')?.addEventListener('click', () => {
     const menu = document.getElementById('v4Menu'), button = document.querySelector('.menu-button');

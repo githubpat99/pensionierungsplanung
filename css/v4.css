@@ -333,6 +333,10 @@ body{padding-bottom:18px}
 .v4-menu-group{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 4px;padding:0 2px;font:600 11.5px system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--v3-muted)}
 .v4-menu-group:first-child{margin-top:4px}
 .v4-menu-badge{padding:2px 7px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);font:600 10.5px system-ui,sans-serif;letter-spacing:.02em}
+/* Pilotbereich ganz unten: dezent, klar abgesetzt, kein Navigationsziel im engeren Sinn. */
+.v4-menu-quiet{margin-top:10px;padding-top:8px;border-top:1px solid var(--v3-line);display:grid;gap:2px}
+.v4-menu-quiet button{border:0;background:transparent;text-align:left;padding:8px 2px;min-height:36px;font:13px system-ui,sans-serif;color:var(--v3-muted);cursor:pointer}
+.v4-menu-quiet button:hover,.v4-menu-quiet button:focus-visible{color:var(--v3-green);text-decoration:underline}
 .v4-formed-note{margin:14px 0 0}
 .v4-readonly{display:grid;margin:0;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);overflow:hidden}
 .v4-readonly>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 12px;border-top:1px solid var(--v3-line)}
@@ -362,6 +366,9 @@ body{padding-bottom:18px}
 .v4-form-group small{font-weight:400;color:var(--v3-muted)}
 .v4-asset-form .v4-form-table label{font-size:13.5px}
 .v4-form-value input::placeholder{font:13px system-ui,sans-serif;color:var(--v3-muted);opacity:1}
+/* Pilot: Feedback-Dialog (Freitext, Empfängeradresse pflegt das Team in js/v4-ui.js). */
+.v4-feedback-label{display:block;margin:0 0 4px;font:600 13px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-feedback{width:100%;min-height:132px;padding:10px;border:1px solid var(--v3-line);border-radius:10px;background:var(--v3-surface);color:var(--v3-ink);font:14px/1.5 system-ui,sans-serif;resize:vertical}
 /* Info-Dialoge: Schliessen-Knopf als reines «✕» (IconX, 22 px, Strichstärke 1,7) in der
    dunkelgrünen Textfarbe – kein Kreis, kein Hintergrund, kein Rahmen, kein Schatten.
    Mindestens 40 × 40 px unsichtbare Touchfläche, sauber oben rechts im Kopf; erst Hover

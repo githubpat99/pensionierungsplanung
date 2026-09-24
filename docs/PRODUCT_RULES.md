@@ -209,6 +209,7 @@ Jeder V4-Screen rendert seinen Kopf ausschliesslich über die zentrale Komponent
 - Auf Mobile ebenfalls nebeneinander; der Kontext nutzt höchstens zwei kurze Zeilen in seiner rechten Spalte und springt nie unter den Haupttitel.
 - Titel enden mit einem Punkt («Mein Plan.», «Plan verbessern.», «Meine Varianten.», «Planung Jahr für Jahr.», «Vermögen.» und alle Editor-Titel).
 - Keine doppelten Headlines; keine separate Status-/Untertitelzeile. Der Hamburger erscheint nur, wenn ein Plan existiert.
+- **Menü (aufgabenorientiert):** genau sechs Destinationen in drei Gruppen – *Mein Plan* («Mein Plan») · *Planen* («Angaben & Grundlagen», «Meine Varianten») · *Plan verstehen* mit Badge «Details» («Jahresverlauf», «Töpfe-Modell», «Annahmen & Berechnung»). Darunter steht dezent abgesetzt (`.v4-menu-quiet`, gedämpfte Schrift, Trennlinie) der **Pilotbereich**: **«Feedback geben»** (Dialog mit Freitextfeld und Vorlage; Versand erst auf Klick per `mailto:`, Plandaten werden **nie** automatisch mitgeschickt; Empfängeradresse `PILOT_FEEDBACK_EMAIL` in `js/v4-ui.js`) und **«Plan zurücksetzen»** (Rückfrage «Plan zurücksetzen?» mit «Abbrechen», danach Schnellstart ohne Plan und ohne Hamburger). Beide sind **keine** Navigationsziele. Kein «Plan verbessern», keine Datensatz-Menüpunkte.
 
 ### 24.3 «Mein Plan» – Zusammenfassung, kein Inhaltsverzeichnis (verbindlich)
 

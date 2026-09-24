@@ -396,6 +396,36 @@ async function navigationChecks(w, h) {
   ok(!/Plan verbessern|Steuern|Einkommen/.test(d.getElementById('v4Menu').textContent), tag + ' kein «Plan verbessern»/Fachjargon im Menü');
   const labels = entries.map(entry => entry.label);
   ok(labels.includes('Jahresverlauf') && labels.includes('Töpfe-Modell') && labels.includes('Annahmen & Berechnung'), tag + ' «Plan verstehen» enthält Jahresverlauf, Töpfe-Modell, Annahmen');
+  /* Pilotwerkzeuge: dezent unten, keine Navigationsziele. */
+  const quiet = [...d.querySelectorAll('#v4Menu .v4-menu-quiet [data-menu-action]')].map(node => ({action:node.dataset.menuAction, label:node.textContent.trim()}));
+  ok(quiet.length === 2 && quiet[0].label === 'Feedback geben' && quiet[1].label === 'Plan zurücksetzen', tag + ' Pilotbereich unten im Menü (' + quiet.map(entry => entry.label).join(' · ') + ')');
+  ok(!entries.some(entry => /Feedback|zurücksetzen/.test(entry.label)), tag + ' Pilotwerkzeuge sind keine Menüdestinationen');
+  const menuOrder = [...d.querySelectorAll('#v4Menu [data-menu-page], #v4Menu [data-menu-action]')].map(node => node.textContent.trim());
+  ok(menuOrder.slice(-2).join(' | ') === 'Feedback geben | Plan zurücksetzen', tag + ' Reihenfolge im Menü (' + menuOrder.join(' → ') + ')');
+  /* Feedback: Freitext mit Vorlage, Versand erst auf Klick. */
+  d.querySelector('[data-menu-action="feedback"]')?.click();
+  await wait(400);
+  const feedbackText = d.getElementById('v4Feedback');
+  ok(d.getElementById('v4ModalTitle')?.textContent === 'Feedback geben' && !!feedbackText, tag + ' «Feedback geben» öffnet den Dialog mit Freitextfeld');
+  ok(/Was hat gut funktioniert\?/.test(feedbackText?.value ?? '') && /Was war unklar/.test(feedbackText?.value ?? ''), tag + ' Vorlage für die Rückmeldung vorhanden');
+  ok(!!d.querySelector('[data-feedback-send]') && /nicht automatisch mitgeschickt/.test(d.getElementById('v4ModalBody')?.textContent ?? ''), tag + ' Versand nur auf Klick, ohne automatische Plandaten');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(250);
+  /* Plan zurücksetzen: Rückfrage, danach Schnellstart ohne Plan. */
+  d.querySelector('.menu-button')?.click();
+  await wait(200);
+  d.querySelector('[data-menu-action="reset"]')?.click();
+  await wait(400);
+  ok(d.getElementById('v4ModalTitle')?.textContent === 'Plan zurücksetzen?' && !!d.querySelector('[data-plan-reset]'), tag + ' «Plan zurücksetzen» fragt zuerst nach');
+  d.querySelector('[data-plan-reset]')?.click();
+  await wait(700);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && d.querySelector('.v4-page-context')?.textContent.trim() === '5 Angaben für deinen ersten Überblick.', tag + ' nach dem Zurücksetzen startet der Schnellstart');
+  ok(d.querySelectorAll('.v4-start-card').length === 5 && d.querySelector('.menu-button')?.hidden === true, tag + ' Schnellstart ohne Hamburger (' + d.querySelectorAll('.v4-start-card').length + ' Karten)');
+  const afterReset = JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? '{}');
+  ok(!afterReset.state || Object.keys(afterReset.state.values ?? {}).length === 0, tag + ' gespeicherter Plan ist geleert (' + JSON.stringify(afterReset.state?.values ?? {}) + ')');
+  // Ausgangsstand für die folgenden Prüfungen wiederherstellen
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
+  await wait(400);
   // Töpfe-Modell: Menü und Jahresverlauf öffnen dieselbe Komponente
   d.querySelector('[data-menu-page="pots"]')?.click();
   await wait(450);
