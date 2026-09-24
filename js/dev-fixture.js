@@ -71,7 +71,7 @@
       ['need', {need}],
       mode === 'pre' ? ['pension', {pk, pkContrib:pkContrib ?? 0, pkShare:variants ? variants[0] : 0}] : ['pension', {pkRent}],
       ['assumptions', {...base.defaults, ...(targetAge ? {targetAge} : {})}]];
-    if (canton) groups.push(['regular', {canton}]);
+    if (canton) groups.push(['tax', {canton}]);
     if (rents) groups.push(['income', {canton:canton ?? '', ahv:Math.min(rents, 3000), other:Math.max(0, rents - 3000), additional:0}]);
     if (free) groups.push(['free', {free}]);
     if (p3) groups.push(['pension3a', {p3, p3Contrib:0}]);
@@ -90,7 +90,14 @@
     'ohne-kanton': () => build('pre', {age:60, retirement:65, pk:600000, pkContrib:20000, need:7000}),
     'vollstaendig': () => build('pre', {age:60, retirement:65, pk:750000, pkContrib:24000, need:7500, canton:'AR', free:200000, p3:120000, targetAge:90, variants:[0,50,100]}),
     'kurz': () => build('pre', {age:62, retirement:65, pk:200000, pkContrib:0, need:9500, canton:'ZH', variants:[50]}),
-    'ziel': () => build('pre', {age:58, retirement:65, pk:1200000, pkContrib:30000, need:6000, canton:'ZH', free:400000, p3:150000, targetAge:92, variants:[0,100]})
+    'ziel': () => build('pre', {age:58, retirement:65, pk:1200000, pkContrib:30000, need:6000, canton:'ZH', free:400000, p3:150000, targetAge:92, variants:[0,100]}),
+    /* Alle Angaben erfasst (Datenqualität vollständig): eigener AHV-Ansatz, weitere
+       Einnahmen erfasst, PK-Beiträge, Vermögen und Säule 3a vorhanden. Damit ist der
+       Zustand «Plan optimieren» (statt «Plan präzisieren») prüfbar. */
+    'optimiert': () => {
+      const state = scenarios['vollstaendig']();
+      return root.CheckV2State.apply(state, 'income', {canton:'AR', ahv:2800, other:0, additional:0});
+    }
   };
   /* Szenario schreiben; ohne Testmodus wirkungslos. */
   function scenario(key) {

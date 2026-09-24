@@ -17,12 +17,27 @@ body{position:relative}
 .v4-hero-media{display:block;width:100%;height:100%}
 .v4-hero-image{display:block;width:100%;height:100%;object-fit:cover;object-position:center top;opacity:var(--v4-hero-image-opacity,1)}
 .v4-hero::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,rgba(247,246,242,.06) 0%,rgba(247,246,242,.16) 42%,rgba(247,246,242,.55) 72%,var(--v3-bg) 100%)}
-/* Schnellstart: Landschaft klar erkennbar, weicher Auslauf in Creme. */
+/* Schnellstart: kräftiger, warmweisser Schleier bis unter die Titelzeile (Logo + PageTitle
+   liegen ruhig auf Creme), danach weiches Ausblenden, damit die Landschaft ab den
+   Situations-Tabs wieder deutlich sichtbar ist und unten ruhig in Creme ausläuft.
+   Kein Textschatten, keine Kontur, keine Card hinter dem Titel – nur dieser Verlauf. */
 .v4-hero[data-mode="start"]{--v4-hero-height:min(178vw,62vh);--v4-hero-image-opacity:1}
-.v4-hero[data-mode="start"]::after{background:linear-gradient(to bottom,rgba(247,246,242,.13) 0%,rgba(247,246,242,.16) 42%,rgba(247,246,242,.45) 74%,var(--v3-bg) 96%)}
-/* Plan und Detailseiten: derselbe Bildaufbau, deutlich zurückgenommen. */
+.v4-hero[data-mode="start"]::after{background:linear-gradient(to bottom,
+  rgba(247,246,242,.90) 0px,
+  rgba(247,246,242,.90) 84px,
+  rgba(247,246,242,.52) 112px,
+  rgba(247,246,242,.26) 146px,
+  rgba(247,246,242,.5) 46%,
+  var(--v3-bg) 100%)}
+/* Plan und Detailseiten: derselbe Bildaufbau, derselbe ruhige Kopfbereich, darunter
+   zurückgenommener als im Schnellstart. */
 .v4-hero[data-mode="calm"]{--v4-hero-height:min(74vw,26vh);--v4-hero-image-opacity:.9}
-.v4-hero[data-mode="calm"]::after{background:linear-gradient(to bottom,rgba(247,246,242,.56) 0%,rgba(247,246,242,.7) 46%,rgba(247,246,242,.92) 82%,var(--v3-bg) 100%)}
+.v4-hero[data-mode="calm"]::after{background:linear-gradient(to bottom,
+  rgba(247,246,242,.90) 0px,
+  rgba(247,246,242,.90) 84px,
+  rgba(247,246,242,.74) 46%,
+  rgba(247,246,242,.92) 82%,
+  var(--v3-bg) 100%)}
 @media(min-width:700px){
   /* Desktop-Panorama 2172 × 724 → 0,333 × Breite. */
   .v4-hero[data-mode="start"]{--v4-hero-height:min(33vw,42vh);--v4-hero-image-opacity:1}
@@ -36,15 +51,18 @@ body{position:relative}
    Gerendert ausschliesslich von `js/v4-pagetitle.js` (PageTitle). */
 .v4-head{display:flex;flex-direction:row;align-items:baseline;gap:4px 12px;margin:0 0 10px}
 .v4-head .v4-page-title{margin:0;flex:0 0 auto;font-family:Georgia,"Times New Roman",serif;font-size:26px;font-weight:500;line-height:1.15;letter-spacing:-.035em;color:var(--v3-ink);white-space:nowrap}
-.v4-head .v4-page-context{flex:1 1 auto;min-width:0;margin:0;text-align:right;font:13px/1.35 system-ui,sans-serif;color:var(--v3-muted);overflow-wrap:anywhere}
+.v4-head .v4-page-context{flex:1 1 auto;min-width:0;margin:0;text-align:right;font:500 13px/1.35 system-ui,sans-serif;color:#2b3a41;overflow-wrap:break-word;hyphens:auto}
 @media(max-width:430px){.v4-head .v4-page-title{font-size:24px}.v4-head .v4-page-context{font-size:12.5px}}
-/* Detailseiten: unter der Titelzeile links der runde Rückweg-Pfeil, rechts das runde «✕» –
-   beide mit demselben Ziel («Mein Plan») und demselben Bedienpfad. Ausserhalb der Titelzeile,
+/* Lange Haupttitel («Angaben & Grundlagen.») bekommen auf schmalen Screens eine Stufe weniger,
+   damit der Kontext rechts daneben nicht buchstabenweise umbricht. Immer einzeilig, nie
+   unter dem Titel. */
+@media(max-width:520px){.v4-head-long .v4-page-title{font-size:21px}}
+/* Fokussierte Screens: genau EIN Rückweg «‹ Mein Plan» unter der Titelzeile. Kein «✕» –
+   das gehört ausschliesslich Modals (`#v4Modal .v3-modal-close`). Ausserhalb der Titelzeile,
    damit der Kontext seine zwei Zeilen behält. */
-.v4-detailbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:0 0 10px}
+.v4-detailbar{display:flex;align-items:center;gap:8px;margin:0 0 10px}
 .v4-head-back{display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px 0 10px;border:0;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);font:600 13px system-ui,sans-serif;cursor:pointer}
-.v4-head-close{display:grid;place-items:center;flex:none;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:var(--v3-soft);color:var(--v3-green);cursor:pointer}
-.v4-head-back:hover,.v4-head-close:hover,.v4-head-back:focus-visible,.v4-head-close:focus-visible{box-shadow:inset 0 0 0 1px var(--v3-green)}
+.v4-head-back:hover,.v4-head-back:focus-visible{box-shadow:inset 0 0 0 1px var(--v3-green)}
 
 /* ---------- Planstatus: die wichtigste Karte ---------- */
 .v4-verdict{border:1px solid var(--v3-line);border-radius:14px;padding:14px;margin:0 0 12px;background:var(--v3-surface)}
@@ -74,7 +92,7 @@ body{position:relative}
 .v4-lever .v4-lever-labels{display:flex;justify-content:space-between;font:12px system-ui,sans-serif;color:var(--v3-muted)}
 .v4-lever-state{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px}
 
-/* ---------- Ein nächster Schritt: GENAU EINE Card zu «Plan verbessern» ---------- */
+/* ---------- Ein nächster Schritt: GENAU EINE zustandsabhängige Card ---------- */
 .v4-next{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;margin:0 0 8px;padding:12px;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);text-align:left;cursor:pointer;font-family:system-ui,sans-serif}
 .v4-next:hover,.v4-next:focus-visible{border-color:var(--v3-green)}
 .v4-next-icon{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:10px;background:var(--v3-soft);color:var(--v3-green)}
@@ -89,7 +107,7 @@ body{position:relative}
 .v4-row svg{flex:none;color:var(--v3-muted)}
 .v4-row:hover span,.v4-row:focus-visible span{color:var(--v3-green)}
 
-/* ---------- «Plan verbessern»: offene bzw. geschätzte Angaben ---------- */
+/* ---------- «Plan präzisieren»: offene bzw. geschätzte Angaben ---------- */
 .v4-section{margin:6px 0 8px;font:600 13px system-ui,sans-serif;color:var(--v3-muted);text-transform:none}
 .v4-open-list{list-style:none;margin:0 0 10px;padding:0;display:grid;gap:8px}
 .v4-open{display:flex;align-items:center;gap:10px;padding:10px 12px;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface)}
@@ -165,6 +183,12 @@ body{position:relative}
 .v4-year-nav{display:grid;gap:6px;margin:0 0 14px}
 .v4-year-nav .v4-year-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
 .v4-year-nav strong{font:600 16px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+/* Jahresnavigation: «‹ ein Jahr» · Regler · «ein Jahr ›» – die Schritte sind an den Enden aus. */
+.v4-year-slider{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px}
+.v4-year-slider input[type="range"]{width:100%;margin:0;accent-color:var(--v3-green)}
+.v4-year-step{display:grid;place-items:center;flex:none;width:36px;height:36px;padding:0;border:0;border-radius:50%;background:var(--v3-soft);color:var(--v3-green);cursor:pointer}
+.v4-year-step:hover:not([disabled]),.v4-year-step:focus-visible{box-shadow:inset 0 0 0 1px var(--v3-green)}
+.v4-year-step[disabled]{opacity:.4;cursor:default}
 .v4-year-block{border-top:1px solid var(--v3-line);padding:12px 0}
 .v4-year-block h3{margin:0 0 8px;font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
 .v4-year-strategy{display:flex;align-items:center;gap:6px;margin:0 0 8px;font:600 13px system-ui,sans-serif;color:var(--v3-green)}
@@ -237,7 +261,7 @@ body{padding-bottom:18px}
 .v4-start-card .v4-start-head+select{margin-top:6px}
 /* Auf Desktop gleichmässige Karten; der Kanton läuft als fünfte Karte mit. */
 @media(min-width:700px){.v4-start{align-items:stretch}}
-/* ---------- «Plan verbessern»: drei Hebel ---------- */
+/* ---------- «Plan präzisieren» / «Plan optimieren»: nummerierte Hebel ---------- */
 .v4-hebel{border:1px solid var(--v3-line);border-radius:14px;background:var(--v3-surface);padding:14px;margin:0 0 12px}
 .v4-hebel-head{display:flex;gap:10px;align-items:flex-start}
 .v4-hebel-num{flex:none;width:28px;height:28px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);font:600 14px system-ui,sans-serif;display:inline-flex;align-items:center;justify-content:center}
@@ -259,15 +283,16 @@ body{padding-bottom:18px}
 .v4-block-action{width:100%;margin-top:12px;min-height:44px;font:600 14px system-ui,sans-serif}
 .v4-strategy-head{margin:12px 0 4px;font:12px system-ui,sans-serif;color:var(--v3-muted);text-align:right}
 .v4-strategy-list{list-style:none;margin:0;padding:0}
-.v4-strategy{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:6px 8px;padding:8px 0;border-top:1px solid var(--v3-line)}
+.v4-strategy{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px 10px;padding:8px 0;border-top:1px solid var(--v3-line)}
 .v4-strategy:first-child{border-top:0}
 .v4-strategy-mark{width:14px;height:14px;border-radius:999px;border:2px solid var(--v3-line);flex:none}
 .v4-strategy.current .v4-strategy-mark{border-color:var(--v3-green);background:var(--v3-green);box-shadow:inset 0 0 0 2px var(--v3-surface)}
-.v4-strategy-name{font:600 14px system-ui,sans-serif;color:var(--v3-ink);white-space:nowrap}
-.v4-strategy-rate{font:12px system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap}
-.v4-strategy-bar{display:block;grid-column:2 / -1;height:8px;border-radius:999px;background:#ecebe6;overflow:hidden;min-width:32px}
+.v4-strategy-copy{min-width:0}
+.v4-strategy-copy strong{display:block;font:600 14px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-strategy-outcome{display:block;margin-top:2px;font:12.5px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-strategy-bar{display:block;grid-column:2;height:8px;border-radius:999px;background:#ecebe6;overflow:hidden;min-width:32px}
 .v4-strategy-bar span{display:block;height:100%;border-radius:999px;background:#3f6fa8}
-.v4-strategy-value{font:600 14px system-ui,sans-serif;color:var(--v3-ink);text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.v4-strategy-value{display:none}
 .v4-need-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:10px;margin:12px 0 0}
 .v4-need-amount{font:600 26px/1.15 Georgia,"Times New Roman",serif;color:var(--v3-ink);font-variant-numeric:tabular-nums}
 .v4-need-amount small{font:13px system-ui,sans-serif;color:var(--v3-muted)}
@@ -277,25 +302,49 @@ body{padding-bottom:18px}
 .v4-impact{margin:10px 0 0;padding:10px 12px;border-radius:10px;background:var(--v3-soft);font:13px/1.45 system-ui,sans-serif;color:var(--v3-ink)}
 
 /* Strategie-Szenarien: ganze Zeile antippbar, Auswahl sichtbar, Wirkung darunter. */
-.v4-strategy{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:6px 8px;width:100%;padding:8px;border:1px solid transparent;border-radius:10px;background:transparent;text-align:left;cursor:pointer;font-family:system-ui,sans-serif}
+.v4-strategy{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:8px 10px;width:100%;padding:8px;border:1px solid transparent;border-radius:10px;background:transparent;text-align:left;cursor:pointer;font-family:system-ui,sans-serif}
 .v4-strategy-list{display:grid;gap:4px;margin:6px 0 0;padding:0;border:0}
 .v4-strategy.selected{border-color:var(--v3-green);background:var(--v3-soft)}
 .v4-block-action[disabled]{opacity:.6;cursor:default}
 .v4-hebel-done{padding:0}
 .v4-hebel-summary{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;padding:14px;cursor:pointer;list-style:none}
 .v4-hebel-summary::-webkit-details-marker{display:none}
-.v4-hebel-summary .v4-hebel-intro strong{display:block;font:600 17px/1.25 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-hebel-summary .v4-hebel-intro strong{display:flex;align-items:center;gap:6px;font:600 17px/1.25 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
 .v4-hebel-summary .v4-hebel-intro small{display:block;margin-top:2px;font:13px system-ui,sans-serif;color:var(--v3-muted)}
 .v4-hebel-summary svg{color:var(--v3-muted);transition:none}
 .v4-hebel-done[open] .v4-hebel-summary svg{transform:rotate(90deg)}
 .v4-hebel-done .v4-hebel-list{margin:0 14px}
 .v4-hebel-done .v4-block-action{width:calc(100% - 28px);margin:12px 14px 14px}
+/* Hebel 2 «Anlagestrategie»: im Ruhezustand nur die aktuelle Strategie mit ihrer Annahme und
+   Wirkung; die drei Vorschau-Szenarien erscheinen erst auf Tap («zum Ändern aufklappen»). */
+.v4-hebel-fold{padding:0}
+.v4-hebel-strategy .v4-hebel-panel{padding:0 14px 14px}
+.v4-hebel-strategy .v4-strategy-head{margin-top:4px}
+.v4-hebel-strategy[open] .v4-hebel-summary{padding-bottom:6px}
+.v4-hebel-strategy[open] .v4-hebel-summary svg{transform:rotate(90deg)}
+/* ---------- Angaben & Grundlagen (Daten-Hub) ---------- */
+.v4-basics-title{margin:0 0 8px;font:600 17px/1.25 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+/* Erfasste Werte stehen hier rechts; die Beschreibung links darf umbrechen statt abzuschneiden,
+   damit sichtbar bleibt, WAS erfasst wurde. */
+.v4-basics .v4-hebel-line small{white-space:normal;overflow:visible;text-overflow:clip}
+.v4-basics .v4-hebel-row{align-items:start}
+.v4-basics .v4-hebel-copy{padding-top:2px}
+/* ---------- Aufgabengruppen im Menü ---------- */
+.v4-menu-group{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:12px 0 4px;padding:0 2px;font:600 11.5px system-ui,sans-serif;letter-spacing:.04em;text-transform:uppercase;color:var(--v3-muted)}
+.v4-menu-group:first-child{margin-top:4px}
+.v4-menu-badge{padding:2px 7px;border-radius:999px;background:var(--v3-soft);color:var(--v3-green);font:600 10.5px system-ui,sans-serif;letter-spacing:.02em}
 .v4-formed-note{margin:14px 0 0}
 .v4-readonly{display:grid;margin:0;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);overflow:hidden}
-.v4-readonly>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;padding:10px 12px;border-top:1px solid var(--v3-line)}
+.v4-readonly>div{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 12px;border-top:1px solid var(--v3-line)}
 .v4-readonly>div:first-child{border-top:0}
-.v4-readonly dt{font:600 14px/1.3 system-ui,sans-serif;color:var(--v3-ink);min-width:0}
+.v4-readonly dt{font:600 14px/1.3 system-ui,sans-serif;color:var(--v3-ink);min-width:0;overflow-wrap:break-word}
 .v4-readonly dd{margin:0;font:600 14px/1.3 system-ui,sans-serif;color:var(--v3-ink);text-align:right;white-space:nowrap}
+/* Auf schmalen Screens stehen Beschriftung und Wert untereinander: lange Werte wie
+   «Chancenorientiert · 6 % p.a.» können sonst nicht neben das Label passen. */
+@media(max-width:520px){
+  .v4-readonly>div{grid-template-columns:minmax(0,1fr)}
+  .v4-readonly dd{text-align:left;white-space:normal}
+}
 .v4-readonly .v4-readonly-note{grid-column:1 / -1;margin:2px 0 0;font:12px/1.4 system-ui,sans-serif;color:var(--v3-muted)}
 .v4-formed-note .v4-form-table label small{display:block;font-weight:400}
 .v4-formed-note strong{font:600 14px system-ui,sans-serif;color:var(--v3-ink);text-align:right}
@@ -313,6 +362,39 @@ body{padding-bottom:18px}
 .v4-form-group small{font-weight:400;color:var(--v3-muted)}
 .v4-asset-form .v4-form-table label{font-size:13.5px}
 .v4-form-value input::placeholder{font:13px system-ui,sans-serif;color:var(--v3-muted);opacity:1}
-/* Info-Dialoge: derselbe runde «✕»-Knopf wie im Kopf der Detailseiten. */
-#v4Modal .v3-modal-close{border:0;background:var(--v3-soft);color:var(--v3-green)}
-#v4Modal .v3-modal-close:hover,#v4Modal .v3-modal-close:focus-visible{box-shadow:inset 0 0 0 1px var(--v3-green)}
+/* Info-Dialoge: Schliessen-Knopf als reines «✕» (IconX, 22 px, Strichstärke 1,7) in der
+   dunkelgrünen Textfarbe – kein Kreis, kein Hintergrund, kein Rahmen, kein Schatten.
+   Mindestens 40 × 40 px unsichtbare Touchfläche, sauber oben rechts im Kopf; erst Hover
+   oder Tastatur-Focus zeigt einen sehr dezenten mintfarbenen Kreis. */
+#v4Modal .v3-modal-head{gap:12px;padding:12px 14px 12px 16px}
+#v4Modal .v3-modal-head h2:focus{outline:none}
+#v4Modal .v3-modal-close{display:grid;place-items:center;width:40px;height:40px;min-width:40px;min-height:40px;padding:0;border:0;border-radius:50%;background:transparent;box-shadow:none;color:var(--v3-green);cursor:pointer}
+#v4Modal .v3-modal-close svg{display:block}
+#v4Modal .v3-modal-close:hover,#v4Modal .v3-modal-close:focus-visible{background:var(--v3-soft);border-radius:50%}
+#v4Modal .v3-modal-close:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+
+/* ---------- Töpfe-Dialog (V4): kompakt, ohne internes Scrollen ----------
+   Der Dialog erklärt die Aufteilung genau einmal: helles, neutrales Zentrum mit dem Vermögen,
+   darunter die drei Töpfe als kompakte Zeilen, danach eine einzige Card zur Anlagestrategie. */
+#v4Modal .v3-modal-body{max-height:76vh;padding:12px 16px 14px}
+#v4Modal .v3-modal-lead{margin:0 0 6px}
+#v4Modal .v3-donut-wrap{margin:2px 0 8px}
+/* Helles Creme/Mint statt grauer Fläche; Betrag und Label in Navy, einzeilig im Zentrum. */
+#v4Modal .v3-donut{width:196px;height:196px}
+#v4Modal .v3-donut-total{width:121px;height:121px;border-radius:50%;background:var(--v3-soft);color:var(--v3-brand);place-content:center;justify-items:center;text-align:center}
+#v4Modal .v3-donut-total span{font:11.5px/1.25 system-ui,sans-serif;color:var(--v3-brand);opacity:.72}
+#v4Modal .v3-donut-total strong{margin-top:2px;font:600 15px/1.15 Georgia,"Times New Roman",serif;color:var(--v3-brand);font-variant-numeric:tabular-nums;white-space:nowrap}
+#v4Modal .v3-donut-legend{margin:0 0 10px;gap:0}
+#v4Modal .v3-donut-legend li{grid-template-columns:24px minmax(0,1fr) auto auto auto;padding:5px 0;gap:8px}
+#v4Modal .v3-donut-legend strong{font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-pot-strategy{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-soft)}
+.v4-pot-strategy-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:var(--v3-surface);color:var(--v3-green)}
+.v4-pot-strategy-copy{min-width:0}
+.v4-pot-strategy-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.v4-pot-strategy-head>span:first-child{font:12px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-pot-strategy-copy strong{display:block;margin-top:3px;font:600 16px/1.25 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-pot-strategy-rate{display:block;margin-top:1px;font:600 14px/1.3 system-ui,sans-serif;color:var(--v3-green)}
+.v4-pot-strategy-copy small{display:flex;align-items:center;gap:4px;margin-top:2px;font:12px/1.4 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-pot-strategy .v3-modal-icon{flex:none}
+/* Der Herkunfts-Badge liegt auf der mintfarbenen Card und braucht dort Flächenkontrast. */
+#v4Modal .v4-pot-strategy .v4-badge-tone{background:var(--v3-surface)}

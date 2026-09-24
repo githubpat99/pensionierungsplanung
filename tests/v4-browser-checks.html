@@ -49,6 +49,12 @@ function titleChecks(d, win, tag, {context = true} = {}) {
     ok(parseFloat(hcs.fontSize) > parseFloat(ccs.fontSize) * 1.5, tag + ' Kontext deutlich kleiner (' + hcs.fontSize + ' vs ' + ccs.fontSize + ')');
     ok(hcs.whiteSpace === 'nowrap', tag + ' Titel bricht nicht um');
     ok(Math.abs(tb.height - parseFloat(hcs.lineHeight)) < 2, tag + ' Titel einzeilig (' + Math.round(tb.height) + ' px)');
+    /* Kein Umbruch mitten im Wort: «anywhere» würde den Kontext buchstabenweise zerreissen. */
+    ok(ccs.overflowWrap !== 'anywhere', tag + ' Kontext bricht nicht mitten im Wort (' + ccs.overflowWrap + ')');
+    /* Lange Titel bekommen eine Schriftstufe weniger, damit der Kontext Platz behält. */
+    const longTitle = (h1.textContent.trim().length > 16);
+    ok(!!head.classList.contains('v4-head-long') === longTitle, tag + ' Kennzeichnung langer Titel (' + h1.textContent.trim().length + ' Zeichen)');
+    if (longTitle && win.innerWidth <= 520) ok(parseFloat(hcs.fontSize) <= 21, tag + ' langer Titel bleibt bei ≤ 21 px (' + hcs.fontSize + ')');
   }
   ok(d.querySelectorAll('#app .v4-head').length === 1, tag + ' genau ein Kopf');
   ok(!/#app .*v4-subtitle|v4-status-line/.test(d.body.innerHTML), tag + ' keine separate Status-/Untertitelzeile');
@@ -93,12 +99,12 @@ async function planStructure(w, h) {
   ok(app.querySelectorAll('.v4-rows .v4-row').length === 2, tag + ' genau zwei sekundäre Zeilen');
   ok(app.querySelectorAll('.v4-verdict button').length === 0, tag + ' keine Aktion in der Status-Card');
   const rows = [...app.querySelectorAll('.v4-rows .v4-row')].map(b => b.textContent.trim());
-  ok(rows[0] === 'Vermögensverlauf' && /^Meine Varianten · \d gespeichert$/.test(rows[1]), tag + ' Zeilen korrekt (' + rows.join(' | ') + ')');
+  ok(rows[0] === 'Jahresverlauf' && /^Meine Varianten · \d gespeichert$/.test(rows[1]), tag + ' Zeilen korrekt (' + rows.join(' | ') + ')');
   const improve = app.querySelector('.v4-next');
-  ok(/Plan verbessern/.test(improve?.textContent ?? ''), tag + ' «Plan verbessern» vorhanden');
+  ok(/Plan präzisieren/.test(improve?.textContent ?? ''), tag + ' zustandsabhängige Card «Plan präzisieren» vorhanden');
   const forbiddenSelectors = ['.v4-details', '.v4-detail-list', '.v4-detail', '.v4-save', '#saveLabel', '[data-save]', '.v4-open-list', '.v4-variant'];
   const presentSelectors = forbiddenSelectors.filter(selector => app.querySelector(selector));
-  const forbiddenLabels = ['Details', 'Plan genauer machen', 'Drei Geldtöpfe', 'Jetzt speichern', 'Automatisch gespeichert', 'Einnahmen im Ruhestand', 'Renten total / Monat', 'Entnahme aus Vermögen / Monat'];
+  const forbiddenLabels = ['Details', 'Plan genauer machen', 'Plan verbessern', 'Drei Geldtöpfe', 'Jetzt speichern', 'Automatisch gespeichert', 'Einnahmen im Ruhestand', 'Renten total / Monat', 'Entnahme aus Vermögen / Monat', 'Anlagestrategie', 'Töpfe-Modell'];
   const allLabels = [...app.querySelectorAll('strong,h2,h3,button,a,span')].map(node => node.textContent.trim());
   const presentLabels = forbiddenLabels.filter(entry => allLabels.includes(entry));
   ok(presentSelectors.length === 0 && presentLabels.length === 0, tag + ' keine verbotenen Blöcke' + ((presentSelectors.length || presentLabels.length) ? ' (' + [...presentSelectors, ...presentLabels].join(', ') + ')' : ''));
@@ -113,7 +119,20 @@ async function startChecks(w, h, situation = 'pre') {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + '×' + h + (situation === 'pre' ? '' : ' [' + situation + ']');
   if (situation !== 'pre') { d.querySelector('[data-situation="' + situation + '"]')?.click(); await wait(350); }
   titleChecks(d, win, tag);
-  ok(d.querySelector('.v4-page-context')?.textContent.trim() === 'Nur 5 Angaben und du hast einen ersten Überblick.', tag + ' Schnellstart-Kontext');
+  ok(d.querySelector('.v4-page-context')?.textContent.trim() === '5 Angaben für deinen ersten Überblick.', tag + ' Schnellstart-Kontext');
+  /* Kopfbereich ruhig für die Aufnahme: kräftiger Creme-Schleier oben, darunter weich
+     ausblendend; Titel/Logo in Navy, Kontext dunkel und kräftig, kein Textschatten. */
+  const hero = d.getElementById('v4Hero');
+  const heroAfter = hero ? win.getComputedStyle(hero, '::after').backgroundImage : '';
+  ok(/rgba\(247, 246, 242, 0\.9\)/.test(heroAfter) || /0\.90/.test(heroAfter), tag + ' Hero: kräftiger Creme-Schleier oben (' + heroAfter.slice(0, 48) + '…)');
+  ok(/84px/.test(heroAfter) && /146px/.test(heroAfter), tag + ' Hero: Verlauf bis unter die Titelzeile, danach ausblendend');
+  const titleStyle = win.getComputedStyle(d.querySelector('.v4-page-title'));
+  const contextStyle = win.getComputedStyle(d.querySelector('.v4-page-context'));
+  const brandStyle = win.getComputedStyle(d.querySelector('.brand-name'));
+  ok(titleStyle.textShadow === 'none' && contextStyle.textShadow === 'none' && brandStyle.textShadow === 'none', tag + ' kein Textschatten (' + titleStyle.textShadow + ')');
+  const darkness = value => (value.match(/\d+/g) ?? []).slice(0, 3).reduce((sum, part) => sum + Number(part), 0);
+  ok(darkness(titleStyle.color) < 220 && darkness(brandStyle.color) < 260, tag + ' Titel und Logo in dunklem Navy (' + titleStyle.color + ' / ' + brandStyle.color + ')');
+  ok(contextStyle.fontWeight === '500' && darkness(contextStyle.color) < 240, tag + ' Kontext dunkler und kräftiger (' + contextStyle.color + ' / ' + contextStyle.fontWeight + ')');
   const cards = [...d.querySelectorAll('.v4-start-card')];
   ok(cards.length === 5, tag + ' fünf Eingabekarten (' + cards.length + ')');
   ok(new Set(cards.map(c => Math.round(c.getBoundingClientRect().height))).size === 1, tag + ' gleiche Kartenhöhe (' + cards.map(c => Math.round(c.getBoundingClientRect().height)).join('/') + ')');
@@ -168,8 +187,19 @@ async function startChecks(w, h, situation = 'pre') {
 }
 
 /* ---------- Alle Screens: PageTitle + Hero-Modus ---------- */
+/* Alle Editoren liegen hinter dem einen Menüpunkt «Angaben & Grundlagen» – die Navigation
+   folgt den Aufgaben, nicht dem Datenmodell (docs/information-architecture-v4.md §7).
+   Jahresverlauf und Annahmen haben eigene Menüpunkte. */
+async function openEditor(d, page) {
+  const direct = d.querySelector(`[data-menu-page="${page}"]`);
+  if (direct) { direct.click(); await wait(450); return; }
+  d.querySelector('[data-menu-page="basics"]')?.click();
+  await wait(400);
+  d.querySelector(`#app [data-v4-next="${page}"]`)?.click();
+  await wait(450);
+}
 async function screenChecks(w, h) {
-  const routes = ['Schnellstart', 'Mein Plan', 'Plan verbessern', 'Varianten', 'years', 'personal', 'ahv', 'need', 'assets', 'assumptions', 'pension', 'extra'];
+  const routes = ['Schnellstart', 'Mein Plan', 'Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'years', 'personal', 'ahv', 'need', 'assets', 'assumptions', 'pension', 'extra'];
   for (const route of routes) {
     const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px ' + route;
     try {
@@ -177,11 +207,10 @@ async function screenChecks(w, h) {
       else {
         win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
         if (route === 'Varianten') win.V4.renderVariants();
-        else if (route === 'Plan verbessern') { const el = d.querySelector('[data-v4-next="improve"]'); if (el) el.click(); }
-        else if (route !== 'Mein Plan') {
-          const el = d.querySelector(`[data-v4-next="${route}"]`) || d.querySelector(`[data-menu-page="${route}"]`);
-          if (el) el.click();
-        }
+        else if (route === 'Angaben & Grundlagen') d.querySelector('[data-menu-page="basics"]')?.click();
+        else if (route === 'Plan präzisieren') d.querySelector('[data-v4-next="improve"]')?.click();
+        else if (route === 'Mein Plan') { /* schon offen */ }
+        else await openEditor(d, route);
       }
     } catch (e) { out.push('      ' + tag + ' Aktion: ' + e.message); }
     await wait(350);
@@ -191,15 +220,21 @@ async function screenChecks(w, h) {
     const mode = d.getElementById('v4Hero')?.dataset.mode;
     if (route === 'Schnellstart') ok(mode === 'start', tag + ' Hero start');
     else ok(mode === 'calm', tag + ' Hero calm (' + mode + ')');
-    /* Detailseiten tragen im Kopf links den Rückweg-Pfeil und rechts das «✕»; «Mein Plan»
-       und der Schnellstart haben keinen Rückweg. Beide Knöpfe führen auf «Mein Plan». */
+    /* Detailseiten haben GENAU EINEN Rückweg; das «✕» gehört nur Modals. «Zurück» ist reine
+       Navigation und führt zur übergeordneten Seite (nicht zwingend auf «Mein Plan»). */
     const isDetail = route !== 'Mein Plan' && route !== 'Schnellstart';
     const headBack = d.querySelector('.v4-head-back'), headClose = d.querySelector('.v4-head-close');
     if (isDetail) {
-      ok(!!headBack && !!headBack.querySelector('svg') && !!headClose && !!headClose.querySelector('svg'), tag + ' Kopf mit Rückweg-Pfeil und «✕»');
-      headClose?.click();
+      ok(!!headBack && !!headBack.querySelector('svg') && d.querySelectorAll('#app .v4-head-back').length === 1, tag + ' genau ein Rückweg-Knopf im Kopf');
+      ok(!headClose, tag + ' kein «✕» auf dem Screen (nur Modals)');
+      /* Editoren werden über «Angaben & Grundlagen» geöffnet, «Annahmen» über das Menü. */
+      const viaBasics = !['Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'years', 'assumptions'].includes(route);
+      const expectedBack = viaBasics ? 'Angaben & Grundlagen' : 'Mein Plan';
+      ok(headBack?.textContent.trim() === expectedBack, tag + ' Rückweg nennt die übergeordnete Seite («' + (headBack?.textContent.trim() ?? '') + '»)');
+      headBack?.click();
       await wait(420);
-      ok(!!d.querySelector('.v4-verdict') && !!d.querySelector('.v4-tiles'), tag + ' «✕» führt zurück auf «Mein Plan»');
+      const afterTitle = d.querySelector('.v4-page-title')?.textContent.trim() ?? '';
+      ok(afterTitle === (viaBasics ? 'Angaben & Grundlagen.' : 'Mein Plan.'), tag + ' «Zurück» führt zur übergeordneten Seite (→ «' + afterTitle + '»)');
     } else {
       ok(!headBack && !headClose, tag + ' Kopf ohne Rückweg-/Schliessen-Knopf');
     }
@@ -214,12 +249,12 @@ async function editorChecks(w, h) {
   win.DevFixture.write(win.DevFixture.scenarios['knapp']()); win.V4.load();
   await wait(400);
   const before = d.querySelector('.v4-tiles')?.textContent ?? '';
-  d.querySelector('[data-menu-page="need"]')?.click();
-  await wait(350);
+  await openEditor(d, 'need');
   titleChecks(d, win, tag + ' Bedarf-Editor', {context: true});
-  const back = d.querySelector('.v4-head-back'), close = d.querySelector('.v4-head-close');
-  ok(!!back && !!back.querySelector('svg') && /Mein Plan/.test(back.getAttribute('aria-label') ?? '') && back.hasAttribute('data-v4-back'), tag + ' Rückweg-Pfeil im Kopf («' + (back?.getAttribute('aria-label') ?? '') + '»)');
-  ok(!!close && !!close.querySelector('svg') && close.hasAttribute('data-v4-back'), tag + ' «✕» zum Schliessen im Kopf («' + (close?.getAttribute('aria-label') ?? '') + '»)');
+  const back = d.querySelector('.v4-head-back');
+  ok(!!back && !!back.querySelector('svg') && /Zurück zu/.test(back.getAttribute('aria-label') ?? '') && back.hasAttribute('data-v4-back'), tag + ' Rückweg-Knopf im Kopf («' + (back?.getAttribute('aria-label') ?? '') + '»)');
+  ok(d.querySelectorAll('#app .v4-head-back').length === 1 && !d.querySelector('#app .v4-head-close'), tag + ' genau ein Rückweg, kein «✕» auf dem Screen');
+  ok(back?.textContent.trim() === 'Angaben & Grundlagen', tag + ' aus «Angaben & Grundlagen» geöffnet → Rückweg dorthin («' + (back?.textContent.trim() ?? '') + '»)');
   const table = d.querySelector('.v4-form-table');
   ok(!!table, tag + ' Editor als Tabelle');
   const labels = [...(table?.querySelectorAll('label') ?? [])];
@@ -237,6 +272,48 @@ async function editorChecks(w, h) {
     ok(after !== before && /12'000/.test(after), tag + ' «Übernehmen» übernimmt den Wert (' + (after.match(/CHF [\d']+/g) ?? []).join(' / ') + ')');
     ok(!!d.querySelector('.v4-verdict'), tag + ' danach zurück auf «Mein Plan»');
   } else { ok(false, tag + ' Bedarf-Feld und Submit-Knopf vorhanden'); }
+  /* Apply-and-return: «Zurück» ist reine Navigation – nichts wird gespeichert. */
+  await openEditor(d, 'need');
+  const untouched = d.getElementById('need');
+  if (untouched) {
+    untouched.value = '9\'999';
+    untouched.dispatchEvent(new win.Event('input', {bubbles:true}));
+    d.querySelector('.v4-head-back')?.click();
+    await wait(700);
+    ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Angaben & Grundlagen.', tag + ' «Zurück» führt zur übergeordneten Seite');
+    d.querySelector('[data-menu-page="plan"]')?.click();
+    await wait(500);
+    const tiles = d.querySelector('.v4-tiles')?.textContent ?? '';
+    ok(/12'000/.test(tiles) && !/9'999/.test(tiles), tag + ' «Zurück» speichert nichts (' + (tiles.match(/CHF [\d']+/g) ?? []).join(' / ') + ')');
+  }
+  /* Beschriftungen brechen nur an Wortgrenzen, der Kanton belegt im Editor nur den Code –
+     sonst schrumpft die Label-Spalte und «Pensionierungsalter» wird silbenweise getrennt. */
+  await openEditor(d, 'personal');
+  /* Silbentrennung erkennen: mehr Zeilen als Wörter heisst, ein Wort wurde getrennt. */
+  const labelLines = node => {
+    let lines = 0;
+    for (const child of node.childNodes) {
+      if (child.nodeType !== 3 || !child.textContent.trim()) continue;
+      const range = d.createRange(); range.selectNodeContents(child);
+      lines = Math.max(lines, range.getClientRects().length);
+    }
+    return lines;
+  };
+  const labelWords = node => [...node.childNodes].filter(child => child.nodeType === 3).map(child => child.textContent.trim().split(/\s+/).filter(Boolean).length).reduce((a, b) => a + b, 0);
+  const personalLabels = [...d.querySelectorAll('#v4DetailForm label')];
+  ok(personalLabels.length >= 3, tag + ' Persönliche Angaben: ' + personalLabels.length + ' Felder');
+  const split = personalLabels.filter(label => labelLines(label) > labelWords(label));
+  ok(split.length === 0, tag + ' Editor-Labels ohne Silbentrennung' + (split.length ? ' (' + split.map(label => label.textContent.trim() + ': ' + labelLines(label) + ' Zeilen / ' + labelWords(label) + ' Wörter').join(', ') + ')' : ' (' + personalLabels.map(label => label.textContent.trim() + '=' + labelLines(label) + '/' + labelWords(label)).join(', ') + ')'));
+  const labelColumn = Math.round(personalLabels[0]?.getBoundingClientRect().width ?? 0);
+  ok(labelColumn >= 140, tag + ' Label-Spalte breit genug (' + labelColumn + ' px)');
+  const cantonSelect = d.getElementById('canton');
+  const cantonTrigger = d.querySelector('#v4DetailForm .canton-trigger');
+  const triggerText = cantonTrigger?.textContent.trim() ?? '';
+  ok(/^[A-Z]{2}/.test(triggerText) && !/Aargau|Zürich|Appenzell|Bern|Waadt/.test(triggerText), tag + ' Kanton im Editor nur als Code («' + triggerText + '», Wert: «' + (cantonSelect?.value ?? '–') + '»)');
+  /* «Nettomiete» ist aus der Oberfläche entfernt. */
+  await openEditor(d, 'extra');
+  ok(!/Nettomiete/.test(d.body.textContent), tag + ' kein «Nettomiete» im Einkommens-Editor');
+  ok(/Weitere Einnahmen/.test(d.body.textContent), tag + ' Feld heisst «Weitere Einnahmen»');
   f.remove();
 }
 
@@ -263,6 +340,21 @@ async function infoChecks(w, h) {
     ok(!!body?.querySelector('.v4-info-amount'), tag + ' ⓘ ' + entry.title + ' zeigt den Betrag prominent');
     ok(!!body?.querySelector('.v3-info-list'), tag + ' ⓘ ' + entry.title + ' ist tabellarisch');
     ok(/Herkunft|deine Angabe|aus deinen|Schnellstart/.test(text), tag + ' ⓘ ' + entry.title + ' nennt die Herkunft');
+    /* Modal-Schliessen: nur das Tabler-«✕» in der dunkelgrünen Textfarbe, ohne Fläche. */
+    if (entry.index === 0) {
+      const close = d.querySelector('#v4Modal [data-modal-close]');
+      const cs = close ? win.getComputedStyle(close) : null;
+      const box = close?.getBoundingClientRect();
+      const svg = close?.querySelector('svg');
+      ok(close?.getAttribute('aria-label') === 'Schliessen', tag + ' «✕» mit aria-label «Schliessen»');
+      ok(!!box && box.width >= 40 && box.height >= 40, tag + ' «✕» Touchfläche ≥ 40 × 40 px (' + Math.round(box?.width ?? 0) + '×' + Math.round(box?.height ?? 0) + ')');
+      ok(!!cs && (cs.backgroundColor === 'rgba(0, 0, 0, 0)' || cs.backgroundColor === 'transparent'), tag + ' «✕» ohne Hintergrund im Normalzustand (' + cs?.backgroundColor + ')');
+      ok(!!cs && parseFloat(cs.borderTopWidth) === 0 && cs.borderTopStyle === 'none', tag + ' «✕» ohne Rahmen (' + cs?.borderTopWidth + ' ' + cs?.borderTopStyle + ')');
+      ok(!!cs && cs.boxShadow === 'none', tag + ' «✕» ohne Schatten (' + cs?.boxShadow + ')');
+      ok(!!cs && cs.color === 'rgb(31, 98, 85)', tag + ' «✕» in der dunkelgrünen Textfarbe (' + cs?.color + ')');
+      ok(!!svg && svg.getAttribute('width') === '22' && svg.getAttribute('height') === '22', tag + ' IconX 22 px (' + svg?.getAttribute('width') + ')');
+      ok(!!svg && svg.getAttribute('stroke-width') === '1.7' && svg.getAttribute('stroke') === 'currentColor', tag + ' IconX Strichstärke 1,7 in Textfarbe (' + svg?.getAttribute('stroke-width') + ')');
+    }
     /* Die Kette muss aufgehen: brutto − Steuern = netto, und die Einzelposten ergeben brutto. */
     if (entry.index === 0) {
       const read = root => [...(root?.querySelectorAll('.v3-info-list > div') ?? [])].map(row => ({label:row.querySelector('dt')?.textContent.trim() ?? '', value:Number((row.querySelector('dd')?.textContent ?? '').replace(/[^\d]/g, ''))}));
@@ -274,11 +366,91 @@ async function infoChecks(w, h) {
       const parts = read(body.querySelector('.v4-info-detail')).map(row => row.value);
       ok(parts.length > 0 && parts.reduce((a, b) => a + b, 0) === gross, tag + ' ⓘ Einkommen: Summe der Einnahmen = brutto (' + parts.join(' + ') + ' = ' + parts.reduce((a, b) => a + b, 0) + ' / ' + gross + ')');
       ok(!/Kapitalbezugssteuer/.test(text), tag + ' ⓘ Einkommen ohne Hinweis auf die einmalige Kapitalbezugssteuer');
+      ok(!/Nettomiete/.test(text), tag + ' ⓘ Einkommen: «Einnahmen einzeln» ohne «Nettomiete»');
     }
     d.querySelector('[data-modal-close]')?.click();
     await wait(140);
   }
   f.remove();
+}
+
+/* ---------- Informationsarchitektur: Menü, Rückwege, «Plan verstehen» ---------- */
+async function navigationChecks(w, h) {
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
+  // Schnellstart: kein Hamburger, solange kein Plan existiert
+  win.__v4SuspendSave = true; win.localStorage.removeItem('retirement-v3-plan'); win.V4.renderStart();
+  await wait(400);
+  ok(d.querySelector('.menu-button')?.hidden === true, tag + ' Schnellstart ohne Hamburger');
+  // Mit Plan: aufgabenorientiertes Menü mit drei Gruppen
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
+  await wait(450);
+  d.querySelector('.menu-button')?.click();
+  await wait(250);
+  const groups = [...d.querySelectorAll('#v4Menu .v4-menu-group')].map(node => node.textContent.replace(/\s+/g, ' ').trim());
+  ok(groups.length === 3 && /^Mein Plan$/.test(groups[0]) && /^Planen$/.test(groups[1]) && /^Plan verstehen/.test(groups[2]), tag + ' Menü in drei Aufgabengruppen (' + groups.join(' | ') + ')');
+  ok(/Details/.test(groups[2] ?? ''), tag + ' «Plan verstehen» ist als Detail-Ebene gekennzeichnet');
+  const entries = [...d.querySelectorAll('#v4Menu [data-menu-page]')].map(node => ({page:node.dataset.menuPage, label:node.textContent.trim()}));
+  ok(entries.map(entry => entry.page).join(',') === 'plan,basics,variants,years,pots,assumptions', tag + ' Menüdestinationen (' + entries.map(entry => entry.page).join(',') + ')');
+  const forbiddenPages = ['ahv','pension','pension3a','extra','need','assets','personal','improve'];
+  ok(!entries.some(entry => forbiddenPages.includes(entry.page)), tag + ' keine Fach-Datensätze als Menüdestination');
+  ok(!/Plan verbessern|Steuern|Einkommen/.test(d.getElementById('v4Menu').textContent), tag + ' kein «Plan verbessern»/Fachjargon im Menü');
+  const labels = entries.map(entry => entry.label);
+  ok(labels.includes('Jahresverlauf') && labels.includes('Töpfe-Modell') && labels.includes('Annahmen & Berechnung'), tag + ' «Plan verstehen» enthält Jahresverlauf, Töpfe-Modell, Annahmen');
+  // Töpfe-Modell: Menü und Jahresverlauf öffnen dieselbe Komponente
+  d.querySelector('[data-menu-page="pots"]')?.click();
+  await wait(450);
+  const fromMenu = {title:d.getElementById('v4ModalTitle')?.textContent ?? '', body:d.getElementById('v4ModalBody')?.innerHTML ?? ''};
+  ok(fromMenu.title === 'Das Töpfe-Modell' && !!d.querySelector('#v4Modal .v4-pot-strategy'), tag + ' Menü öffnet das Töpfe-Modell direkt');
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.', tag + ' Töpfe-Modell öffnet als Dialog über dem Screen (kein eigener Screen)');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(200);
+  d.querySelector('[data-v4-next="years"]')?.click();
+  await wait(450);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Jahr für Jahr.' && d.querySelector('.v4-page-context')?.textContent.trim() === 'So arbeitet dein Plan im Detail.', tag + ' Jahresverlauf gehört zu «Plan verstehen» («Jahr für Jahr.»)');
+  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Mein Plan' && !d.querySelector('.v4-head-close'), tag + ' Jahresverlauf mit genau einem Rückweg zu «Mein Plan»');
+  d.querySelector('[data-v4-action="pots"]')?.click();
+  await wait(450);
+  const fromYears = {title:d.getElementById('v4ModalTitle')?.textContent ?? '', body:d.getElementById('v4ModalBody')?.innerHTML ?? ''};
+  ok(fromYears.title === fromMenu.title && fromYears.body === fromMenu.body, tag + ' beide Wege nutzen dieselbe Töpfe-Komponente (identischer Inhalt)');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(200);
+  // Angaben & Grundlagen: ein Menüpunkt, alle Editoren
+  d.querySelector('.menu-button')?.click();
+  await wait(200);
+  d.querySelector('[data-menu-page="basics"]')?.click();
+  await wait(450);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Angaben & Grundlagen.', tag + ' Screen «Angaben & Grundlagen.»');
+  const basicsGroups = [...d.querySelectorAll('#app .v4-basics-title')].map(node => node.textContent.trim());
+  ok(basicsGroups.join(' | ') === 'Zeitpunkt & Steuern | Einkommen & Vorsorge | Bedarf & Vermögen', tag + ' Angaben gruppiert (' + basicsGroups.join(' | ') + ')');
+  const pages = [...d.querySelectorAll('#app .v4-hebel-row')].map(row => row.dataset.v4Next);
+  ok(pages.join(',') === 'personal,ahv,pension,pension3a,extra,need,assets', tag + ' alle Editoren erreichbar (' + pages.join(',') + ')');
+  ok([...d.querySelectorAll('#app .v4-hebel-row .v4-badge-tone')].length === pages.length, tag + ' jede Zeile zeigt ihren Zustand');
+  /* Erfasst heisst auch sichtbar: jede Zeile nennt den erfassten Wert, nicht nur «erfasst». */
+  const basicRows = [...d.querySelectorAll('#app .v4-hebel-row')].map(row => ({page:row.dataset.v4Next, text:row.textContent.replace(/\s+/g, ' ').trim(), value:row.querySelector('.v4-hebel-value')?.textContent.trim() ?? ''}));
+  const rowOf = page => basicRows.find(row => row.page === page) ?? {text:'', value:''};
+  ok(/^CHF [\d'’]+$/.test(rowOf('pension').value), tag + ' PK-Zeile nennt das Guthaben («' + rowOf('pension').value + '»)');
+  ok(/Beitrag CHF [\d'’]+ \/ Jahr/.test(rowOf('pension').text), tag + ' PK-Zeile nennt die Beiträge');
+  ok(/^CHF [\d'’]+$/.test(rowOf('pension3a').value), tag + ' Säule-3a-Zeile nennt das Guthaben («' + rowOf('pension3a').value + '»)');
+  ok(rowOf('extra').value === 'Keine' && /Keine weiteren Einnahmen/.test(rowOf('extra').text), tag + ' Weitere Einnahmen nennt den erfassten Wert («' + rowOf('extra').value + '»)');
+  ok(/^CHF [\d'’]+$/.test(rowOf('assets').value) && /Bank & Wertschriften/.test(rowOf('assets').text), tag + ' Vermögens-Zeile nennt die erfasste Summe («' + rowOf('assets').value + '»)');
+  ok(/^CHF [\d'’]+ \/ Monat$/.test(rowOf('need').value) && /^CHF [\d'’]+ \/ Monat$/.test(rowOf('ahv').value), tag + ' Bedarf und AHV nennen den Betrag');
+  ok(basicRows.every(row => row.text.length > 0 && !/\.\.\.$/.test(row.text)), tag + ' keine abgeschnittenen Beschreibungen');
+  const clipped = [...d.querySelectorAll('#app .v4-basics .v4-hebel-line small')].filter(node => node.scrollWidth > node.clientWidth + 1);
+  ok(clipped.length === 0, tag + ' Beschreibungen nicht gekürzt' + (clipped.length ? ' (' + clipped.map(node => node.textContent.trim()).join(', ') + ')' : ''));
+  d.querySelector('#app [data-v4-next="ahv"]')?.click();
+  await wait(450);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'AHV-Renten.', tag + ' Zeile öffnet den bestehenden Editor');
+  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Angaben & Grundlagen', tag + ' Editor führt zurück auf «Angaben & Grundlagen»');
+  f.remove();
+}
+
+/* ---------- Modal-Schliessen: Hover/Focus-Regel (statisch im Stylesheet) ---------- */
+async function modalCloseStyleChecks() {
+  const css = (await (await fetch('/css/v4.css')).text()).replace(/\s+/g, ' ');
+  ok(/#v4Modal \.v3-modal-close:hover[^{]*\{[^}]*background:var\(--v3-soft\)/.test(css), 'CSS: Hover/Focus zeigt den dezenten mintfarbenen Kreis');
+  ok(/#v4Modal \.v3-modal-close:hover[^{]*\{[^}]*border-radius:50%/.test(css), 'CSS: Hover/Focus mit border-radius 50%');
+  ok(/#v4Modal \.v3-modal-close\{[^}]*background:transparent/.test(css) && !/#v4Modal \.v3-modal-close\{[^}]*background:var\(--v3-soft\)/.test(css), 'CSS: Normalzustand vollständig transparent');
+  ok(/#v4Modal \.v3-modal-close\{[^}]*border:0/.test(css) && /#v4Modal \.v3-modal-close\{[^}]*box-shadow:none/.test(css), 'CSS: kein Rahmen, kein Schatten');
 }
 
 /* ---------- Alle Editoren und alle Vermögenssektionen speichern wirklich ---------- */
@@ -288,8 +460,9 @@ async function saveChecks(w, h) {
     const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px ' + page;
     win.DevFixture.write(win.DevFixture.scenarios['knapp']()); win.V4.load();
     await wait(400);
-    d.querySelector(`[data-menu-page="${page}"]`)?.click();
-    await wait(350);
+    /* Editoren liegen hinter «Angaben & Grundlagen» – «Annahmen» hat einen eigenen Menüpunkt. */
+    if (page === 'assumptions') { d.querySelector('[data-menu-page="assumptions"]')?.click(); await wait(400); }
+    else await openEditor(d, page);
     const input = d.getElementById(field);
     const submit = d.querySelector('.v4-form-submit');
     if (!input || !submit) { ok(false, tag + ' Feld/Knopf vorhanden'); f.remove(); continue; }
@@ -306,8 +479,7 @@ async function saveChecks(w, h) {
     const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px Vermögen';
     win.DevFixture.write(win.DevFixture.scenarios['knapp']()); win.V4.load();
     await wait(400);
-    d.querySelector('[data-menu-page="assets"]')?.click();
-    await wait(400);
+    await openEditor(d, 'assets');
     ok(d.querySelectorAll('#v4AssetForm').length === 1 && d.querySelectorAll('.v4-form-submit').length === 1, tag + ' genau eine Tabelle und eine Aktion');
     const fill = {cash:'11111'};
     for (const [name, value] of Object.entries(fill)) {
@@ -319,8 +491,7 @@ async function saveChecks(w, h) {
     const title = d.querySelector('.v4-page-title')?.textContent.trim() ?? '';
     ok(!win.__v4LastError && title === 'Mein Plan.', tag + ' «Übernehmen» speichert und kehrt zurück' + (win.__v4LastError ? ' (Fehler: ' + win.__v4LastError + ')' : ''));
     // Fehlerfall: ungültige Eingabe → Fehler sichtbar, kein stiller Abbruch
-    d.querySelector('[data-menu-page="assets"]')?.click();
-    await wait(400);
+    await openEditor(d, 'assets');
     const invalid = d.querySelector('#v4AssetForm input[name="securities"]');
     invalid.value = 'abc';
     invalid.dispatchEvent(new win.Event('input', {bubbles:true}));
@@ -340,8 +511,7 @@ async function saveChecks(w, h) {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow;
   win.DevFixture.write(win.DevFixture.scenarios['knapp']()); win.V4.load();
   await wait(400);
-  d.querySelector('[data-menu-page="assets"]')?.click();
-  await wait(400);
+  await openEditor(d, 'assets');
   const assetValues = {cash:'11111', securities:'22222', propertyValue:'444444'};
   for (const [name, value] of Object.entries(assetValues)) {
     const input = d.querySelector(`#v4AssetForm input[name="${name}"]`);
@@ -357,47 +527,103 @@ async function saveChecks(w, h) {
 }
 
 /* ---------- «Plan verbessern»: drei Hebel + Töpfe-Dialog ohne leere Töpfe ---------- */
+/* ---------- «Plan präzisieren»: nur Datenqualität, keine Optimierung ---------- */
 async function improveChecks(w, h) {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
   win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
   await wait(400);
+  /* Zustand A: es fehlen noch Angaben → die Card heisst «Plan präzisieren». */
+  const cta = d.querySelector('.v4-next')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  ok(/^Plan präzisieren/.test(cta), tag + ' Card: «Plan präzisieren» bei offenen Angaben («' + cta + '»)');
+  ok(/Dein erster Plan basiert teilweise auf Schätzungen\./.test(cta) && /Angaben machen deinen Plan genauer\.|Eine Angabe macht deinen Plan genauer\./.test(cta), tag + ' Card nennt Schätzungs-Hinweis und Anzahl Angaben');
+  ok(!/Plan verbessern|Plan optimieren/.test(cta), tag + ' Card nicht «Plan verbessern»/«Plan optimieren»');
   d.querySelector('[data-v4-next="improve"]')?.click();
   await wait(450);
-  titleChecks(d, win, tag + ' Plan verbessern');
+  titleChecks(d, win, tag + ' Plan präzisieren');
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Plan präzisieren.', tag + ' Titel «Plan präzisieren.»');
+  ok(d.querySelector('.v4-page-context')?.textContent.trim() === 'Mach deinen ersten Plan genauer.', tag + ' Kontext «Mach deinen ersten Plan genauer.»');
   const blocks = [...d.querySelectorAll('#app .v4-hebel')];
-  ok(blocks.length === 3, tag + ' drei Hebel (' + blocks.length + ')');
-  ok([...d.querySelectorAll('.v4-hebel-num')].map(n => n.textContent.trim()).join(',') === '1,2,3', tag + ' Hebel nummeriert 1,2,3');
-  ok(d.querySelector('.v4-page-context')?.textContent.trim() === '3 Hebel für einen besseren Plan.', tag + ' Kontext nennt die Anzahl Hebel');
+  ok(blocks.length === 1, tag + ' nur der Datenhebel (' + blocks.length + ' Block)');
+  ok([...d.querySelectorAll('.v4-hebel-num')].map(n => n.textContent.trim()).join(',') === '1', tag + ' Hebel nummeriert 1');
   const first = blocks[0];
   ok(/Angaben präzisieren/.test(first.textContent) && first.querySelectorAll('.v4-hebel-row').length >= 2, tag + ' Hebel 1: Zeilen (' + first.querySelectorAll('.v4-hebel-row').length + ')');
   ok(!!first.querySelector('.v4-badge-tone'), tag + ' Hebel 1: Zustand je Zeile');
   ok(/Angaben ergänzen/.test(first.textContent), tag + ' Hebel 1: Aktion «Angaben ergänzen»');
-  const second = blocks[1];
+  /* Auch hier gilt: erfasst heisst sichtbar – die Zeilen nennen die erfassten Beträge. */
+  const precisionRows = [...first.querySelectorAll('.v4-hebel-row')].map(row => ({page:row.dataset.v4Next, text:row.textContent.replace(/\s+/g, ' ').trim()}));
+  const precisionOf = page => precisionRows.find(row => row.page === page)?.text ?? '';
+  ok(/CHF [\d'’]+/.test(precisionOf('assets')), tag + ' Hebel 1: Vermögens-Zeile nennt den erfassten Betrag («' + precisionOf('assets') + '»)');
+  ok(/CHF [\d'’]+/.test(precisionOf('pension')) && /Beitrag CHF/.test(precisionOf('pension')), tag + ' Hebel 1: PK-Zeile nennt Guthaben und Beiträge («' + precisionOf('pension') + '»)');
+  /* Datenqualität und Optimierung sind getrennte Konzepte. */
+  ok(!d.querySelector('#app .v4-strategy') && !d.querySelector('#app .v4-need-amount'), tag + ' keine Optimierungshebel im Zustand «Plan präzisieren»');
+  ok(!/Anlagestrategie|Bedarf netto/.test(d.getElementById('app').textContent), tag + ' kein Strategie-/Bedarf-Block im Screen');
+  ok(!d.querySelector('.v4-head-close'), tag + ' kein «✕» auf dem Screen');
+  f.remove();
+}
+
+/* ---------- «Plan optimieren»: Strategie + Bedarf, Töpfe-Dialog ---------- */
+async function optimizeChecks(w, h) {
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
+  await wait(400);
+  /* Zustand B: alle Angaben erfasst → die Card heisst «Plan optimieren». */
+  const cta = d.querySelector('.v4-next')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  ok(/^Plan optimieren/.test(cta), tag + ' Card: «Plan optimieren» bei vollständigen Angaben («' + cta + '»)');
+  ok(/Teste Strategie, Bedarf und weitere Möglichkeiten\./.test(cta), tag + ' Card nennt die Optimierungsmöglichkeiten');
+  d.querySelector('[data-v4-next="improve"]')?.click();
+  await wait(450);
+  titleChecks(d, win, tag + ' Plan optimieren');
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Plan optimieren.', tag + ' Titel «Plan optimieren.»');
+  ok(d.querySelector('.v4-page-context')?.textContent.trim() === 'Teste, was deinen Plan verbessert.', tag + ' Kontext «Teste, was deinen Plan verbessert.»');
+  const blocks = [...d.querySelectorAll('#app .v4-hebel')];
+  ok(blocks.length === 2, tag + ' genau zwei Optimierungshebel (' + blocks.length + ')');
+  ok([...d.querySelectorAll('.v4-hebel-num')].map(n => n.textContent.trim()).join(',') === '1,2', tag + ' Hebel nummeriert 1,2');
+  ok(!/Angaben präzisieren/.test(d.getElementById('app').textContent), tag + ' kein Datenhebel mehr');
+  const second = blocks[0];
+  /* Hebel 1 zeigt im Ruhezustand die aktuelle Strategie; die Szenarien erst auf Tap. */
+  const fold = second.classList.contains('v4-hebel-strategy') ? second : second.querySelector('details.v4-hebel-strategy');
+  ok(!!fold && !fold.open, tag + ' Anlagestrategie startet zugeklappt');
+  const foldSummary = fold?.querySelector('.v4-hebel-summary')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  ok(/^1\s*Anlagestrategie/.test(foldSummary), tag + ' Hebel 1: Kopfzeile («' + foldSummary.slice(0, 40) + '…»)');
+  ok(/· Annahme [\d,]+ % pro Jahr/.test(foldSummary) && /zum Ändern aufklappen\.$/.test(foldSummary), tag + ' Hebel 1: aktuelle Strategie mit Annahme und Aufklapp-Hinweis («' + foldSummary + '»)');
+  ok(!/Vorsichtig|Chancenorientiert/.test(foldSummary), tag + ' Hebel 1: Ruhezustand nennt keine Fremdszenarien');
+  const foldPanel = fold?.querySelector('.v4-hebel-panel');
+  /* Zugeklappte <details> versteckt Chrome über `::details-content{content-visibility:hidden}` –
+     die inneren Elemente behalten dabei ihre Layoutgrösse, sind aber nicht gerendert. */
+  const foldHidden = node => {
+    if (!node) return false;
+    if (win.getComputedStyle(node, '::details-content').contentVisibility === 'hidden') return true;
+    return [...node.children].filter(child => child.tagName !== 'SUMMARY').every(child => win.getComputedStyle(child).display === 'none');
+  };
+  ok(foldHidden(fold), tag + ' Hebel 1: Szenarien im Ruhezustand nicht gerendert (content-visibility ' + (fold ? win.getComputedStyle(fold, '::details-content').contentVisibility : 'n/a') + ')');
+  fold?.querySelector('summary')?.click();
+  await wait(320);
+  ok(!!fold?.open && !foldHidden(fold), tag + ' Hebel 1: Tap auf die Kopfzeile klappt die Szenarien auf (' + Math.round(foldPanel?.getBoundingClientRect().height ?? 0) + ' px)');
   const strategies = [...second.querySelectorAll('.v4-strategy')];
-  ok(strategies.length === 3, tag + ' Hebel 2: drei Anlagestrategien (' + strategies.length + ')');
-  ok(strategies.filter(row => row.classList.contains('current')).length === 1, tag + ' Hebel 2: genau eine aktuelle Strategie');
-  ok(strategies.every(row => /% real/.test(row.textContent) && (/bis Alter \d+\+?/.test(row.textContent) || /CHF/.test(row.textContent))), tag + ' Hebel 2: Rendite und Reichweite/Restvermögen je Strategie');
+  ok(strategies.length === 3, tag + ' Anlagestrategie: drei Szenarien (' + strategies.length + ')');
+  ok(strategies.filter(row => row.classList.contains('current')).length === 1, tag + ' genau eine aktuelle Strategie');
+  ok(strategies.every(row => /% pro Jahr/.test(row.textContent) && /reicht bis Alter \d+\+?|Restvermögen CHF/.test(row.textContent)), tag + ' jedes Szenario nennt Annahme und Wirkung (' + strategies.map(row => row.textContent.replace(/\s+/g, ' ').trim()).join(' | ') + ')');
   const bars = strategies.map(row => row.querySelector('.v4-strategy-bar span'));
-  ok(bars.every(bar => bar && /%$/.test(bar.getAttribute('style') || '')) || bars.every(bar => !bar), tag + ' Hebel 2: Balken nur bei vergleichbarem Restvermögen');
+  ok(bars.every(bar => bar && /%$/.test(bar.getAttribute('style') || '')) || bars.every(bar => !bar), tag + ' Balken nur bei vergleichbarem Restvermögen');
   const amount = d.querySelector('.v4-need-amount')?.textContent.trim() ?? '';
   const impactBefore = d.getElementById('needImpact')?.textContent.trim() ?? '';
   const chipLabel = value => d.querySelector('[data-need-preview="' + value + '"]')?.textContent.trim() ?? '';
   const impact = () => d.getElementById('needImpact')?.textContent.trim() ?? '';
-  ok(/CHF/.test(amount) && /Bei CHF/.test(impactBefore), tag + ' Hebel 3: Betrag und Wirkung');
-  ok(chipLabel(500) === '− 500' && chipLabel(1000) === '− 1\'000', tag + ' Hebel 3: Chips starten mit «−» (' + chipLabel(500) + ' / ' + chipLabel(1000) + ')');
+  ok(/CHF/.test(amount) && /Bei CHF/.test(impactBefore), tag + ' Hebel 2: Betrag und Wirkung');
+  ok(chipLabel(500) === '− 500' && chipLabel(1000) === '− 1\'000', tag + ' Hebel 2: Chips starten mit «−» (' + chipLabel(500) + ' / ' + chipLabel(1000) + ')');
   d.querySelector('[data-need-preview="500"]')?.click();
   await wait(300);
-  ok(chipLabel(500) === '+ 500', tag + ' Hebel 3: «− 500» wird nach dem Antippen zu «+ 500»');
+  ok(chipLabel(500) === '+ 500', tag + ' Hebel 2: «− 500» wird nach dem Antippen zu «+ 500»');
   const raised = impact();
-  ok(raised !== impactBefore && /Bei CHF/.test(raised), tag + ' Hebel 3: höherer Bedarf wird gerechnet («' + raised.slice(0, 46) + '…»)');
+  ok(raised !== impactBefore && /Bei CHF/.test(raised), tag + ' Hebel 2: höherer Bedarf wird gerechnet («' + raised.slice(0, 46) + '…»)');
   d.querySelector('[data-need-preview="500"]')?.click();
   await wait(300);
-  ok(chipLabel(500) === '− 500', tag + ' Hebel 3: erneutes Antippen wechselt zurück auf «− 500»');
+  ok(chipLabel(500) === '− 500', tag + ' Hebel 2: erneutes Antippen wechselt zurück auf «− 500»');
   const lowered = impact();
-  ok(lowered !== raised && lowered !== impactBefore, tag + ' Hebel 3: tieferer Bedarf wird gerechnet («' + lowered.slice(0, 46) + '…»)');
+  ok(lowered !== raised && lowered !== impactBefore, tag + ' Hebel 2: tieferer Bedarf wird gerechnet («' + lowered.slice(0, 46) + '…»)');
   d.querySelector('[data-need-preview="1000"]')?.click();
   await wait(300);
-  ok(chipLabel(1000) === '+ 1\'000' && chipLabel(500) === '− 500', tag + ' Hebel 3: zweiter Chip wechselt ebenfalls und setzt den ersten zurück');
+  ok(chipLabel(1000) === '+ 1\'000' && chipLabel(500) === '− 500', tag + ' Hebel 2: zweiter Chip wechselt ebenfalls und setzt den ersten zurück');
   win.V4.renderPlan();
   await wait(450);
   d.querySelector('[data-v4-next="years"]')?.click();
@@ -408,6 +634,50 @@ async function improveChecks(w, h) {
   ok(legend.length >= 1 && legend.length <= 3, tag + ' Töpfe-Dialog: 1–3 Töpfe (' + legend.length + ')');
   ok(legend.every(row => !/CHF 0\b/.test(row.textContent)), tag + ' Töpfe-Dialog: keine leeren Töpfe (' + legend.map(row => row.querySelector('.v3-pot-name')?.textContent).join(', ') + ')');
   ok(d.querySelectorAll('.v3-donut circle').length === legend.length, tag + ' Töpfe-Dialog: Ringe = gezeigte Töpfe');
+  /* Kompakte Zeilen: Icon, Name, Betrag, Prozentanteil – ohne Beschreibungstext. */
+  ok(legend.every(row => !!row.querySelector('.v3-pot-icon svg') && /^CHF [\d'’]+$/.test(row.querySelector('strong')?.textContent.trim() ?? '') && /^\d+ %$/.test(row.querySelector('small')?.textContent.trim() ?? '')), tag + ' Töpfe-Dialog: Zeilen mit Icon, CHF-Betrag und Prozentanteil (' + legend.map(row => row.textContent.replace(/\s+/g, ' ').trim()).join(' | ') + ')');
+  ok(legend.every(row => row.querySelectorAll('p').length === 0 && !/Für (kurzfristige|Stabilität|langfristiges)/.test(row.textContent)), tag + ' Töpfe-Dialog: Zeilen ohne Erklärtext');
+  /* Zentrum: helles Mint/Creme mit Navy-Text, Label «Vermögen» statt «Total». */
+  const centre = d.querySelector('#v4Modal .v3-donut-total');
+  const centreStyle = centre ? win.getComputedStyle(centre) : null;
+  const centreAmount = centre?.querySelector('strong');
+  ok(/^Frei verfügbares VermögenCHF/.test((centre?.textContent ?? '').replace(/\s+/g, ' ')), tag + ' Töpfe-Dialog: Zentrum nennt «Frei verfügbares Vermögen» und den Betrag («' + (centre?.textContent.replace(/\s+/g, ' ').trim() ?? '') + '»)');
+  ok(centreStyle?.backgroundColor === 'rgb(237, 242, 237)', tag + ' Töpfe-Dialog: Zentrum hell und neutral (' + centreStyle?.backgroundColor + ')');
+  ok(centreStyle?.color === 'rgb(15, 34, 66)' && win.getComputedStyle(centreAmount).color === 'rgb(15, 34, 66)', tag + ' Töpfe-Dialog: Zentrum-Text in Navy (' + centreStyle?.color + ')');
+  ok(!!centre && !!centreAmount && centreAmount.scrollWidth <= centre.clientWidth, tag + ' Töpfe-Dialog: Betrag passt einzeilig ins Zentrum (' + centreAmount?.scrollWidth + ' ≤ ' + centre?.clientWidth + ')');
+  const leadText = d.querySelector('#v4Modal .v3-modal-lead')?.textContent.trim() ?? '';
+  ok(/^Dein frei verfügbares Vermögen ist auf drei Töpfe verteilt\.$/.test(leadText), tag + ' Töpfe-Dialog: Lead nennt das frei verfügbare Vermögen («' + leadText + '»)');
+  /* Die drei wiederholten Erklärblöcke und der generische Satz sind entfernt; die Erklärung
+     zu jedem Topf hängt als ⓘ an der Zeile (keine zweite Sektion). */
+  ok(!d.querySelector('#v4Modal .v3-pot-notes') && !d.querySelector('#v4Modal .v3-pot-note'), tag + ' Töpfe-Dialog: keine wiederholten Erklärblöcke');
+  const modalText = (d.getElementById('v4ModalBody')?.textContent ?? '').replace(/\s+/g, ' ');
+  ok(!/Die Aufteilung folgt deiner Anlagestrategie/.test(modalText), tag + ' Töpfe-Dialog: kein generischer Erklärsatz');
+  ok(legend.length > 0 && legend.every(row => !!row.querySelector('.v3-modal-icon')), tag + ' Töpfe-Dialog: jede Zeile hat ein ⓘ mit der Erklärung');
+  legend[0]?.querySelector('.v3-modal-icon')?.click();
+  await wait(250);
+  const potInfo = (d.getElementById('v4ModalTitle')?.textContent ?? '') + ' ' + (d.getElementById('v4ModalBody')?.textContent ?? '');
+  ok(/Topf Geldmarkt/.test(potInfo) && /kurzfristige Entnahmen/.test(potInfo), tag + ' Topf-ⓘ erklärt den Topf («' + potInfo.replace(/\s+/g, ' ').trim().slice(0, 60) + '…»)');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(300);
+  d.querySelector('[data-v4-action="pots"]')?.click();
+  await wait(200);
+  /* Eine einzige kompakte Card zur Anlagestrategie mit Herkunft. */
+  const strategyCard = d.querySelector('#v4Modal .v4-pot-strategy');
+  const cardText = (strategyCard?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  /* Satz und Profilname kommen dynamisch aus dem aktiven Profil in `risk-profiles.js`. */
+  const activeItem = win.V4.evaluated(0);
+  const activeProfile = activeItem ? win.RiskProfiles.getRiskProfile(activeItem.plan.riskProfile) : null;
+  const expectedRate = activeProfile ? (activeProfile.expectedRealReturn * 100).toLocaleString('de-DE', {maximumFractionDigits:1}) + ' % pro Jahr' : '';
+  ok(!!strategyCard, tag + ' Töpfe-Dialog: genau eine Card Anlagestrategie (' + d.querySelectorAll('#v4Modal .v4-pot-strategy').length + ')');
+  ok(/^Anlagestrategie\s*(Annahme|gewählt)\s*(Vorsichtig|Ausgewogen|Chancenorientiert)\s*[\d,]+ % pro Jahr\s*Bestimmt die erwartete Rendite deiner Anlage, nicht die Aufteilung\./.test(cardText), tag + ' Töpfe-Dialog: Card nennt Profil, Annahme pro Jahr, Herkunft und korrekte Subline («' + cardText + ')»');
+  ok(!!expectedRate && cardText.includes(expectedRate), tag + ' Töpfe-Dialog: Satz aus dem aktiven Profil (' + expectedRate + ')');
+  ok(/Annahme/.test(cardText), tag + ' Töpfe-Dialog: ohne eigene Wahl steht «Annahme»');
+  ok(!!strategyCard?.querySelector('.v3-modal-icon') && !!strategyCard?.querySelector('svg'), tag + ' Töpfe-Dialog: Card mit Icon und ⓘ für Details');
+  /* Ohne internes Scrollen vollständig sichtbar. */
+  const modalBody = d.getElementById('v4ModalBody'), dialog = d.getElementById('v4Modal');
+  ok(!!modalBody && modalBody.scrollHeight <= modalBody.clientHeight + 1, tag + ' Töpfe-Dialog: kein internes Scrollen (' + modalBody?.scrollHeight + ' ≤ ' + modalBody?.clientHeight + ')');
+  ok(!!dialog && dialog.getBoundingClientRect().height <= win.innerHeight - 8, tag + ' Töpfe-Dialog: passt vollständig auf den Screen (' + Math.round(dialog?.getBoundingClientRect().height ?? 0) + ' ≤ ' + win.innerHeight + ')');
+  ok(!!d.querySelector('#v4Modal .v3-modal-action'), tag + ' Töpfe-Dialog: «Schliessen» sichtbar');
   d.querySelector('[data-modal-close]')?.click();
   await wait(150);
   // Ein-Topf-Fall: Szenario «ziel» legt das ganze Vermögen in die Wertschöpfung
@@ -424,6 +694,20 @@ async function improveChecks(w, h) {
   ok(d.querySelectorAll('.v3-donut circle').length === 1, tag + ' Ein-Topf-Fall: ein Ring');
   d.querySelector('[data-modal-close]')?.click();
   await wait(150);
+  /* Grosse Beträge (7 Stellen): Zentrum bleibt innerhalb des Rings, Dialog bleibt scrollfrei. */
+  const big = win.DevFixture.scenarios['ziel']();
+  big.details.pension.pk = 1500000; big.details.pension.pkShare = 100;
+  win.DevFixture.write(big); win.V4.load();
+  await wait(500);
+  d.querySelector('[data-menu-page="pots"]')?.click();
+  await wait(500);
+  const bigCentre = d.querySelector('#v4Modal .v3-donut-total'), bigAmount = bigCentre?.querySelector('strong');
+  ok(/^CHF \d'\d{3}'\d{3}$/.test(bigAmount?.textContent.trim() ?? ''), tag + ' grosses Vermögen im Zentrum («' + (bigAmount?.textContent.trim() ?? '') + '»)');
+  ok(!!bigCentre && !!bigAmount && bigAmount.scrollWidth <= bigCentre.clientWidth, tag + ' grosser Betrag bleibt im Zentrum (' + bigAmount?.scrollWidth + ' ≤ ' + bigCentre?.clientWidth + ')');
+  const bigBody = d.getElementById('v4ModalBody');
+  ok(bigBody.scrollHeight <= bigBody.clientHeight + 1, tag + ' auch bei grossem Vermögen kein internes Scrollen (' + bigBody.scrollHeight + ' ≤ ' + bigBody.clientHeight + ')');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(150);
   f.remove();
 }
 
@@ -432,10 +716,14 @@ async function threeAChecks(w, h) {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
   win.DevFixture.write(win.DevFixture.scenarios['knapp']()); win.V4.load();
   await wait(400);
-  d.querySelector('[data-menu-page="assets"]')?.click();
-  await wait(450);
+  await openEditor(d, 'assets');
   const group = [...d.querySelectorAll('#v4AssetForm .v4-form-group')].find(node => /Säule 3a/.test(node.textContent));
   ok(!!group, tag + ' Vermögen zeigt die Gruppe «Säule 3a»');
+  /* Reihenfolge: die wichtigere Säule 3a steht vor den optionalen Immobilien. */
+  const groups = [...d.querySelectorAll('#v4AssetForm .v4-form-group')].map(node => node.textContent.replace(/\s+/g, ' ').trim());
+  ok(/^Säule 3a/.test(groups[0] ?? '') && /^Immobilien/.test(groups[1] ?? ''), tag + ' Gruppenreihenfolge: Säule 3a vor Immobilien (' + groups.join(' → ') + ')');
+  const assetOrder = [...d.querySelectorAll('#v4AssetForm label')].map(node => node.textContent.trim());
+  ok(JSON.stringify(assetOrder) === JSON.stringify(['Bank / liquide Mittel','Wertschriften','Anlage pro Jahr','Weitere Positionen','3a-Guthaben heute','Beiträge pro Jahr','Immobilienwert','Hypotheken']), tag + ' Zeilenreihenfolge (' + assetOrder.join(' · ') + ')');
   ok(!!d.querySelector('#v4AssetForm input[name="p3"]') && !!d.querySelector('#v4AssetForm input[name="p3Contrib"]'), tag + ' 3a-Guthaben und Beiträge erfassbar');
   // Nur das Guthaben erfassen → Beitrag wird 0, Speichern klappt
   const balance = d.querySelector('#v4AssetForm input[name="p3"]');
@@ -447,22 +735,25 @@ async function threeAChecks(w, h) {
   const stored = win.localStorage.getItem('retirement-v3-plan') ?? '';
   ok(/"p3":88000/.test(stored) && /"p3Contrib":0/.test(stored), tag + ' 3a im Speicherstand (Guthaben 88\'000, Beiträge 0)');
   // Beitrag ohne Guthaben → sichtbare Meldung
-  d.querySelector('[data-menu-page="assets"]')?.click();
-  await wait(450);
+  await openEditor(d, 'assets');
   d.querySelector('#v4AssetForm input[name="p3"]').value = '';
   d.querySelector('#v4AssetForm input[name="p3Contrib"]').value = '7000';
   d.querySelector('#v4AssetForm .v4-form-submit')?.click();
   await wait(600);
   const message = d.getElementById('v4Error')?.textContent ?? '';
   ok(/3a-Guthaben/.test(message), tag + ' Beitrag ohne Guthaben wird gemeldet («' + message + '»)');
-  // Menüeintrag öffnet den Editor
+  /* Zweiter legitimer Weg: die Zeile «Säule 3a» auf «Angaben & Grundlagen» öffnet denselben Editor. */
   win.V4.renderPlan();
   await wait(350);
   d.querySelector('.menu-button')?.click();
   await wait(250);
-  const entry = d.querySelector('[data-menu-page="pension3a"]');
-  ok(!!entry && /Säule 3a/.test(entry.textContent), tag + ' Menü enthält «Säule 3a»');
-  entry?.click();
+  const basicsEntry = d.querySelector('[data-menu-page="basics"]');
+  ok(!!basicsEntry && /Angaben & Grundlagen/.test(basicsEntry.textContent), tag + ' Menü enthält «Angaben & Grundlagen»');
+  basicsEntry?.click();
+  await wait(450);
+  const threeARow = [...d.querySelectorAll('#app .v4-hebel-row')].find(row => /Säule 3a/.test(row.textContent));
+  ok(!!threeARow && threeARow.dataset.v4Next === 'pension3a', tag + ' «Angaben & Grundlagen» führt zur Säule 3a');
+  threeARow?.click();
   await wait(450);
   ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Säule 3a.', tag + ' Editor «Säule 3a.» erreichbar');
   const form = d.querySelector('.v4-form-table');
@@ -473,28 +764,35 @@ async function threeAChecks(w, h) {
 /* ---------- Strategie-Szenarien, Separator, Annahmen (Renditeprüfung) ---------- */
 async function strategyChecks(w, h) {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
-  win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
   await wait(400);
   const beforeProfile = JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? '{}')?.state?.riskProfile ?? 'balanced';
   d.querySelector('[data-v4-next="improve"]')?.click();
   await wait(500);
+  /* Die drei Szenarien liegen hinter der aufklappbaren Kopfzeile («zum Ändern aufklappen»). */
+  const fold = d.querySelector('details.v4-hebel-strategy');
+  ok(!!fold && !fold.open, tag + ' Anlagestrategie zugeklappt beim Öffnen des Screens');
+  fold?.querySelector('summary')?.click();
+  await wait(320);
+  ok(!!fold?.open, tag + ' Anlagestrategie auf Tap aufgeklappt');
   const group = d.querySelector('.v4-strategy-list');
   ok(!!group && group.getAttribute('role') === 'radiogroup', tag + ' Strategien als Radiogruppe');
   const rows = [...d.querySelectorAll('[data-strategy]')];
   ok(rows.length === 3 && rows.every(row => row.getAttribute('role') === 'radio'), tag + ' drei antippbare Strategien');
-  const values = rows.map(row => row.querySelector('.v4-strategy-value')?.textContent.trim() ?? '');
-  const rates = rows.map(row => row.querySelector('.v4-strategy-rate')?.textContent.trim() ?? '');
-  ok(rates.join(' ') === '2,5 % real 4,5 % real 6 % real', tag + ' Profilrenditen aus einer Quelle (' + rates.join(' / ') + ')');
+  const names = rows.map(row => row.querySelector('.v4-strategy-copy strong')?.textContent.trim() ?? '');
+  const values = rows.map(row => row.querySelector('.v4-strategy-outcome')?.textContent.trim() ?? '');
+  ok(names.join(' | ') === 'Vorsichtig · 2,5 % pro Jahr | Ausgewogen · 4,5 % pro Jahr | Chancenorientiert · 6 % pro Jahr', tag + ' Profil und Annahme aus einer Quelle (' + names.join(' / ') + ')');
   ok(new Set(values).size > 1, tag + ' Szenarien unterscheiden sich (' + values.join(' / ') + ')');
   ok(values.every(value => value !== 'CHF 0'), tag + ' nie dreimal CHF 0 (' + values.join(' / ') + ')');
-  ok(values.every(value => /^bis Alter \d+\+?$/.test(value) || /^CHF/.test(value)), tag + ' Anzeige «reicht bis Alter …» bzw. Restvermögen (' + values.join(' / ') + ')');
+  ok(values.every(value => /^reicht bis Alter \d+\+?$/.test(value) || /^Restvermögen CHF/.test(value)), tag + ' Wirkung «reicht bis Alter …» bzw. «Restvermögen …» (' + values.join(' / ') + ')');
   // Vorschau: antippen darf nichts speichern und nicht navigieren
   const impactBefore = d.getElementById('strategyImpact')?.textContent.trim() ?? '';
   d.querySelectorAll('[data-strategy]')[0]?.click();
   await wait(350);
   const impactAfter = d.getElementById('strategyImpact')?.textContent.trim() ?? '';
   ok(impactAfter !== impactBefore && /Vorsichtig/.test(impactAfter), tag + ' Vorschau rechnet sofort («' + impactAfter.slice(0, 52) + '…»)');
-  ok(!!d.querySelector('.v4-page-title') && /Plan verbessern/.test(d.querySelector('.v4-page-title').textContent), tag + ' Auswahl navigiert nicht (kein Sprung zu «Annahmen»)');
+  ok(d.querySelector('details.v4-hebel-strategy')?.open === true, tag + ' aufgeklappte Auswahl bleibt nach dem Antippen offen');
+  ok(!!d.querySelector('.v4-page-title') && /Plan optimieren/.test(d.querySelector('.v4-page-title').textContent), tag + ' Auswahl navigiert nicht (kein Sprung zu «Annahmen»)');
   ok(!/Annahmen öffnen|Strategie prüfen/.test(d.querySelector('#app').textContent), tag + ' keine Navigation zu «Annahmen» im Block');
   const selectedRow = d.querySelector('[data-strategy][aria-checked="true"]');
   ok(!!selectedRow && selectedRow.classList.contains('selected') && /Vorsichtig/.test(selectedRow.textContent), tag + ' Auswahl sichtbar markiert');
@@ -514,6 +812,42 @@ async function strategyChecks(w, h) {
   await wait(450);
   const disabled = d.querySelector('.v4-block-action[disabled]');
   ok(!!disabled && /aktuell/.test(disabled.textContent), tag + ' aktuelle Strategie: Knopf deaktiviert («' + (disabled?.textContent.trim() ?? '') + '»)');
+  const again = d.querySelector('details.v4-hebel-strategy');
+  ok(!!again && !again.open, tag + ' erneuter Eintritt zeigt die Strategie wieder zugeklappt');
+  ok(new RegExp('Vorsichtig · Annahme').test(again?.querySelector('.v4-hebel-summary')?.textContent ?? ''), tag + ' Kopfzeile nennt die übernommene Strategie («' + (again?.querySelector('.v4-hebel-summary')?.textContent.replace(/\s+/g, ' ').trim() ?? '') + '»)');
+  /* Nach der eigenen Wahl steht im Töpfe-Dialog die Herkunft «gewählt». */
+  d.querySelector('.v4-head-back')?.click();
+  await wait(450);
+  d.querySelector('[data-v4-next="years"]')?.click();
+  await wait(500);
+  d.querySelector('[data-v4-action="pots"]')?.click();
+  await wait(500);
+  const adoptedCard = (d.querySelector('#v4Modal .v4-pot-strategy')?.textContent ?? '').replace(/\s+/g, ' ').trim();
+  ok(/^Anlagestrategie\s*gewählt\s*Vorsichtig\s*2,5 % pro Jahr/.test(adoptedCard), tag + ' Töpfe-Dialog nach «Strategie übernehmen»: Herkunft «gewählt» («' + adoptedCard + '»)');
+  ok(/"strategyChosen":true/.test(win.localStorage.getItem('retirement-v3-plan') ?? ''), tag + ' Herkunft der Strategie wird gespeichert');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(150);
+  /* Annahmen: Prozentwerte mit Dezimalkomma, Beschriftung und Wert überlappen nie. */
+  d.querySelector('.v4-head-back')?.click();
+  await wait(400);
+  d.querySelector('[data-menu-page="assumptions"]')?.click();
+  await wait(450);
+  const percentInputs = [...d.querySelectorAll('#v4DetailForm input[data-percent]')].map(input => ({name:input.name, value:input.value}));
+  ok(percentInputs.length >= 2 && percentInputs.every(entry => /^\d+(,\d+)?$/.test(entry.value)), tag + ' Prozentfelder mit Dezimalkomma (' + percentInputs.map(entry => entry.name + '=' + entry.value).join(', ') + ')');
+  const readonlyRows = [...d.querySelectorAll('.v4-readonly>div')].map(node => ({dt:node.querySelector('dt')?.getBoundingClientRect(), dd:node.querySelector('dd')?.getBoundingClientRect()}));
+  ok(readonlyRows.length >= 2 && readonlyRows.every(({dt, dd}) => dt && dd && (dd.left >= dt.right - 1 || dd.top >= dt.bottom - 1)), tag + ' Beschriftung und Wert der Annahmen überlappen nicht (' + readonlyRows.length + ' Zeilen)');
+  ok(/% pro Jahr/.test(d.querySelector('.v4-readonly')?.textContent ?? ''), tag + ' Anlagestrategie im Annahmen-Screen mit «% pro Jahr»');
+  // Übernehmen mit Komma-Eingabe: Wert bleibt numerisch korrekt
+  const inflation = d.getElementById('inflation');
+  if (inflation) {
+    inflation.value = '0,9';
+    inflation.dispatchEvent(new win.Event('input', {bubbles:true}));
+    d.querySelector('.v4-form-submit')?.click();
+    await wait(800);
+    const stored = win.localStorage.getItem('retirement-v3-plan') ?? '';
+    const found = (stored.match(/"inflation":\s*[^,}]+/) ?? ['–'])[0];
+    ok(/"inflation":0\.9/.test(stored), tag + ' Komma-Eingabe wird numerisch übernommen («0,9 %» → 0.9; gespeichert: ' + found + ', Fehler: ' + (d.getElementById('v4Error')?.textContent || '–') + ')');
+  } else { ok(false, tag + ' Feld «Inflation» vorhanden'); }
   f.remove();
 }
 
@@ -521,10 +855,7 @@ async function separatorChecks(w, h) {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
   win.DevFixture.write(win.DevFixture.scenarios['knapp']()); win.V4.load();
   await wait(400);
-  d.querySelector('.menu-button')?.click();
-  await wait(200);
-  d.querySelector('[data-menu-page="extra"]')?.click();
-  await wait(450);
+  await openEditor(d, 'extra');
   const input = d.querySelector('input[name="additional"]');
   ok(!!input?.hasAttribute('data-amount'), tag + ' Betragsfeld mit Tausenderlogik');
   if (input) {
@@ -576,12 +907,13 @@ async function assumptionsChecks(w, h) {
 /* ---------- Restvermögen am Planungshorizont: identisch in Strategie, Varianten und Jahresansicht ---------- */
 async function horizonChecks(w, h) {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
-  win.DevFixture.write(win.DevFixture.scenarios['ziel']()); win.V4.load();
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
   await wait(450);
   d.querySelector('[data-v4-next="improve"]')?.click();
   await wait(500);
-  const row = d.querySelector('.v4-strategy.current .v4-strategy-value')?.textContent.trim() ?? '';
-  const allReach = /^CHF/.test(row);
+  const outcome = d.querySelector('.v4-strategy.current .v4-strategy-outcome')?.textContent.trim() ?? '';
+  const allReach = /^Restvermögen CHF/.test(outcome);
+  const row = outcome.replace(/^Restvermögen /, '');
   d.querySelector('[data-v4-back]')?.click();
   await wait(400);
   d.querySelector('[data-v4-next="years"]')?.click();
@@ -599,14 +931,14 @@ async function horizonChecks(w, h) {
   ok(endBlock?.querySelectorAll('.v4-year-line').length === 2, tag + ' Abschnitt 6 zeigt Total und Veränderung (' + (endBlock?.querySelectorAll('.v4-year-line').length ?? 0) + ' Zeilen)');
   ok(!!total, tag + ' Vermögen am Jahresende des letzten Planjahres ausgewiesen (' + total + ')');
   if (allReach) ok(!!total && total === row, tag + ' Strategie zeigt dieselbe Zahl wie die Jahresansicht (' + row + ' / ' + total + ')');
-  else out.push('      ' + tag + ' Strategie zeigt Reichweite statt Restvermögen (' + row + ') – Konsistenz nur gegen die Jahresansicht geprüft');
+  else out.push('      ' + tag + ' Strategie zeigt Reichweite statt Restvermögen (' + (outcome || '–') + ') – Konsistenz nur gegen die Jahresansicht geprüft');
   f.remove();
 }
 
 /* ---------- Jahresansicht: verwendete Strategie + Überleitung zum Vorjahr ---------- */
 async function yearDetailChecks(w, h) {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
-  win.DevFixture.write(win.DevFixture.scenarios['ziel']()); win.V4.load();
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
   await wait(450);
   d.querySelector('[data-v4-next="years"]')?.click();
   await wait(500);
@@ -614,8 +946,32 @@ async function yearDetailChecks(w, h) {
   const blockOf = needle => blocks().find(block => new RegExp(needle).test(block.querySelector('h3')?.textContent ?? ''));
   const first = blockOf('Vermögen am Jahresanfang');
   ok(!!first && !first.querySelector('.v4-year-carry'), tag + ' keine Währungsumrechnungs-Zeile mehr');
-  // Reale Sicht: Jahresende des Vorjahres = Eröffnung des Folgejahres (kein Sprung)
+  /* Jahresnavigation: zwei Schrittknöpfe (± 1 Jahr), an den Enden deaktiviert. */
   const range = d.getElementById('yearRange');
+  const stepButtons = [...d.querySelectorAll('.v4-year-nav [data-year-step]')];
+  const yearLabel = () => d.querySelector('.v4-year-nav .v4-detail-state')?.textContent.trim() ?? '';
+  const sliderValue = () => Number(d.getElementById('yearRange')?.value ?? -1);
+  const yearTotal = () => d.querySelector('.v4-year-block strong')?.textContent.trim() ?? '';
+  ok(stepButtons.length === 2 && stepButtons.every(button => !!button.querySelector('svg')), tag + ' Jahresnavigation mit zwei Schrittknöpfen (' + stepButtons.length + ')');
+  ok(stepButtons.every(button => /^Ein Jahr (früher|später)$/.test(button.getAttribute('aria-label') ?? '')), tag + ' Schrittknöpfe mit aria-label (' + stepButtons.map(button => button.getAttribute('aria-label')).join(' / ') + ')');
+  range.value = range.min; range.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(400);
+  const startSlider = sliderValue(), startLabel = yearLabel(), startTotal = yearTotal();
+  ok(d.querySelector('[data-year-step="-1"]')?.disabled === true, tag + ' im ersten Planjahr ist «früher» deaktiviert');
+  d.querySelector('[data-year-step="1"]')?.click();
+  await wait(400);
+  ok(sliderValue() === startSlider + 1 && yearLabel() !== startLabel && yearTotal() !== startTotal, tag + ' «später» springt genau ein Jahr weiter (' + startLabel + ' → ' + yearLabel() + ')');
+  ok(d.querySelector('[data-year-step="-1"]')?.disabled === false, tag + ' nach dem ersten Schritt ist «früher» aktiv');
+  d.querySelector('[data-year-step="-1"]')?.click();
+  await wait(400);
+  ok(sliderValue() === startSlider && yearTotal() === startTotal, tag + ' «früher» stellt dasselbe Jahr wieder her (' + yearLabel() + ')');
+  range.value = range.max; range.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(400);
+  ok(d.querySelector('[data-year-step="1"]')?.disabled === true, tag + ' im letzten Planjahr ist «später» deaktiviert');
+  ok(d.querySelector('[data-year-step="-1"]')?.disabled === false, tag + ' im letzten Planjahr bleibt «früher» aktiv');
+  range.value = range.min; range.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(400);
+  // Reale Sicht: Jahresende des Vorjahres = Eröffnung des Folgejahres (kein Sprung)
   const ages = [...Array(Number(range.max) - Number(range.min) + 1)].map((_, i) => Number(range.min) + i);
   const readYear = async age => {
     range.value = String(age); range.dispatchEvent(new win.Event('input', {bubbles:true}));
@@ -641,7 +997,7 @@ async function yearDetailChecks(w, h) {
   ok(!!before && Math.abs(expected - number(taxLine.value)) <= 2, tag + ' Steuerzeile stimmt (Satz ' + rate + ' % von ' + before + ' ≈ ' + taxLine.value + ')');
   const pots = blockOf('Deine Töpfe');
   const strategy = pots?.querySelector('.v4-year-strategy')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
-  ok(/^Ausgewogen · Annahme 4,5 % p\.a\./.test(strategy), tag + ' Abschnitt 5 nennt die verwendete Strategie («' + strategy + '»)');
+  ok(/^Ausgewogen · Annahme 4,5 % pro Jahr/.test(strategy), tag + ' Abschnitt 5 nennt die verwendete Strategie («' + strategy + '»)');
   ok(!!pots?.querySelector('.v4-year-strategy .v3-modal-icon'), tag + ' Strategie-Zeile mit ⓘ');
   const potsLines = [...(pots?.querySelectorAll('.v4-year-line') ?? [])].map(node => node.querySelector('span')?.textContent.trim() ?? '');
   ok(potsLines.some(label => /Rendite dieses Jahres/.test(label)), tag + ' «Rendite dieses Jahres» bleibt erhalten');
@@ -650,6 +1006,8 @@ async function yearDetailChecks(w, h) {
   await wait(400);
   d.querySelector('[data-v4-next="improve"]')?.click();
   await wait(500);
+  d.querySelector('details.v4-hebel-strategy summary')?.click();
+  await wait(280);
   d.querySelector('[data-strategy="cautious"]')?.click();
   await wait(400);
   d.getElementById('strategyAdopt')?.click();
@@ -657,50 +1015,75 @@ async function yearDetailChecks(w, h) {
   d.querySelector('[data-v4-next="years"]')?.click();
   await wait(500);
   const cautious = blockOf('Deine Töpfe')?.querySelector('.v4-year-strategy')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
-  ok(/^Vorsichtig · Annahme 2,5 % p\.a\./.test(cautious), tag + ' Strategie-Zeile folgt dem Profil («' + cautious + '»)');
+  ok(/^Vorsichtig · Annahme 2,5 % pro Jahr/.test(cautious), tag + ' Strategie-Zeile folgt dem Profil («' + cautious + '»)');
   f.remove();
 }
 
 (async () => {
+  /* Zwischenstand nach jedem Block schreiben: so bleibt auch bei einem Abbruch sichtbar,
+     wie weit die Prüfungen gekommen sind. */
+  const flush = () => { document.getElementById('report').textContent = out.join('\n'); };
   for (const [w, h] of [[360,780],[390,844],[430,900],[1000,900]]) {
     try { await startChecks(w, h, 'pre'); await startChecks(w, h, 'post'); } catch (e) { ok(false, w + ' Schnellstart: ' + e.message); }
+    flush();
   }
+  flush();
   for (const [w, h] of [[390,844],[430,900],[1000,900]]) {
     try { await planStructure(w, h); } catch (e) { ok(false, w + ' Mein Plan: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await screenChecks(w, h); } catch (e) { ok(false, w + ' Screens: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await editorChecks(w, h); } catch (e) { ok(false, w + ' Editor: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await infoChecks(w, h); } catch (e) { ok(false, w + ' Info-Dialoge: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await saveChecks(w, h); } catch (e) { ok(false, w + ' Speichern: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
-    try { await improveChecks(w, h); } catch (e) { ok(false, w + ' Plan verbessern: ' + e.message); }
+    try { await improveChecks(w, h); } catch (e) { ok(false, w + ' Plan präzisieren: ' + e.message); }
   }
+  flush();
+  for (const [w, h] of [[390,844],[1000,900]]) {
+    try { await optimizeChecks(w, h); } catch (e) { ok(false, w + ' Plan optimieren: ' + e.message); }
+  }
+  flush();
+  for (const [w, h] of [[390,844],[1000,900]]) {
+    try { await navigationChecks(w, h); } catch (e) { ok(false, w + ' Navigation/IA: ' + e.message); }
+  }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await threeAChecks(w, h); } catch (e) { ok(false, w + ' Säule 3a: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await strategyChecks(w, h); } catch (e) { ok(false, w + ' Strategie: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await separatorChecks(w, h); } catch (e) { ok(false, w + ' Separator: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await assumptionsChecks(w, h); } catch (e) { ok(false, w + ' Annahmen: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await horizonChecks(w, h); } catch (e) { ok(false, w + ' Horizontwert: ' + e.message); }
   }
+  flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await yearDetailChecks(w, h); } catch (e) { ok(false, w + ' Jahresansicht: ' + e.message); }
   }
+  try { await modalCloseStyleChecks(); } catch (e) { ok(false, 'Modal-Schliessen (CSS): ' + e.message); }
   const fails = out.filter(l => l.startsWith('FAIL')).length;
   document.getElementById('report').textContent = out.join('\n') + '\n---\n' + (fails ? fails + ' FAIL' : 'ALLE CHECKS PASS');
 })();

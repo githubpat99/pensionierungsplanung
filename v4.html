@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="css/v3-plan-reference.css?v=61">
   <link rel="stylesheet" href="css/v3-chart-reference.css?v=5">
   <link rel="stylesheet" href="css/canton-picker.css">
-  <link rel="stylesheet" href="css/v4.css?v=30">
+  <link rel="stylesheet" href="css/v4.css?v=40">
 </head>
 <body>
   <div class="v4-hero" id="v4Hero" data-mode="calm" aria-hidden="true"></div>
@@ -19,20 +19,19 @@
     <button class="menu-button" type="button" aria-label="Menü öffnen" aria-expanded="false"><span></span><span></span><span></span></button>
   </header>
   <nav id="v4Menu" class="v3-menu" hidden aria-label="Menü">
+    <p class="v4-menu-group">Mein Plan</p>
     <button type="button" data-menu-page="plan">Mein Plan</button>
+    <p class="v4-menu-group">Planen</p>
+    <button type="button" data-menu-page="basics">Angaben &amp; Grundlagen</button>
     <button type="button" data-menu-page="variants">Meine Varianten</button>
-    <button type="button" data-menu-page="personal">Persönliche Angaben</button>
-    <button type="button" data-menu-page="ahv">AHV-Renten</button>
-    <button type="button" data-menu-page="pension">Pensionskasse</button>
-    <button type="button" data-menu-page="pension3a">Säule 3a</button>
-    <button type="button" data-menu-page="extra">Weitere Einnahmen</button>
-    <button type="button" data-menu-page="need">Bedarf</button>
-    <button type="button" data-menu-page="assets">Vermögen</button>
-    <button type="button" data-menu-page="assumptions">Annahmen</button>
+    <p class="v4-menu-group">Plan verstehen <span class="v4-menu-badge">Details</span></p>
+    <button type="button" data-menu-page="years">Jahresverlauf</button>
+    <button type="button" data-menu-page="pots">Töpfe-Modell</button>
+    <button type="button" data-menu-page="assumptions">Annahmen &amp; Berechnung</button>
   </nav>
   <main id="app" class="shell"></main>
   <dialog id="v4Modal" class="v3-modal" aria-labelledby="v4ModalTitle">
-    <div class="v3-modal-head"><h2 id="v4ModalTitle"></h2><button type="button" class="v3-modal-close" data-modal-close aria-label="Erklärung schliessen"></button></div>
+    <div class="v3-modal-head"><h2 id="v4ModalTitle" tabindex="-1"></h2><button type="button" class="v3-modal-close" data-modal-close aria-label="Schliessen"></button></div>
     <div class="v3-modal-body" id="v4ModalBody"></div>
   </dialog>
   <script src="js/tax-config.js"></script>
@@ -43,13 +42,13 @@
   <script src="js/retirement-engine.js"></script>
   <script src="js/retirement-calculator.js"></script>
   <script src="js/v2-state.js"></script>
-  <script src="js/icons.js?v=3"></script>
+  <script src="js/icons.js?v=4"></script>
   <script src="js/canton-picker.js?v=2"></script>
   <script src="js/v3-state.js"></script>
   <script src="js/estimates.js"></script>
   <script src="js/dev-fixture.js"></script>
-  <script src="js/v4-pagetitle.js?v=2"></script>
+  <script src="js/v4-pagetitle.js?v=4"></script>
   <script src="js/v4-hero.js?v=4"></script>
-  <script src="js/v4-ui.js?v=31"></script>
+  <script src="js/v4-ui.js?v=46"></script>
 </body>
 </html>

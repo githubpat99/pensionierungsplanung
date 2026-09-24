@@ -8,9 +8,9 @@
  *
  * «Mein Plan» ist die Zusammenfassung, kein Inhaltsverzeichnis der App:
  *   1 PageTitle (eine Titelzeile) · 2 Planstatus (ohne Buttons) · 3 vier Kennzahlen ·
- *   4 PK-Bezug-Slider · 5 genau eine Card «Plan verbessern» · 6 zwei sekundäre Zeilen.
- * Alles Weitere liegt auf fokussierten Screens («Plan verbessern», «Meine Varianten»,
- * «Planung Jahr für Jahr», Editoren) oder im Menü. Autosave läuft ohne sichtbare Zeile.
+ *   4 PK-Bezug-Slider · 5 genau eine zustandsabhängige Aktion («Plan präzisieren»/«Plan optimieren») · 6 zwei sekundäre Zeilen.
+ * Alles Weitere liegt auf fokussierten Screens («Angaben & Grundlagen», «Plan präzisieren»/«Plan optimieren», «Meine Varianten»,
+ * «Jahr für Jahr», Editoren) oder im Menü (siehe docs/information-architecture-v4.md). Autosave läuft ohne sichtbare Zeile.
  */
 (() => {
   const app = document.getElementById('app');
@@ -193,19 +193,32 @@
   }
 
   /* ---------------- GENAUIGKEIT / NÄCHSTER SCHRITT (genau EINE Card) ----------------
-     Öffnet den fokussierten Screen «Plan verbessern». Kein zweiter Einstieg,
-     kein «Plan genauer machen», keine Detail-Übersicht auf «Mein Plan». */
+     Datenqualität und Optimierung sind zwei verschiedene Konzepte und erscheinen
+     deshalb nie gleichzeitig in derselben Card:
+       – offene/geschätzte Angaben  → «Plan präzisieren»
+       – Daten vollständig          → «Plan optimieren»
+     Beide öffnen denselben fokussierten Screen, der seinen Zustand selbst kennt
+     (siehe `renderImprove`). Kein «Plan genauer machen», kein zweiter Einstieg. */
+  function improveState() {
+    const {open} = precisionItems();
+    return {key: open.length ? 'precise' : 'optimize', count: open.length};
+  }
   function improveEntry() {
-    const open = precisionItems().open.length;
-    const detail = open === 1 ? 'Eine Angabe macht deinen Plan genauer.' : `${open} Angaben machen deinen Plan genauer.`;
-    return `<button type="button" class="v4-next" data-v4-next="improve"><span class="v4-next-icon" aria-hidden="true">${Icons.icon('bulb', {size:20})}</span><span><strong>Plan verbessern</strong><small>Dein erster Plan basiert teilweise auf Schätzungen.</small>${open ? `<small>${detail}</small>` : ''}</span>${Icons.icon('chevronRight', {size:18})}</button>`;
+    const {key, count} = improveState();
+    const icon = key === 'precise' ? 'listDetails' : 'target';
+    const copy = key === 'precise'
+      ? `<strong>Plan präzisieren</strong><small>Dein erster Plan basiert teilweise auf Schätzungen.</small><small>${count === 1 ? 'Eine Angabe macht deinen Plan genauer.' : `${count} Angaben machen deinen Plan genauer.`}</small>`
+      : '<strong>Plan optimieren</strong><small>Teste Strategie, Bedarf und weitere Möglichkeiten.</small>';
+    return `<button type="button" class="v4-next" data-v4-next="improve"><span class="v4-next-icon" aria-hidden="true">${Icons.icon(icon, {size:20})}</span><span>${copy}</span>${Icons.icon('chevronRight', {size:18})}</button>`;
   }
 
-  /* ---------------- SEKUNDÄRE AKTIONEN (maximal zwei kompakte Zeilen) ---------------- */
+  /* ---------------- SEKUNDÄRE AKTIONEN (maximal zwei kompakte Zeilen) ----------------
+     «Mein Plan» ist kein Inhaltsverzeichnis: der Jahresverlauf und die Varianten stehen
+     hier nur als kompakte Einstiege, ihre Inhalte leben auf eigenen Screens. */
   function secondaryRows() {
     const count = variantShares().length;
     const row = (label, page) => `<li><button type="button" class="v4-row" data-v4-next="${page}"><span>${label}</span>${Icons.icon('chevronRight', {size:18})}</button></li>`;
-    return `<ul class="v4-rows">${row('Vermögensverlauf', 'years')}${row(`Meine Varianten · ${count} gespeichert`, 'variants')}</ul>`;
+    return `<ul class="v4-rows">${row('Jahresverlauf', 'years')}${row(`Meine Varianten · ${count} gespeichert`, 'variants')}</ul>`;
   }
   function dataKnown() {
     const pre = state.mode === 'pre', a = state.details.assets ?? null;
@@ -246,12 +259,17 @@
     const max = Math.max(...rows.map(row => row.rest), 0) || 1;
     // Restvermögen ist nur vergleichbar, wenn alle Szenarien den Planungshorizont erreichen.
     const allReach = rows.every(row => !row.age);
-    return {rows: rows.map(row => ({...row, share: row.rest / max, shown: allReach ? money(row.rest) : row.age ? `bis Alter ${row.age}` : `bis Alter ${target}+`})), target, currentKey, allReach};
+    /* Zwei Schreibweisen, nie vermischt: die Reichweite («reicht bis Alter X») oder – wenn
+       alle Szenarien den Horizont erreichen – das Restvermögen am Planungshorizont. */
+    const withOutcome = rows.map(row => ({...row, share: row.rest / max,
+      shown: allReach ? money(row.rest) : row.age ? `bis Alter ${row.age}` : `bis Alter ${target}+`,
+      outcome: allReach ? `Restvermögen ${money(row.rest)}` : `reicht bis Alter ${row.age ?? `${target}+`}`}));
+    return {rows: withOutcome, target, currentKey, allReach};
   }
 
   /* Wert am Planungshorizont: das Ende des **letzten Planjahres** in heutiger Kaufkraft. Die Engine
      führt danach noch eine nominale Schlusszeile (Zielalter + 1); sie ist kein Planjahr und wird in
-     «Planung Jahr für Jahr» nicht angezeigt. Strategie, Varianten und Jahresansicht nutzen diesen
+     «Jahr für Jahr» nicht angezeigt. Strategie, Varianten und Jahresansicht nutzen diesen
      Wert, damit alle Screens dieselbe Zahl zeigen. */
   function horizonValue(item) {
     const rows = (item?.result?.yearlyProjection ?? []).filter(row => !row.terminal);
@@ -268,17 +286,42 @@
     const result = delta !== 0 ? Calculator.evaluatePlan(planWithNeed(plan, delta)) : item.result;
     return {monthly, text:`Bei ${money(monthly)} / Monat reicht dein Vermögen voraussichtlich bis ${reachAge(result, target)}.`};
   }
-  /* Offene bzw. geschätzte Angaben mit Zustand – Grundlage für Hebel 1. */
+  /* Was tatsächlich erfasst ist – Betrag und Kurzbeschreibung je Angabe. Dieselbe Quelle für
+     «Angaben & Grundlagen» und «Plan präzisieren»: der Zustand allein («erfasst») hilft
+     niemandem, der prüfen will, ob die Zahl stimmt. Alles kommt aus dem bestehenden Zustand,
+     nichts wird zusätzlich gerechnet. */
+  function captured() {
+    const pension = state.details.pension ?? {}, p3 = state.details.pension3a ?? {}, income = state.details.income ?? {};
+    const a = state.details.assets ?? null;
+    const value = source => entered(source) ? numeric(source) : null;
+    /* Frei verfügbares Vermögen: identisch zu `toPlan` (Noch nicht Aufgeteiltes + Bank +
+       Wertschriften + weitere Positionen). Immobilien sind gebunden und werden separat genannt. */
+    const unallocated = a ? (a.unallocated !== undefined ? numeric(a.unallocated) : 0)
+      : (state.values.free !== undefined ? numeric(state.values.free) : 0);
+    const free = unallocated + ['cash','securities','otherAssets'].reduce((sum, key) => sum + (entered(a?.[key]) ? numeric(a[key]) : 0), 0);
+    const property = entered(a?.propertyValue) ? Math.max(0, numeric(a.propertyValue) - numeric(a?.mortgage)) : 0;
+    const extra = (entered(income.other) ? numeric(income.other) : 0) + (entered(income.additional) ? numeric(income.additional) : 0);
+    return {
+      pk: value(pension.pk), pkContrib: value(pension.pkContrib),
+      p3: value(p3.p3), p3Contrib: value(p3.p3Contrib),
+      extra, extraDone: entered(income.other) || entered(income.additional),
+      free, property,
+      need: state.values.need !== undefined ? numeric(state.values.need) : null
+    };
+  }
+  const yearMoney = value => value ? `Beitrag ${money(value)} / Jahr` : '';
+  /* Offene bzw. geschätzte Angaben mit Zustand – Grundlage für Hebel 1 (Zustand A). */
   function precisionItems() {
-    const pre = state.mode === 'pre', known = dataKnown(), ahv = Estimates ? Estimates.ahvOf(state) : {origin:'user'}, pkContrib = numeric(state.details.pension?.pkContrib);
+    const pre = state.mode === 'pre', known = dataKnown(), ahv = Estimates ? Estimates.ahvOf(state) : {origin:'user'}, amounts = captured();
     const income = state.details.income ?? {};
     const ahvDone = ahv.origin === 'user';
     const monthly = ahvDone ? numeric(income.ahv) : (Estimates ? Estimates.ahv.monthly : 0);
+    const pkDone = amounts.pkContrib !== null && amounts.pkContrib > 0;
     const items = [
       {page:'ahv', icon:'buildingBank', label:'AHV-Rente', sub: ahvDone ? 'Aus deiner Eingabe' : 'Durchschnittswert', value:`${money(monthly)} / Monat`, badge: ahvDone ? 'erfasst' : 'geschätzt', tone: ahvDone ? 'done' : 'estimated', done: ahvDone},
-      {page:'assets', icon:'pigMoney', label:'Weiteres Kapital & Säule 3a', sub: known.assets ? 'Erfasst' : 'Noch ergänzen', value:'', badge: known.assets ? 'erfasst' : 'offen', tone: known.assets ? 'done' : 'open', done: known.assets},
-      (!entered(income.additional) && !entered(income.other)) ? {page:'extra', icon:'coins', label:'Weitere Einnahmen', sub:'Noch ergänzen', value:'', badge:'offen', tone:'open', done:false} : null,
-      pre ? {page:'pension', icon:'buildingBank', label:'PK-Ausweis', sub: pkContrib > 0 ? 'Erfasst' : 'Noch ergänzen', value:'', badge: pkContrib > 0 ? 'erfasst' : 'offen', tone: pkContrib > 0 ? 'done' : 'open', done: pkContrib > 0} : null
+      {page:'assets', icon:'pigMoney', label:'Weiteres Kapital & Säule 3a', sub: amounts.free > 0 ? 'Bank & Wertschriften' : (known.assets ? 'Erfasst' : 'Noch ergänzen'), value: amounts.free > 0 ? money(amounts.free) : (amounts.p3 !== null ? money(amounts.p3) : ''), badge: known.assets ? 'erfasst' : 'offen', tone: known.assets ? 'done' : 'open', done: known.assets},
+      amounts.extraDone ? null : {page:'extra', icon:'coins', label:'Weitere Einnahmen', sub:'Noch ergänzen', value:'', badge:'offen', tone:'open', done:false},
+      pre ? {page:'pension', icon:'buildingBank', label:'PK-Ausweis', sub: pkDone ? yearMoney(amounts.pkContrib) : (amounts.pk !== null ? 'Beiträge fehlen' : 'Noch ergänzen'), value: amounts.pk !== null ? money(amounts.pk) : '', badge: pkDone ? 'erfasst' : 'offen', tone: pkDone ? 'done' : 'open', done: pkDone} : null
     ].filter(Boolean);
     return {items, open: items.filter(entry => !entry.done)};
   }
@@ -315,12 +358,24 @@
     return `<section class="v4-start-card"><div class="v4-start-head"><span class="v4-detail-icon" aria-hidden="true">${Icons.icon('receiptTax', {size:16})}</span><label for="start-canton">Wohnkanton <span class="v3-required" aria-hidden="true">*</span></label>${info}</div><select id="start-canton" name="canton" aria-required="true" data-canton-compact="1" data-canton-hint="für deine Steuerschätzung"><option value="" ${entered(draft.canton) ? '' : 'selected'}>Bitte wählen</option>${options}</select></section>`;
   }
   /* Titelzeile: ausschliesslich über die zentrale Komponente `PageTitle` (js/v4-pagetitle.js). */
-  const startContext = 'Nur 5 Angaben und du hast einen ersten Überblick.';
-  /* `{detail:true}` ergänzt links den runden Rückweg-Pfeil und rechts das runde «✕» –
-     beide über denselben Delegationspfad (`data-v4-back`) und damit identisch bedient. */
+  const startContext = '5 Angaben für deinen ersten Überblick.';
+  /* Kontextabhängiger Rückweg: «Zurück» ist reine Navigation und führt zur übergeordneten
+     Seite, von der aus der Screen geöffnet wurde. «Übernehmen» dagegen speichert, rechnet neu
+     und führt immer auf «Mein Plan» (Apply-and-return-Regel, siehe
+     docs/information-architecture-v4.md §8). */
+  let detailParent = 'plan';
+  const parentLabel = parent => parent === 'basics' ? 'Angaben & Grundlagen' : parent === 'improve' ? 'Plan präzisieren' : 'Mein Plan';
+  function goBack() {
+    if (detailParent === 'basics') renderBasics();
+    else if (detailParent === 'improve') renderImprove();
+    else returnToPlan();
+  }
+  /* `{detail:true}` ergänzt unter der Titelzeile den Rückweg mit dem Namen der übergeordneten
+     Seite – beide über denselben Delegationspfad (`data-v4-back`). */
   function title(title, context = '', options = {}) {
     const component = globalThis.PageTitle;
-    return component ? component.render(title, context, options) : `<header class="v4-head"><h1 class="v4-page-title">${title}</h1>${context ? `<p class="v4-page-context">${context}</p>` : ''}</header>`;
+    const opts = options.detail ? {...options, backLabel: parentLabel(detailParent)} : options;
+    return component ? component.render(title, context, opts) : `<header class="v4-head"><h1 class="v4-page-title">${title}</h1>${context ? `<p class="v4-page-context">${context}</p>` : ''}</header>`;
   }
   const detailHead = {detail:true};
   // Kontextzeile für alle Screens, die zum Plan gehören (immer gleicher Aufbau).
@@ -330,15 +385,10 @@
     const age = plan.retirement?.age, target = plan.retirement?.targetAge;
     return `${state.mode === 'pre' && age ? `Pensionierung mit ${age}` : 'Planungsstart heute'}${target ? ` · Planung bis ${target}` : ''}`;
   }
-  // Variantenkontext für «Meine Varianten» bzw. «Planung Jahr für Jahr».
+  // Variantenkontext für «Meine Varianten».
   function variantContext() {
     const count = variantShares().length;
     return count === 1 ? '1 gespeicherte Variante' : `${count} gespeicherte Varianten`;
-  }
-  function yearContext() {
-    if (state.mode === 'pre') return `Variante ${chosenShare()} % Kapitalbezug`;
-    const target = (evaluated(chosenShare()) ?? {}).plan?.retirement.targetAge;
-    return target ? `Planung bis ${target}` : 'Planungsstart heute';
   }
   function assumptionsBody() {
     const ahv = Estimates ? Estimates.ahvOf(state) : null, uws = Estimates ? Estimates.uwsOf(state) : null, pre = state.mode === 'pre';
@@ -353,7 +403,7 @@
   }
   function renderStart() {
     state = normalizeP3(state);
-    route = 'plan'; markDirty();
+    route = 'plan'; detailParent = 'plan'; markDirty();
     // Im Schnellstart gibt es noch keinen Plan und damit nichts zu navigieren: kein Menü.
     setMenuAvailable(false);
     app.innerHTML = `${title('Mein Plan.', startContext)}<div class="v4-segments" role="group" aria-label="Deine Situation"><button type="button" class="v4-segment" data-situation="pre" aria-pressed="${state.mode === 'pre'}">${Icons.icon('user', {size:18})}<span>Vor Pensionierung</span></button><button type="button" class="v4-segment" data-situation="post" aria-pressed="${state.mode === 'post'}">${Icons.icon('users', {size:18})}<span>Bereits pensioniert</span></button></div><form id="v4Form" novalidate><div class="v4-start">${cantonField()}${startFields().map(field => {
@@ -374,7 +424,11 @@
   function assignForm() {
     app.querySelectorAll('input,select').forEach(input => {
       if (!input.name) return;
-      draft[input.name] = input.hasAttribute('data-amount') ? amountValue(input.value) : input.value;
+      // Beträge und Prozentwerte werden schweizerisch angezeigt (1'000 / 4,5) und numerisch
+      // gelesen: Beträge als Zahl-String ohne Trennzeichen, Prozente als echte Zahl.
+      draft[input.name] = input.hasAttribute('data-amount') ? amountValue(input.value)
+        : input.hasAttribute('data-percent') ? (input.value.trim() === '' ? '' : Number(input.value.replace(',', '.')))
+        : input.value;
     });
   }
   function submitStart(event) {
@@ -402,8 +456,8 @@
 
   /* ---------------- Mein Plan (Executive Summary) ----------------
      Zielstruktur, mehr steht hier nicht:
-       PageTitle · Planstatus · 4 Kennzahlen · PK-Bezug · «Plan verbessern» ·
-       zwei sekundäre Zeilen (Vermögensverlauf, Meine Varianten).
+       PageTitle · Planstatus · 4 Kennzahlen · PK-Bezug · zustandsabhängige Aktion ·
+       zwei sekundäre Zeilen (Jahresverlauf, Meine Varianten).
      Alles Weitere liegt auf fokussierten Screens oder im Menü. */
   function planScreen(item) {
     return `${title('Mein Plan.', planContext(item))}${verdictCard(item)}${summaryTiles(item)}${lever(item)}${improveEntry()}${secondaryRows()}`;
@@ -411,7 +465,7 @@
   function renderPlan(restore = false) {
     state = normalizeP3(state);
     if (!State.timing(state) || state.values.need === undefined) { setStartDraft(); renderStart(); return; }
-    closeMenu(); route = 'plan'; markDirty(); setMenuAvailable(true);
+    closeMenu(); route = 'plan'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
     if (!restore) window.scrollTo(0, 0);
     const item = evaluated(previewShare ?? chosenShare()) ?? evaluated(chosenShare());
     if (!item) { setStartDraft(); renderStart(); return; }
@@ -442,7 +496,7 @@
 
   /* ---------------- Meine Varianten ---------------- */
   function renderVariants() {
-    closeMenu(); route = 'variants'; markDirty(); setMenuAvailable(true);
+    closeMenu(); route = 'variants'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
     window.scrollTo(0, 0);
     const target = (evaluated(chosenShare()) ?? {}).plan?.retirement.targetAge ?? '';
     const cards = variantShares().map((share, index) => {
@@ -466,7 +520,7 @@
     }));
   }
 
-  /* ---------------- Plan verbessern: drei Hebel ----------------
+  /* ---------------- Plan präzisieren / Plan optimieren (zwei Zustände) ----------------
      1 Angaben präzisieren · 2 Anlagestrategie · 3 Bedarf netto.
      Alle Wirkungen kommen aus dem gemeinsamen Rechenkern; gespeichert wird nur
      über die jeweilige Detailseite. */
@@ -474,20 +528,67 @@
     return `<div class="v4-hebel-head"><span class="v4-hebel-num" aria-hidden="true">${number}</span><div class="v4-hebel-intro"><h2>${title}${info}</h2><p>${text}</p></div></div>`;
   }
   const badgeTone = tone => tone === 'done' ? 'done' : tone === 'estimated' ? 'estimated' : 'open';
+  /* Eine Zeile für Angaben: Icon, Label, Zustands-Badge, Zustandstext, Wert, Zielseite.
+     Sie wird von «Plan präzisieren» (Hebel 1) UND vom Screen «Angaben & Grundlagen»
+     verwendet – eine Implementierung, zwei legitime Wege zum selben Editor. */
+  const hebelRow = (entry, parent = 'plan') => `<li><button type="button" class="v4-hebel-row" data-v4-next="${entry.page}" data-v4-parent="${parent}"><span class="v4-detail-icon" aria-hidden="true">${Icons.icon(entry.icon, {size:18})}</span><span class="v4-hebel-copy"><span class="v4-hebel-line"><strong>${esc(entry.label)}</strong><span class="v4-badge-tone ${badgeTone(entry.tone)}">${esc(entry.badge)}</span></span><span class="v4-hebel-line"><small>${esc(entry.sub)}</small>${entry.value ? `<span class="v4-hebel-value">${esc(entry.value)}</span>` : ''}</span></span>${Icons.icon('chevronRight', {size:18})}</button></li>`;
+  /* Hebel 1 «Angaben präzisieren»: erscheint nur, solange Angaben fehlen oder geschätzt sind.
+     Die Datenpflege selbst liegt dauerhaft unter «Angaben & Grundlagen» im Menü. */
   function hebelPrecision(items, open) {
-    const rows = items.map(entry => `<li><button type="button" class="v4-hebel-row" data-v4-next="${entry.page}"><span class="v4-detail-icon" aria-hidden="true">${Icons.icon(entry.icon, {size:18})}</span><span class="v4-hebel-copy"><span class="v4-hebel-line"><strong>${esc(entry.label)}</strong><span class="v4-badge-tone ${badgeTone(entry.tone)}">${esc(entry.badge)}</span></span><span class="v4-hebel-line"><small>${esc(entry.sub)}</small>${entry.value ? `<span class="v4-hebel-value">${esc(entry.value)}</span>` : ''}</span></span>${Icons.icon('chevronRight', {size:18})}</button></li>`).join('');
     const target = open[0]?.page ?? 'ahv';
-    // Sind alle Angaben erfasst, klappt der Hebel zu einer Zeile zusammen (aufklappbar zum Prüfen).
-    if (!open.length) {
-      return `<details class="v4-hebel v4-hebel-done"><summary class="v4-hebel-summary"><span class="v4-hebel-num" aria-hidden="true">1</span><span class="v4-hebel-intro"><strong>Angaben präzisieren</strong><small>Alle Angaben erfasst – zum Prüfen aufklappen.</small></span>${Icons.icon('chevronRight', {size:18})}</summary><ul class="v4-hebel-list">${rows}</ul><button type="button" class="primary v4-block-action" data-v4-next="${target}">Angaben prüfen <span aria-hidden="true">→</span></button></details>`;
-    }
-    return `<section class="v4-hebel">${hebelHead(1, 'Angaben präzisieren', 'Je genauer deine Angaben, desto verlässlicher dein Plan.')}<ul class="v4-hebel-list">${rows}</ul><button type="button" class="primary v4-block-action" data-v4-next="${target}">Angaben ergänzen <span aria-hidden="true">→</span></button></section>`;
+    return `<section class="v4-hebel">${hebelHead(1, 'Angaben präzisieren', 'Je genauer deine Angaben, desto verlässlicher dein Plan.')}<ul class="v4-hebel-list">${items.map(entry => hebelRow(entry, 'improve')).join('')}</ul><button type="button" class="primary v4-block-action" data-v4-next="${target}" data-v4-parent="improve">Angaben ergänzen <span aria-hidden="true">→</span></button></section>`;
+  }
+  /* ---------------- Angaben & Grundlagen (Daten-Hub) ----------------
+     Die Navigation folgt den Aufgaben, nicht dem Datenmodell: alle Editoren (AHV, PK, 3a,
+     Einnahmen, Bedarf, Vermögen) liegen hinter EINEM Menüpunkt «Angaben & Grundlagen».
+     Jede Zeile zeigt Zustand und Wert und öffnet denselben Editor wie bisher. */
+  function basicsRows() {
+    const known = dataKnown(), pre = state.mode === 'pre';
+    const income = state.details.income ?? {};
+    const amounts = captured();
+    const ahv = Estimates ? Estimates.ahvOf(state) : {origin:'user', monthly:0};
+    const ahvDone = ahv.origin === 'user';
+    const ahvMonthly = ahvDone ? numeric(income.ahv) : (Estimates ? Estimates.ahv.monthly : 0);
+    const p3Done = amounts.p3 !== null || amounts.p3Contrib !== null;
+    const pkDone = amounts.pkContrib !== null && amounts.pkContrib > 0;
+    const need = state.values.need, needDone = need !== undefined;
+    const row = (page, icon, label, done, value = '', style = {}) => ({page, icon, label, value, sub: style.sub ?? (done ? 'Erfasst' : 'Noch ergänzen'), badge: style.badge ?? (done ? 'erfasst' : 'offen'), tone: style.tone ?? (done ? 'done' : 'open')});
+    const timeline = [state.values.age, state.values.retirement].filter(entry => entry !== undefined && entry !== null);
+    /* Zeile «Vermögen»: die Summe der erfassten Positionen, nicht nur «erfasst». Der Zusatz
+       nennt, was darin steckt – inklusive gebundenem Immobilienvermögen (netto). */
+    const assetsSub = amounts.free > 0
+      ? `Bank & Wertschriften${amounts.property > 0 ? ` · Immobilien ${money(amounts.property)}` : ''}`
+      : (amounts.p3 !== null ? 'Nur Säule 3a erfasst' : 'Noch ergänzen');
+    const extraSub = amounts.extraDone ? (amounts.extra > 0 ? 'Weitere Einnahmen' : 'Keine weiteren Einnahmen') : 'Noch ergänzen';
+    return [
+      {title:'Zeitpunkt & Steuern', rows:[row('personal', 'calendarStats', 'Persönliche Angaben', true, timeline.join(' → '), {sub:'Alter & Pensionierung'})]},
+      {title:'Einkommen & Vorsorge', rows:[
+        row('ahv', 'buildingBank', 'AHV-Renten', ahvDone, `${money(ahvMonthly)} / Monat`, ahvDone ? {sub:'Aus deiner Eingabe'} : {sub:'Durchschnittswert', badge:'geschätzt', tone:'estimated'}),
+        pre ? row('pension', 'buildingBank', 'Pensionskasse (PK)', pkDone, amounts.pk !== null ? money(amounts.pk) : '', {sub: yearMoney(amounts.pkContrib) || (amounts.pk !== null ? 'Beiträge fehlen' : 'Noch ergänzen')}) : null,
+        pre ? row('pension3a', 'pigMoney', 'Säule 3a', p3Done, amounts.p3 !== null ? money(amounts.p3) : '', {sub: yearMoney(amounts.p3Contrib) || (amounts.p3 !== null ? 'Guthaben erfasst' : 'Noch ergänzen')}) : null,
+        row('extra', 'coins', 'Weitere Einnahmen', amounts.extraDone, amounts.extraDone ? (amounts.extra > 0 ? `${money(amounts.extra)} / Monat` : 'Keine') : '', {sub: extraSub})
+      ].filter(Boolean)},
+      {title:'Bedarf & Vermögen', rows:[
+        row('need', 'shoppingCart', 'Bedarf netto', needDone, needDone ? `${money(need)} / Monat` : '', {sub: needDone ? 'Nach Steuern' : 'Noch ergänzen'}),
+        row('assets', 'pigMoney', 'Vermögen', known.assets, amounts.free > 0 ? money(amounts.free) : '', {sub: assetsSub})
+      ]}
+    ];
+  }
+  function renderBasics() {
+    closeMenu(); route = 'basics'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
+    window.scrollTo(0, 0);
+    const groups = basicsRows().map(group => `<section class="v4-hebel v4-basics"><h2 class="v4-basics-title">${group.title}</h2><ul class="v4-hebel-list">${group.rows.map(entry => hebelRow(entry, 'basics')).join('')}</ul></section>`).join('');
+    app.innerHTML = `${title('Angaben & Grundlagen.', 'Deine Angaben.', detailHead)}<p class="v4-lead">Alles, was in deinen Plan einfliesst – jede Zeile öffnet den passenden Editor.</p>${groups}`;
   }
   /* Hebel 2: die drei Strategien sind echte Vorschau-Szenarien. Ein Tap rechnet die
      vollständige Ruhestandsprojektion mit diesem Profil neu (gemeinsamer Rechenkern) und
      zeigt die Wirkung sofort im Screen – der aktuelle Plan bleibt dabei unverändert.
      Erst «Strategie übernehmen» speichert die Auswahl. Keine Navigation zu «Annahmen». */
   let strategyPreview = null;
+  /* Hebel 2 zeigt im Ruhezustand nur die aktuelle Strategie. Die drei Vorschau-Szenarien
+     erscheinen erst auf Tap («zum Ändern aufklappen») – der Zustand überlebt das Neuzeichnen
+     der Vorschau, weil ein Strategie-Tap den Block offen hält. */
+  let strategyOpen = false;
   let needPreview = {step:0, sign:-1};
   function strategyImpact(item, comparison, key) {
     const row = comparison.rows.find(entry => entry.key === key) ?? comparison.rows[0];
@@ -502,54 +603,71 @@
       ? `${prefix}: Dein Vermögen reicht voraussichtlich bis Alter ${row.age}.`
       : `${prefix}: Dein Vermögen reicht bis zum Planungshorizont ${comparison.target} – Restvermögen ${money(row.rest)}.`;
   }
-  function hebelStrategy(item) {
+  function hebelStrategy(item, number = 1) {
     const comparison = profileComparison(item);
     if (!comparison) return '';
     const selected = strategyPreview && comparison.rows.some(row => row.key === strategyPreview) ? strategyPreview : comparison.currentKey;
     const info = modalInfo({title:'Anlagestrategie', aria:'Anlagestrategie erklären', body:`<p>Die Anlagestrategie ist die einzige Quelle für die erwartete Rendite im Ruhestand. Sie bestimmt, wie dein Vermögen zwischen Sicherheit und Wachstum aufgeteilt wird.</p><p><strong>Vorsichtig ${comparison.rows[0]?.rate ?? ''} %, Ausgewogen ${comparison.rows[1]?.rate ?? ''} %, Chancenorientiert ${comparison.rows[2]?.rate ?? ''} %</strong> – Modellrenditen des Szenarios, nicht Renditen einzelner Anlagen. Höhere Chancen bedeuten grössere Schwankungen.</p>`});
-    const rows = comparison.rows.map(row => `<li><button type="button" class="v4-strategy${row.current ? ' current' : ''}${row.key === selected ? ' selected' : ''}" role="radio" aria-checked="${row.key === selected}" data-strategy="${row.key}"><span class="v4-strategy-mark" aria-hidden="true"></span><span class="v4-strategy-name">${esc(row.label)}</span><span class="v4-strategy-rate">${row.rate} % real</span><strong class="v4-strategy-value">${esc(row.shown)}</strong>${comparison.allReach ? `<span class="v4-strategy-bar" aria-hidden="true"><span style="width:${Math.max(4, Math.round(row.share * 100))}%"></span></span>` : ''}</button></li>`).join('');
+    /* Jedes Szenario nennt Profil und Annahme UND die gerechnete Wirkung – keine Auswahl
+       ohne sichtbare Reaktion. Der Balken erscheint nur bei vergleichbarem Horizont. */
+    const rows = comparison.rows.map(row => `<li><button type="button" class="v4-strategy${row.current ? ' current' : ''}${row.key === selected ? ' selected' : ''}" role="radio" aria-checked="${row.key === selected}" data-strategy="${row.key}"><span class="v4-strategy-mark" aria-hidden="true"></span><span class="v4-strategy-copy"><strong>${esc(row.label)} · ${row.rate} % pro Jahr</strong><small class="v4-strategy-outcome">${esc(row.outcome)}</small></span>${comparison.allReach ? `<span class="v4-strategy-bar" aria-hidden="true"><span style="width:${Math.max(4, Math.round(row.share * 100))}%"></span></span>` : ''}</button></li>`).join('');
     const adopt = selected === comparison.currentKey
       ? '<button type="button" class="primary v4-block-action" disabled>Strategie ist aktuell</button>'
       : '<button type="button" class="primary v4-block-action" id="strategyAdopt">Strategie übernehmen <span aria-hidden="true">→</span></button>';
-    return `<section class="v4-hebel">${hebelHead(2, 'Anlagestrategie', 'Tippe eine Strategie an – die Wirkung wird sofort gerechnet.', info)}<p class="v4-strategy-head">${comparison.allReach ? 'Restvermögen am Planungshorizont' : 'Reichweite je Strategie'}</p><ul class="v4-strategy-list" role="radiogroup" aria-label="Anlagestrategie">${rows}</ul><p class="v4-impact" id="strategyImpact">${esc(strategyImpact(item, comparison, selected))}</p><div class="v4-hebel-actions">${adopt}</div></section>`;
+    /* Ruhezustand: die aktuell verwendete Strategie mit Annahme und Wirkung – beides
+       dynamisch aus dem aktiven Profil (`risk-profiles.js`) bzw. dem Rechenkern. */
+    const current = comparison.rows.find(row => row.key === comparison.currentKey) ?? comparison.rows[0];
+    const summary = `${current.label} · Annahme ${current.rate} % pro Jahr · ${current.outcome} – zum Ändern aufklappen.`;
+    const panel = `<div class="v4-hebel-panel"><p class="v4-strategy-head">${comparison.allReach ? 'Restvermögen am Planungshorizont' : 'Wirkung je Strategie'}</p><ul class="v4-strategy-list" role="radiogroup" aria-label="Anlagestrategie">${rows}</ul><p class="v4-impact" id="strategyImpact">${esc(strategyImpact(item, comparison, selected))}</p><div class="v4-hebel-actions">${adopt}</div></div>`;
+    return `<details class="v4-hebel v4-hebel-fold v4-hebel-strategy"${strategyOpen ? ' open' : ''}><summary class="v4-hebel-summary"><span class="v4-hebel-num" aria-hidden="true">${number}</span><span class="v4-hebel-intro"><strong>Anlagestrategie${info}</strong><small>${esc(summary)}</small></span>${Icons.icon('chevronRight', {size:18})}</summary>${panel}</details>`;
   }
   function bindStrategy(item) {
     const comparison = profileComparison(item);
     if (!comparison) return;
+    app.querySelector('.v4-hebel-strategy')?.addEventListener('toggle', event => { strategyOpen = event.currentTarget.open; });
     app.querySelectorAll('[data-strategy]').forEach(button => button.addEventListener('click', () => {
       // Nur die Vorschau umschalten und neu zeichnen – der gespeicherte Plan bleibt unangetastet.
       strategyPreview = button.dataset.strategy;
+      strategyOpen = true;   // die aufgeklappte Auswahl bleibt beim Neuzeichnen offen
       renderImprove({reset:false});
     }));
     document.getElementById('strategyAdopt')?.addEventListener('click', () => adoptStrategy(strategyPreview ?? comparison.currentKey));
   }
   function adoptStrategy(key) {
     // Erst hier wird die Auswahl gespeichert; danach zeigt «Mein Plan» die neue Rechnung.
-    state = {...state, riskProfile: key};
+    // `strategyChosen` hält die Herkunft fest («gewählt» statt «Annahme» im Töpfe-Dialog).
+    state = {...state, riskProfile: key, strategyChosen: true};
     strategyPreview = null;
     markDirty();
     returnToPlan();
   }
 
-  function hebelNeed(item) {
+  function hebelNeed(item, number = 3) {
     const info = modalInfo({title:'Bedarf netto', aria:'Bedarf netto erklären', body:'<p>Dein monatlicher Bedarf nach Steuern. Ein tieferer Bedarf schont dein Vermögen und verlängert die Reichweite.</p><p>Die Vorschau rechnet mit demselben Rechenkern; gespeichert wird erst, wenn du deinen Bedarf anpasst.</p>'});
     const current = needImpact(item, needPreview.step * needPreview.sign);
     // Jeder Chip wechselt beim Antippen sein Vorzeichen: − 500 wird zu + 500 (höherer Bedarf).
     const chips = [500, 1000].map(step => { const active = needPreview.step === step; // Das Label zeigt, was der nächste Tap bewirkt: nach «− 500» also «+ 500».
       const sign = active && needPreview.sign < 0 ? '+' : '−'; return `<button type="button" class="v4-chip" data-need-preview="${step}" aria-pressed="${active ? 'true' : 'false'}">${sign} ${step.toLocaleString('de-CH')}</button>`; }).join('');
-    return `<section class="v4-hebel">${hebelHead(3, 'Bedarf netto', 'Sieh, wie sich ein tieferer Nettobedarf auf die Haltbarkeit deines Vermögens auswirkt.', info)}<div class="v4-need-head"><strong class="v4-need-amount">${money(current.monthly)} <small>/ Monat</small></strong><div class="v4-chips">${chips}<button type="button" class="v4-chip" data-v4-next="need">ändern</button></div></div><p class="v4-impact" id="needImpact">${esc(current.text)}</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-v4-next="need">Bedarf anpassen <span aria-hidden="true">→</span></button></div></section>`;
+    return `<section class="v4-hebel">${hebelHead(number, 'Bedarf netto', 'Sieh, wie sich ein tieferer Nettobedarf auf die Haltbarkeit deines Vermögens auswirkt.', info)}<div class="v4-need-head"><strong class="v4-need-amount">${money(current.monthly)} <small>/ Monat</small></strong><div class="v4-chips">${chips}<button type="button" class="v4-chip" data-v4-next="need">ändern</button></div></div><p class="v4-impact" id="needImpact">${esc(current.text)}</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-v4-next="need">Bedarf anpassen <span aria-hidden="true">→</span></button></div></section>`;
   }
+  /* Der Screen kennt zwei Zustände:
+       «Plan präzisieren.» – Angaben fehlen oder sind geschätzt: nur der Datenhebel.
+       «Plan optimieren.» – Daten vollständig: Strategie und Bedarf als Optimierungshebel.
+     Datenqualität und Optimierung werden nie im selben Block vermischt. */
   function renderImprove({reset = true} = {}) {
-    closeMenu(); route = 'improve'; markDirty(); setMenuAvailable(true);
+    closeMenu(); route = 'improve'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
     if (reset) window.scrollTo(0, 0);
-    if (reset) { strategyPreview = null; needPreview = {step:0, sign:-1}; }
+    if (reset) { strategyPreview = null; strategyOpen = false; needPreview = {step:0, sign:-1}; }
     const item = evaluated(previewShare ?? chosenShare());
     if (!item) { returnToPlan(); return; }
     const {items, open} = precisionItems();
-    const blocks = [hebelPrecision(items, open), hebelStrategy(item), hebelNeed(item)].filter(Boolean);
-    // Erfasste Angaben zählen nicht mehr als offener Hebel.
-    const hebelCount = 2 + (open.length ? 1 : 0);
-    app.innerHTML = `${title('Plan verbessern.', `${hebelCount} Hebel für einen besseren Plan.`, detailHead)}${blocks.join('')}`;
+    const precise = open.length > 0;
+    const head = precise ? ['Plan präzisieren.', 'Mach deinen ersten Plan genauer.'] : ['Plan optimieren.', 'Teste, was deinen Plan verbessert.'];
+    const lead = precise
+      ? 'Je genauer deine Angaben, desto verlässlicher dein Plan. Danach kannst du Strategie und Bedarf durchspielen.'
+      : 'Teste Strategie und Bedarf: die Vorschau rechnet sofort, gespeichert wird erst mit «übernehmen».';
+    const blocks = precise ? [hebelPrecision(items, open)] : [hebelStrategy(item, 1), hebelNeed(item, 2)];
+    app.innerHTML = `${title(head[0], head[1], detailHead)}<p class="v4-lead">${lead}</p>${blocks.join('')}`;
     bindStrategy(item);
     app.querySelectorAll('[data-need-preview]').forEach(chip => chip.addEventListener('click', () => {
       const step = numeric(chip.dataset.needPreview);
@@ -559,10 +677,10 @@
     }));
   }
 
-  /* ---------------- Planung Jahr für Jahr (kompakt) ---------------- */
+  /* ---------------- Jahr für Jahr – Jahresverlauf (Plan verstehen) ---------------- */
   const yearState = {age:null};
   function renderYear() {
-    closeMenu(); route = 'years'; markDirty(); setMenuAvailable(true);
+    closeMenu(); route = 'years'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
     window.scrollTo(0, 0);
     const item = evaluated(previewShare ?? chosenShare());
     if (!item) { returnToPlan(); return; }
@@ -587,12 +705,23 @@
        Profil (risk-profiles.js), nie hardcodiert. */
     const activeProfile = globalThis.RiskProfiles?.getRiskProfile(item.plan.riskProfile ?? state.riskProfile);
     const strategyLine = activeProfile
-      ? `<p class="v4-year-strategy">${esc(activeProfile.label)} · Annahme ${percent(numeric(activeProfile.expectedRealReturn) * 100)} % p.a. ${modalInfo({title:'Anlagestrategie dieser Projektion', aria:'Anlagestrategie erklären', body:`<p>Dein Plan rechnet im Ruhestand mit der Modellrendite der Anlagestrategie <strong>${esc(activeProfile.label)} (${percent(numeric(activeProfile.expectedRealReturn) * 100)} % p.a. real)</strong>. Du wählst sie unter «Plan verbessern».</p><p>Die Zeile «Rendite dieses Jahres» zeigt dagegen das effektiv gerechnete Jahresergebnis deiner Töpfe – nicht die Annahme.</p>`})}</p>`
+      ? `<p class="v4-year-strategy">${esc(activeProfile.label)} · Annahme ${percent(numeric(activeProfile.expectedRealReturn) * 100)} % pro Jahr ${modalInfo({title:'Anlagestrategie dieser Projektion', aria:'Anlagestrategie erklären', body:`<p>Dein Plan rechnet im Ruhestand mit der Modellrendite der Anlagestrategie <strong>${esc(activeProfile.label)} (${percent(numeric(activeProfile.expectedRealReturn) * 100)} % pro Jahr, real)</strong>. Du wählst sie unter «Plan optimieren».</p><p>Die Zeile «Rendite dieses Jahres» zeigt dagegen das effektiv gerechnete Jahresergebnis deiner Töpfe – nicht die Annahme.</p>`})}</p>`
       : '';
     /* Keine Überleitungszeile mehr: in der realen Sicht schliesst das Vorjahresende exakt an die
        Eröffnung des Folgejahres an. */
-    app.innerHTML = `${title('Planung Jahr für Jahr.', yearContext(), detailHead)}<section class="v4-year-nav"><input id="yearRange" type="range" min="${ages[0]}" max="${ages[ages.length - 1]}" step="1" value="${row.age}" aria-label="Alter wählen"><div class="v4-year-row"><span class="v4-detail-state">Alter ${value.age + 1}</span><span class="v4-detail-state">${ages.length} Planjahre</span></div></section><section class="v4-year-block"><h3>1 · Vermögen am Jahresanfang</h3>${line('Total', money(value.free))}${['Geldmarkt','Obligationen','Wertschöpfung'].map((name, position) => line(name, money(value.buckets?.[position] ?? 0))).join('')}</section><section class="v4-year-block"><h3>2 · Einkommen</h3>${(value.sources ?? []).filter(source => source.gross > 0.5).map(source => line(esc(source.name), money(source.gross), source.taxable ? 'brutto' : 'nicht steuerbar')).join('')}${line('Einnahmen vor Steuern', money(value.grossIncome))}${line(`Steuern (${percent(rate)} %)`, `− ${money(numeric(value.estimatedIncomeTax))}`)}${line('Netto verfügbar', money(value.rent))}</section><section class="v4-year-block"><h3>3 · Bedarf netto</h3>${line('Lebenshaltung netto', money(value.need))}${value.special > 0.5 ? line('Sonderausgabe', money(value.special)) : ''}${line(value.withdrawal > 0.5 ? 'Fehlbetrag' : 'Überschuss', money(value.withdrawal > 0.5 ? value.withdrawal : Math.max(0, value.rent - value.need - (value.special ?? 0))))}</section><section class="v4-year-block"><h3>4 · Entnahme aus den Töpfen</h3>${takes.map((take, position) => pot(position, take)).join('')}${line('Total Entnahme', money(takes.reduce((a, b) => a + b, 0)))}</section><section class="v4-year-block"><h3>5 · Deine Töpfe (Jahresende)</h3>${strategyLine}${['Geldmarkt','Obligationen','Wertschöpfung'].map((name, position) => line(name, money(value.endBuckets?.[position] ?? 0))).join('')}${line('Rendite dieses Jahres', `${value.ret >= 0 ? '+' : '−'} ${money(Math.abs(value.ret))}`)}${line('Umbuchungen (intern)', money((value.transfers ?? []).reduce((a, b) => a + Math.abs(b), 0)))}</section><section class="v4-year-block"><h3>6 · Vermögen am Jahresende</h3>${line('Total', money(value.end))}${line('Veränderung', `${value.net >= 0 ? '+' : '−'} ${money(Math.abs(value.net))}`)}</section><ul class="v4-rows"><li><button type="button" class="v4-row" data-v4-action="pots"><span>Töpfe-Modell · Aufteilung und Entwicklung</span>${Icons.icon('chevronRight', {size:18})}</button></li></ul><p class="v4-lead">Alle Beträge in heutiger Kaufkraft – so bleiben die Jahre untereinander vergleichbar. Gerechnet mit den bestehenden Annahmen (Inflation ${percent(item.plan.assumptions.rates.inflation)} %).</p>`;
+    /* Jahresnavigation: Regler in der Mitte, links/rechts je ein Schritt um genau ein Jahr
+       (an den Enden deaktiviert). Darunter der erreichte Stand. */
+    const first = index === 0, last = index === ages.length - 1;
+    const step = (direction, label, icon, disabled) => `<button type="button" class="v4-year-step" data-year-step="${direction}" aria-label="${label}"${disabled ? ' disabled' : ''}>${Icons.icon(icon, {size:18})}</button>`;
+    app.innerHTML = `${title('Jahr für Jahr.', 'So arbeitet dein Plan im Detail.', detailHead)}<section class="v4-year-nav"><div class="v4-year-slider">${step(-1, 'Ein Jahr früher', 'chevronLeft', first)}<input id="yearRange" type="range" min="${ages[0]}" max="${ages[ages.length - 1]}" step="1" value="${row.age}" aria-label="Alter wählen">${step(1, 'Ein Jahr später', 'chevronRight', last)}</div><div class="v4-year-row"><span class="v4-detail-state">Alter ${value.age + 1}</span><span class="v4-detail-state">${ages.length} Planjahre</span></div></section><section class="v4-year-block"><h3>1 · Vermögen am Jahresanfang</h3>${line('Total', money(value.free))}${['Geldmarkt','Obligationen','Wertschöpfung'].map((name, position) => line(name, money(value.buckets?.[position] ?? 0))).join('')}</section><section class="v4-year-block"><h3>2 · Einkommen</h3>${(value.sources ?? []).filter(source => source.gross > 0.5).map(source => line(esc(source.name), money(source.gross), source.taxable ? 'brutto' : 'nicht steuerbar')).join('')}${line('Einnahmen vor Steuern', money(value.grossIncome))}${line(`Steuern (${percent(rate)} %)`, `− ${money(numeric(value.estimatedIncomeTax))}`)}${line('Netto verfügbar', money(value.rent))}</section><section class="v4-year-block"><h3>3 · Bedarf netto</h3>${line('Lebenshaltung netto', money(value.need))}${value.special > 0.5 ? line('Sonderausgabe', money(value.special)) : ''}${line(value.withdrawal > 0.5 ? 'Fehlbetrag' : 'Überschuss', money(value.withdrawal > 0.5 ? value.withdrawal : Math.max(0, value.rent - value.need - (value.special ?? 0))))}</section><section class="v4-year-block"><h3>4 · Entnahme aus den Töpfen</h3>${takes.map((take, position) => pot(position, take)).join('')}${line('Total Entnahme', money(takes.reduce((a, b) => a + b, 0)))}</section><section class="v4-year-block"><h3>5 · Deine Töpfe (Jahresende)</h3>${strategyLine}${['Geldmarkt','Obligationen','Wertschöpfung'].map((name, position) => line(name, money(value.endBuckets?.[position] ?? 0))).join('')}${line('Rendite dieses Jahres', `${value.ret >= 0 ? '+' : '−'} ${money(Math.abs(value.ret))}`)}${line('Umbuchungen (intern)', money((value.transfers ?? []).reduce((a, b) => a + Math.abs(b), 0)))}</section><section class="v4-year-block"><h3>6 · Vermögen am Jahresende</h3>${line('Total', money(value.end))}${line('Veränderung', `${value.net >= 0 ? '+' : '−'} ${money(Math.abs(value.net))}`)}</section><ul class="v4-rows"><li><button type="button" class="v4-row" data-v4-action="pots"><span>Töpfe-Modell · Aufteilung und Entwicklung</span>${Icons.icon('chevronRight', {size:18})}</button></li></ul><p class="v4-lead">${state.mode === 'pre' ? `Variante ${chosenShare()} % Kapitalbezug · ` : ''}Alle Beträge in heutiger Kaufkraft – so bleiben die Jahre untereinander vergleichbar. Gerechnet mit den bestehenden Annahmen (Inflation ${percent(item.plan.assumptions.rates.inflation)} %).</p>`;
     document.getElementById('yearRange')?.addEventListener('input', event => { yearState.age = numeric(event.target.value); renderYear(); });
+    /* Schrittknöpfe: genau ein Jahr vor/zurück, nie über die Planjahre hinaus. */
+    app.querySelectorAll('[data-year-step]').forEach(button => button.addEventListener('click', () => {
+      const next = numeric(ages[index]) + numeric(button.dataset.yearStep);
+      if (next < ages[0] || next > ages[ages.length - 1]) return;
+      yearState.age = next;
+      renderYear();
+    }));
   }
 
   /* ---------------- Detail-Editoren (bestehende Felddefinitionen) ---------------- */
@@ -614,14 +743,20 @@
     const value = draft[field.key] ?? '';
     const required = field.optional === true ? '' : ' <span class="v3-required" aria-hidden="true">*</span>';
     if (field.key === 'canton' || field.type === 'canton') {
-      return `<label for="${field.key}">${field.label}${required}</label><div class="v4-form-value"><select id="${field.key}" name="${field.key}"><option value="" ${entered(value) ? '' : 'selected'}>Noch offen</option>${Object.entries(TaxModel.config.cantons).map(([code, canton]) => `<option value="${code}" ${value === code ? 'selected' : ''}>${code} · ${esc(canton.name)}</option>`).join('')}</select></div>`;
+      return `<label for="${field.key}">${field.label}${required}</label><div class="v4-form-value"><select id="${field.key}" name="${field.key}" data-canton-compact="1"><option value="" ${entered(value) ? '' : 'selected'}>Noch offen</option>${Object.entries(TaxModel.config.cantons).map(([code, canton]) => `<option value="${code}" ${value === code ? 'selected' : ''}>${code} · ${esc(canton.name)}</option>`).join('')}</select></div>`;
     }
     const amount = isAmountField(field);
-    return `<label for="${field.key}">${field.label}${required}</label><div class="v4-form-value"><input id="${field.key}" name="${field.key}" type="text" inputmode="${amount ? 'decimal' : 'numeric'}" autocomplete="off"${amount ? ' data-amount' : ''} value="${esc(formatAmount(value))}"><span class="v4-form-unit">${field.unit}</span></div>`;
+    /* Prozentwerte erscheinen mit Dezimalkomma («4,5 %»), wie alle Prozentangaben der App. */
+    const percent = !amount && String(field.unit ?? '').trim().startsWith('%');
+    const shown = amount ? formatAmount(value) : percent ? String(value).replace('.', ',') : value;
+    return `<label for="${field.key}">${field.label}${required}</label><div class="v4-form-value"><input id="${field.key}" name="${field.key}" type="text" inputmode="${amount || percent ? 'decimal' : 'numeric'}" autocomplete="off"${amount ? ' data-amount' : ''}${percent ? ' data-percent' : ''} value="${esc(shown)}"><span class="v4-form-unit">${field.unit}</span></div>`;
   }
-  function openDetail(name) {
+  /* `parent` ist die übergeordnete Seite («Zurück»-Ziel); «Übernehmen» führt immer auf
+     «Mein Plan» (Apply-and-return-Regel). */
+  function openDetail(name, parent = 'plan') {
     if (name === 'plan') { returnToPlan(); return; }
     if (name === 'variants') { renderVariants(); return; }
+    detailParent = parent;
     if (name === 'assets') { renderAssets(); return; }
     closeMenu(); route = name; markDirty(); setMenuAvailable(true);
     window.scrollTo(0, 0);
@@ -687,7 +822,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     const warning = suspect
       ? `<p class="v4-warning" role="status">Die hinterlegte Wertschriftenrendite von ${percent(rate)} % ist fachlich zu prüfen${suspect === 'decimal' ? ' – möglicher Dezimalfehler (0.16 statt 16 %)' : ''}. Sie wirkt nur bis zur Pensionierung; im Ruhestand rechnet der Plan mit der Anlagestrategie.</p><button type="button" class="v4-chip" data-reset-sec-return>Wertschriftenrendite auf ${percent(State.defaults.secReturn)} % zurücksetzen</button>`
       : '';
-    return `<section class="v4-formed-note"><dl class="v4-readonly">${row('Anlagestrategie', `${strategyLabels[profile?.key] ?? profile?.key ?? '–'} · ${(numeric(profile?.expectedRealReturn) * 100).toLocaleString('de-DE', {maximumFractionDigits:1})} % real`, 'einzige Renditequelle im Ruhestand – wählbar unter «Plan verbessern»')}${row('Wertschriftenrendite bis Pensionierung', `${percent(rate)} %`, 'interner Produktsatz, nicht Teil der Strategie')}</dl>${warning}</section>`;
+    return `<section class="v4-formed-note"><dl class="v4-readonly">${row('Anlagestrategie', `${strategyLabels[profile?.key] ?? profile?.key ?? '–'} · ${(numeric(profile?.expectedRealReturn) * 100).toLocaleString('de-DE', {maximumFractionDigits:1})} % pro Jahr`, 'einzige Renditequelle im Ruhestand – wählbar unter «Plan optimieren»')}${row('Wertschriftenrendite bis Pensionierung', `${percent(rate)} %`, 'interner Produktsatz, nicht Teil der Strategie')}</dl>${warning}</section>`;
   }
 
   /* Säule 3a: Guthaben und Beiträge gehören zusammen (Modellregel). Ein leeres Beitragsfeld
@@ -710,21 +845,32 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     const item = evaluated(previewShare ?? chosenShare());
     if (!item) { returnToPlan(); return; }
     const assetLabels = {cash:'Bank / liquide Mittel', securities:'Wertschriften', saving:'Anlage pro Jahr', otherAssets:'Weitere Positionen', propertyValue:'Immobilienwert', mortgage:'Hypotheken'};
-    const sections = [['cash','cash'],['securities','securities','saving'],['otherAssets','otherAssets'],['property','propertyValue','mortgage']];
+    const values = state.details.assets ?? {};
     const threeA = State.fields('pension3a', state);
     const threeALabels = {p3:'3a-Guthaben heute', p3Contrib:'Beiträge pro Jahr'};
     const threeARow = field => `<label for="asset-${field.key}">${threeALabels[field.key] ?? field.label}</label><div class="v4-form-value"><input id="asset-${field.key}" name="${field.key}" type="text" inputmode="decimal" data-amount placeholder="leer" value="${esc(formatAmount((state.details.pension3a ?? {})[field.key] ?? ''))}"><span class="v4-form-unit">${field.unit}</span></div>`;
-    const threeABlock = threeA.length ? `<div class="v4-form-group">Säule 3a <small>optional – Guthaben und Beiträge</small></div>${threeA.map(threeARow).join('')}` : '';
-    const values = state.details.assets ?? {};
+    const sections = [
+      ['cash','cash'],
+      ['securities','securities','saving'],
+      ['otherAssets','otherAssets'],
+      /* Reihenfolge nach Wichtigkeit: die Säule 3a steht vor den optionalen Immobilien. */
+      ['pension3a', ...threeA.map(field => field.key)],
+      ['property','propertyValue','mortgage']
+    ];
     const row = field => `<label for="asset-${field.key}">${assetLabels[field.key] ?? field.label}</label><div class="v4-form-value"><input id="asset-${field.key}" name="${field.key}" type="text" inputmode="decimal" data-amount placeholder="leer" value="${esc(formatAmount(values[field.key] ?? ''))}"><span class="v4-form-unit">${field.unit}</span></div>`;
     const rows = sections.map(([part, ...keys]) => {
+      if (part === 'pension3a') {
+        return threeA.length
+          ? `<div class="v4-form-group">Säule 3a <small>optional – Guthaben und Beiträge</small></div>${threeA.map(threeARow).join('')}`
+          : '';
+      }
       const fields = part === 'property'
         ? [{key:'propertyValue', label:'Immobilienwert', unit:'CHF'}, {key:'mortgage', label:'Hypotheken', unit:'CHF', optional:true}]
         : State.assetFields(part, state, {keepOptional:true});
       const group = part === 'property' ? `<div class="v4-form-group">Immobilien <small>optional – Wert und Hypotheken gehören zusammen</small></div>` : '';
       return group + fields.filter(field => keys.includes(field.key)).map(row).join('');
     }).join('');
-    app.innerHTML = `${title('Vermögen.', 'Kapital für den Ruhestand', detailHead)}<p class="v4-lead">Jede Zeile darf leer bleiben – leere Felder zählen nicht als erfasst. Erfasse nur, was du kennst.</p><form id="v4AssetForm" class="v4-form"><div class="v4-form-table">${rows}${threeABlock}</div><p id="v4Error" class="v3-error" role="alert"></p><button type="submit" class="primary v4-form-submit">Übernehmen</button></form>`;
+    app.innerHTML = `${title('Vermögen.', 'Kapital für den Ruhestand', detailHead)}<p class="v4-lead">Jede Zeile darf leer bleiben – leere Felder zählen nicht als erfasst. Erfasse nur, was du kennst.</p><form id="v4AssetForm" class="v4-form"><div class="v4-form-table">${rows}</div><p id="v4Error" class="v3-error" role="alert"></p><button type="submit" class="primary v4-form-submit">Übernehmen</button></form>`;
     document.getElementById('v4AssetForm').addEventListener('submit', event => {
       event.preventDefault();
       const entered = Object.fromEntries([...event.currentTarget.querySelectorAll('input[name]')].map(input => [input.name, amountValue(input.value)]));
@@ -734,6 +880,8 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       try {
         let next = state;
         for (const [part, ...keys] of sections) {
+          // Die Säule 3a gehört nicht zu den Vermögensabschnitten und wird über `apply3a` gespeichert.
+          if (part === 'pension3a') continue;
           next = State.applyAsset(next, part, Object.fromEntries(keys.map(key => [key, entered[key] ?? ''])), {keepOptional:true, allowEmpty:true});
         }
         next = apply3a(next, entered);
@@ -758,7 +906,9 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     dialog.querySelector('#v4ModalTitle').textContent = data.modalTitle || '';
     dialog.querySelector('#v4ModalBody').innerHTML = data.modalBody || '';
     if (!dialog.open) { if (typeof dialog.showModal === 'function') dialog.showModal(); else dialog.setAttribute('open', ''); }
-    dialog.querySelector('[data-modal-close]')?.focus();
+    /* Den Fokus in den Dialog holen, aber nicht auf den «✕»-Knopf: sonst trüge er schon beim
+       Öffnen einen Focus-Ring, obwohl der Normalzustand vollständig transparent ist. */
+    (dialog.querySelector('#v4ModalTitle') ?? dialog).focus?.();
   }
   function closeModal() { const dialog = document.getElementById('v4Modal'); if (!dialog) return; if (typeof dialog.close === 'function') dialog.close(); else dialog.removeAttribute('open'); }
   function closeMenu() { const menu = document.getElementById('v4Menu'), button = document.querySelector('.menu-button'); if (menu) menu.hidden = true; if (button) button.setAttribute('aria-expanded', 'false'); }
@@ -781,16 +931,33 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     const lead = total <= 0
       ? 'Für den Ruhestand ist aktuell kein Vermögen hinterlegt.'
       : shown.length === 1
-        ? `Dein Vermögen liegt aktuell vollständig in der ${shown[0].label}.`
+        ? `Dein frei verfügbares Vermögen liegt aktuell vollständig in der ${shown[0].label}.`
         : shown.length === 2
-          ? `Dein Vermögen liegt aktuell in zwei von drei Töpfen: ${shown.map(entry => entry.label).join(' und ')}.`
-          : 'Dein Vermögen ist auf drei Töpfe verteilt.';
+          ? `Dein frei verfügbares Vermögen liegt in zwei von drei Töpfen: ${shown.map(entry => entry.label).join(' und ')}.`
+          : 'Dein frei verfügbares Vermögen ist auf drei Töpfe verteilt.';
+    /* Zentrum hell und neutral, Text in Navy: Label «Frei verfügbares Vermögen», darunter der Betrag. */
     const chart = shown.length
-      ? `<div class="v3-donut-wrap">${donutSvg(shown)}<div class="v3-donut-total"><span>Total</span><strong>${money(total)}</strong></div></div><ul class="v3-donut-legend">${shown.map(entry => `<li class="pot-${entry.tone}"><span class="v3-pot-icon" aria-hidden="true">${Icons.icon(entry.icon, {size:20})}</span><span class="v3-pot-name">${entry.label}</span><strong>${money(entry.amount)}</strong><small>${entry.percent} %</small></li>`).join('')}</ul>`
+      ? `<div class="v3-donut-wrap">${donutSvg(shown)}<div class="v3-donut-total"><span>Frei verfügbares Vermögen</span><strong>${money(total)}</strong></div></div>`
       : '';
-    const notes = shown.map(entry => `<div class="v3-pot-note pot-${entry.tone}"><span class="v3-pot-icon" aria-hidden="true">${Icons.icon(entry.icon, {size:20})}</span><div><strong>${entry.label}</strong><p>${entry.note}</p></div></div>`).join('');
-    const body = `<p class="v3-modal-lead">${lead}</p>${chart}<div class="v3-pot-notes">${notes}</div><p class="v3-modal-note">Die Aufteilung folgt deiner Anlagestrategie und verschiebt sich mit den Entnahmen im Laufe der Jahre.</p><button type="button" class="primary v3-modal-action" data-modal-close>Schliessen</button>`;
+    /* Genau drei kompakte Zeilen: Icon, Name, Betrag, Prozentanteil. Die Erklärung zu jedem
+       Topf hängt als ⓘ an der Zeile – kein zweiter Erklärblock, keine Wiederholung. */
+    const rows = shown.length
+      ? `<ul class="v3-donut-legend">${shown.map(entry => `<li class="pot-${entry.tone}"><span class="v3-pot-icon" aria-hidden="true">${Icons.icon(entry.icon, {size:20})}</span><span class="v3-pot-name">${entry.label}</span><strong>${money(entry.amount)}</strong><small>${entry.percent} %</small>${modalInfo({title:`Topf ${entry.label}`, aria:`${entry.label} erklären`, body:`<p><strong>${entry.label}</strong> – ${esc(entry.note)}</p><p>Der Topf enthält aktuell ${money(entry.amount)} (${entry.percent} % deines frei verfügbaren Vermögens). Die Aufteilung folgt deiner Anlagestrategie und verschiebt sich mit den Entnahmen über die Jahre.</p>`})}</li>`).join('')}</ul>`
+      : '';
+    const body = `<p class="v3-modal-lead">${lead}</p>${chart}${rows}${potsStrategy(item)}<button type="button" class="primary v3-modal-action" data-modal-close>Schliessen</button>`;
     openModal({dataset:{modalTitle:'Das Töpfe-Modell', modalBody:body}, currentTarget:trigger});
+  }
+  /* Eine einzige kompakte Card zur Anlagestrategie: Profil und Satz dynamisch aus dem aktiven
+     Profil (`risk-profiles.js`), dazu die Herkunft – «gewählt» nach «Strategie übernehmen»,
+     sonst «Annahme» (automatisch gesetzter Standard). */
+  function potsStrategy(item) {
+    const profile = globalThis.RiskProfiles?.getRiskProfile((item?.plan ?? planFor(chosenShare()))?.riskProfile ?? state.riskProfile);
+    if (!profile) return '';
+    const rate = percent(numeric(profile.expectedRealReturn) * 100);
+    const source = state.strategyChosen === true ? 'gewählt' : 'Annahme';
+    const info = modalInfo({title:'Anlagestrategie', aria:'Anlagestrategie erklären', body:`<p>Die Anlagestrategie ist die einzige Quelle für die erwartete Rendite im Ruhestand. Sie bestimmt, mit welcher <strong>Rendite und welchen Schwankungen</strong> dein Vermögen gerechnet wird – nicht die Aufteilung auf die drei Töpfe.</p><p>Du wählst sie unter «Plan optimieren»; bis dahin rechnen wir mit der Modellannahme <strong>${esc(profile.label)} (${rate} % pro Jahr)</strong>.</p>`});
+    /* Zwei Zeilen statt eines umbrechenden Satzes: Profil, darunter die Annahme pro Jahr. */
+    return `<section class="v4-pot-strategy"><span class="v4-pot-strategy-icon" aria-hidden="true">${Icons.icon('target', {size:22})}</span><div class="v4-pot-strategy-copy"><div class="v4-pot-strategy-head"><span>Anlagestrategie</span><span class="v4-badge-tone done">${source}</span></div><strong>${esc(profile.label)}</strong><span class="v4-pot-strategy-rate">${rate} % pro Jahr</span><small>Bestimmt die erwartete Rendite deiner Anlage, nicht die Aufteilung. ${info}</small></div></section>`;
   }
   const bucketConfig = [
     {key:'cash', icon:'cash', label:'Geldmarkt', tone:'cash', note:'Für kurzfristige Entnahmen und Sicherheit.'},
@@ -828,6 +995,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       if (state.position === 'variants') renderVariants();
       else if (state.position === 'years') renderYear();
       else if (state.position === 'improve') renderImprove();
+      else if (state.position === 'basics') renderBasics();
       else if (['plan','rents','need','compare'].includes(state.position)) returnToPlan();
       else openDetail(state.position);
       return true;
@@ -839,20 +1007,38 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (modal) { event.preventDefault(); openModal(modal); return; }
     if (event.target.closest('[data-modal-close]')) { closeModal(); return; }
     const back = event.target.closest('[data-v4-back]');
-    if (back) { returnToPlan(); return; }
+    if (back) { goBack(); return; }
     const pots = event.target.closest('[data-v4-action="pots"]');
     if (pots) { openPotsModal(pots); return; }
     const next = event.target.closest('[data-v4-next]');
     if (next) {
       const target = next.dataset.v4Next;
+      /* `data-v4-parent` hält fest, von welcher Seite aus der Editor geöffnet wurde –
+         «Zurück» führt genau dorthin. */
+      const parent = next.dataset.v4Parent || 'plan';
       if (target === 'years') renderYear();
       else if (target === 'improve') renderImprove();
       else if (target === 'variants') renderVariants();
-      else openDetail(target);
+      else openDetail(target, parent);
       return;
     }
     const menu = event.target.closest('[data-menu-page]');
-    if (menu) { openDetail(menu.dataset.menuPage); return; }
+    if (menu) {
+      /* Das Menü ist aufgabenorientiert (siehe docs/information-architecture-v4.md §7):
+         Mein Plan · Planen (Angaben & Grundlagen, Varianten) · Plan verstehen
+         (Jahresverlauf, Töpfe-Modell, Annahmen & Berechnung). Einzelne Datensätze wie
+         AHV, PK oder Säule 3a sind Aufgabenbestandteile und stehen hinter
+         «Angaben & Grundlagen» – nicht als eigene Destination. */
+      const target = menu.dataset.menuPage;
+      closeMenu();
+      if (target === 'plan') returnToPlan();
+      else if (target === 'basics') renderBasics();
+      else if (target === 'variants') renderVariants();
+      else if (target === 'years') renderYear();
+      else if (target === 'pots') openPotsModal(null);   // dieselbe Komponente wie aus dem Jahresverlauf
+      else openDetail(target, 'plan');
+      return;
+    }
   });
   document.querySelector('.menu-button')?.addEventListener('click', () => {
     const menu = document.getElementById('v4Menu'), button = document.querySelector('.menu-button');
@@ -878,9 +1064,11 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
   window.addEventListener?.('pagehide', save);
 
   state.riskProfile = 'balanced';
-  /* Der runde Schliessen-Knopf der Info-Dialoge trägt das «✕» aus der zentralen Icon-Quelle. */
+  /* Der Schliessen-Knopf der Info-Dialoge zeigt ausschliesslich das Tabler-«✕» (`close`,
+     IconX-Pfad) in der dunkelgrünen Textfarbe – Grösse 22, Strichstärke 1,7, keine Fläche.
+     Das Icon kommt aus der einen Icon-Quelle (`js/icons.js`), nie als eigenes SVG. */
   const modalCloseButton = document.querySelector('#v4Modal [data-modal-close]');
-  if (modalCloseButton && !modalCloseButton.firstChild) modalCloseButton.innerHTML = Icons.icon('close', {size:18});
+  if (modalCloseButton && !modalCloseButton.firstChild) modalCloseButton.innerHTML = Icons.icon('close', {size:22, stroke:1.7});
   window.V4 = {save, load, planFor, evaluated, renderPlan, renderStart, renderVariants, precisionItems, profileComparison, needImpact};
   setStartDraft(); renderStart();
   load();
@@ -890,7 +1078,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     const bar = document.createElement('div');
     bar.className = 'v4-dev';
     bar.innerHTML = '<strong>Testmodus</strong><span>Zustand laden:</span>';
-    const scenarios = [['leer','leer'],['knapp','vor Pensionierung, knapp'],['geht-auf','vor Pensionierung, geht auf'],['pensioniert','bereits pensioniert'],['1-variante','1 Variante'],['3-varianten','3 Varianten'],['ohne-kanton','ohne Wohnkanton'],['vollstaendig','vollständige Daten'],['kurz','Vermögen reicht nicht'],['ziel','bis Planungshorizont']];
+    const scenarios = [['leer','leer'],['knapp','vor Pensionierung, knapp'],['geht-auf','vor Pensionierung, geht auf'],['pensioniert','bereits pensioniert'],['1-variante','1 Variante'],['3-varianten','3 Varianten'],['ohne-kanton','ohne Wohnkanton'],['vollstaendig','vollständige Daten'],['kurz','Vermögen reicht nicht'],['ziel','bis Planungshorizont'],['optimiert','Daten vollständig']];
     scenarios.forEach(([key, label]) => {
       const button = document.createElement('button');
       button.type = 'button'; button.textContent = label; button.dataset.v4Scenario = key;

@@ -166,7 +166,9 @@
  function incomeSourcesAtStart(p){
   const input=simulationInput(p);
   // Reuse the annual engine so payment dates, indexation and quote ages match the total.
-  return input.sources.map((source,index)=>({id:source.id||'extra-'+index,name:source.rental?'Nettomiete':source.name,
+  // Der Anzeigename stammt unverändert aus der Quelle («Weitere Einnahmen»); das interne
+  // `rental`-Kennzeichen (Stresstest) ist keine Bezeichnung in der Oberfläche.
+  return input.sources.map((source,index)=>({id:source.id||'extra-'+index,name:source.name,
    annualIncome:engine.simulate({...input,end:input.start+1,sources:[source]})[0].grossIncome}));
  }
  function withReturnProfile(p,key){const next=copy(p),profile=profiles.getRiskProfile(key),rate=profile.expectedRealReturn*100;next.riskProfile=profile.key;next.assumptions.risk=profile.key==='growth'?'bold':profile.key;next.assumptions.rates.capitalReturn=rate;next.scenarios.returns[2]=rate;next.scenarios.volatilityFactor=profile.volatilityFactor;return next;}

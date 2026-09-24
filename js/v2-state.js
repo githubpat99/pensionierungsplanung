@@ -25,7 +25,7 @@
    case 'need':return [field('need','Lebensbedarf netto','CHF / Monat')];
    case 'regular':return fields('income',s);
    case 'free':return [field('free','Frei verfügbares Vermögen','CHF')];
-   case 'income':return [{key:'canton',label:'Dein Wohnsitzkanton',type:'canton'},field('ahv','AHV'),field('other','Weitere Renten'),field('additional','Weitere Einnahmen / Nettomiete')];
+   case 'income':return [{key:'canton',label:'Dein Wohnsitzkanton',type:'canton'},field('ahv','AHV'),field('other','Weitere Renten'),field('additional','Weitere Einnahmen')];
    case 'tax':return [{key:'canton',label:'Dein Wohnsitzkanton',type:'canton'}];
    case 'assets':return [field('cash','Bank / liquide Mittel','CHF'),field('securities','Wertschriften','CHF'),...(pre?[field('saving','Zusätzliche Anlage pro Jahr','CHF / Jahr')]:[]),{...field('otherAssets','Weitere verfügbare Vermögenswerte','CHF'),optional:true},{...field('propertyValue','Immobilienwert','CHF'),optional:true,section:'Gebundenes Vermögen (optional)'},{...field('mortgage','Hypotheken','CHF'),optional:true}];
    case 'pension':return pre?[{...field('pk','PK-Guthaben heute','CHF'),section:'Pensionskasse'},field('pkContrib','Arbeitnehmer- und Arbeitgeberbeiträge','CHF / Jahr'),field('pkShare','Kapitalanteil','%',0,100)]:[field('pkRent','Laufende PK-Rente')];
