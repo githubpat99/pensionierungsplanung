@@ -44,10 +44,10 @@ MEIN PLAN (Home)
 │   │     ├── Bedarf netto                   → Editor
 │   │     └── Vermögen                       → Editor (inkl. Säule-3a-Gruppe)
 │   ├── Plan präzisieren / Plan optimieren   (ein Screen, zwei Zustände)
-│   ├── Meine Varianten                      (max. 3, aktueller Plan zuerst und offen)
-│   │     └── Action-Card «Rente oder Kapital?» → Variantenvergleich
+│   ├── Meine Varianten                      (max. 3, aktueller Plan zuerst und offen;
+│   │     └── Action-Card «Rente oder Kapital?» → Variantenvergleich   nur vor der Pensionierung)
 │   └── Rente oder Kapital?                  (Vergleich; Action-Card unter dem PK-Regler,
-│         kein Menüpunkt · CTA → Beratungsflow)
+│         kein Menüpunkt · CTA → Beratungsflow · «Übernehmen» gibt es hier nicht)
 │
 └── PLAN VERSTEHEN   DETAILS
     ├── Jahresverlauf               («Jahr für Jahr.»)
@@ -119,7 +119,8 @@ absichtliche Abschreckung.
 - **Töpfe-Modell** (Dialog, siehe §8).
 - **Rente oder Kapital?** (`Rente oder Kapital?` / `Zwei Varianten im Vergleich.`): eigener
   Vergleichsscreen für **genau zwei** Varianten (Ebene *Planen*, erreichbar über den PK-Bereich
-  auf «Mein Plan» und über «Meine Varianten» – **kein** Menüpunkt). Links fix und grün der
+  auf «Mein Plan» und über «Meine Varianten» – **kein** Menüpunkt; **nur vor der Pensionierung**,
+  weil der Screen an den Kapitalbezug gebunden ist). Links fix und grün der
   **aktuelle Plan**, rechts blau die **Variante** (Auswahl nur aus den übrigen gespeicherten
   Varianten). Je Karte genau drei Kernwerte (Startkapital netto · PK-Rente netto / Mt. ·
   Vermögen reicht bis) in exakt ausgerichteten Zeilen, darunter ein dynamisches Kurzfazit, die Grafik
@@ -228,12 +229,15 @@ PLAN VERSTEHEN            DETAILS
 ───────────────────────────────  (dezent abgesetzt, keine Navigation)
     Angaben für die Beratung
     Plan zurücksetzen
+    Neu laden
+    App-Version 25.09.2026 · Build 1
 ```
 
 **Pilotbereich (Pilottesting):** Ganz unten stehen dezent abgesetzt **«Angaben für die
-Beratung»** und **«Plan zurücksetzen»** (Klasse .v4-menu-quiet, gedämpfte Schrift, Trennlinie
-darüber). Beide sind bewusst **keine** Menüdestinationen im Sinn der Informationsarchitektur,
-sondern Werkzeuge für die Übergabe bzw. den Neustart:
+Beratung»**, **«Plan zurücksetzen»** und **«Neu laden»** samt Versionszeile (Klasse
+.v4-menu-quiet, gedämpfte Schrift, Trennlinie darüber). Sie sind bewusst **keine**
+Menüdestinationen im Sinn der Informationsarchitektur, sondern Werkzeuge für die Übergabe, den
+Neustart bzw. das Aktualisieren:
 
 - **Angaben für die Beratung** bereitet den Plan als **Klartext** auf, den der Nutzer kopieren
   oder als Datei speichern und selbst verschicken kann: Person und Zeitraum · Einkommen im
@@ -247,6 +251,24 @@ sondern Werkzeuge für die Übergabe bzw. den Neustart:
 - **Plan zurücksetzen** fragt zuerst nach («Plan zurücksetzen?» mit «Abbrechen») und entfernt
   danach alle erfassten Angaben, Varianten und die Anlagestrategie aus diesem Browser; die App
   startet wieder im **Schnellstart** (ohne Hamburger, weil kein Plan existiert).
+- **Neu laden** speichert den aktuellen Stand und lädt die Seite neu – **ohne** Datenverlust und
+  ohne Cache-Löschen. Darunter steht die **App-Version** (aus `js/v4-version.js`): Tester können
+  sie in einer Rückmeldung nennen, und die Zuordnung «welche Version, welcher Fehler» ist eindeutig.
+
+## 7a. Update, Speicherstände und Service Worker
+
+- **Kein manuelles Löschen:** Ein neues Deployment muss bei jedem Tester ankommen. Der
+  **Service Worker** (`sw.js`, registriert über `js/v4-sw.js`) liefert HTML und Code **netz-zuerst
+  ohne HTTP-Cache**, räumt bei der Aktivierung alle alten Caches, übernimmt sofort die Kontrolle
+  (`skipWaiting`/`claim`) und lässt die Seite bei einem echten Update **einmal** neu laden. Nur
+  Medien laufen stale-while-revalidate; `/tests/` und `?dev=1` bleiben unberührt.
+- **Speicherstände:** Jeder Stand trägt `version` (Datenschema 2) und `storageVersion`
+  (Generation, aktuell 3). Beim Laden wird **migriert** (und sofort neu abgelegt), **gesichert und
+  geräumt** (Backup unter `retirement-v3-plan.backup-…`, höchstens zwei, mit sichtbarer Meldung und
+  weiterhin möglichem Speichern) oder **geschützt** (neuerer Stand bleibt byte-gleich, Schreiben
+  blockiert, sichtbare Meldung). Die App läuft in allen drei Fällen weiter.
+- **Sichtbarkeit:** Speicherereignisse erscheinen im Banner `#v4Notice` (`role="status"`,
+  schliessbar). Sie sind der Grund, warum Tester nach einem Deployment nichts löschen müssen.
 
 ## 8. Crosslinks – mehrfach erreichbar, einmal implementiert
 
@@ -260,6 +282,7 @@ Implementierung**:
 | Anlagestrategie | Plan optimieren → Hebel 1 | Töpfe-Dialog → Card «Anlagestrategie» | **dieselbe Quelle** (`profileComparison()` / `risk-profiles.js`) |
 | Anlagestrategie im Jahresverlauf | Abschnitt 5 «Deine Töpfe (Jahresende)» | Töpfe-Dialog-Card | **dieselbe Quelle** (`risk-profiles.js`) |
 | Variantenvergleich «Rente oder Kapital?» | PK-Bereich auf «Mein Plan» → Action-Card «Rente oder Kapital?» | «Meine Varianten» → dieselbe Action-Card | **derselbe Screen** (`renderCompare()`, `comparisonOf()`), gespeist aus `evaluatePlan()` |
+| Alte Planung (Schema 1, ohne Variantenplätze) | Laden in V4 | – | `V3State.restore()`/`migrations` – drei Variantenplätze, sonst Sicherung + Neustart |
 | Beratung / Anlagestrategie | Menü (Pilotbereich) → «Angaben für die Beratung» | Variantenvergleich → «Individuell besprechen» | **derselbe Dialog** (`openAdvisorModal()`) |
 
 Der Test prüft für das Töpfe-Modell, dass der Menüzugang und das Topf-Icon an Abschnitt 1 im ersten
@@ -319,8 +342,10 @@ optionalem ⓘ · «Schliessen». Der Dialog passt bei 390 × 844 **ohne interne
   Nutzer direkt zu **«Mein Plan»** geführt, damit die Wirkung sofort sichtbar ist. Das Muster
   lautet **Ändern → Übernehmen → Wirkung auf «Mein Plan» sehen** und gilt für alle
   planungsrelevanten Eingaben (Alter, Pensionierungsalter, Wohnkanton, AHV, PK, Säule 3a,
-  weiteres Kapital, Bedarf, Annahmen). Reine Zurück-Navigation **speichert nichts** und
-  verändert den Navigationskontext nicht.
+  weiteres Kapital, Bedarf, Annahmen) **und seit der Korrektur vom September 2026 auch für
+  «Übernehmen» einer Variante auf «Meine Varianten»** – der Screen «Meine Varianten» ist keine
+  Ausnahme mehr, sondern bestätigt und springt ebenfalls direkt auf «Mein Plan». Reine
+  Zurück-Navigation **speichert nichts** und verändert den Navigationskontext nicht.
 - **«Zurück» führt zur übergeordneten Seite, nicht immer auf «Mein Plan»:** Der Rückweg trägt
   den Namen der Seite, von der aus der Screen geöffnet wurde (`detailParent` in `js/v4-ui.js`).
   Aus «Angaben & Grundlagen» geöffnete Editoren zeigen «‹ Angaben & Grundlagen» und führen
@@ -361,6 +386,9 @@ Information, die keine der drei Fragen beantwortet, gehört in keine der drei Eb
 | Plan optimieren erscheint bei ausreichender Datenqualität | erfüllt – alle Angaben erfasst |
 | Varianten sind eigener Screen | erfüllt – «Meine Varianten», auf «Mein Plan» nur eine Zeile |
 | Aktueller Plan zuerst, übrige Varianten zugeklappt | erfüllt – aktuelle Karte offen, übrige zeigen nur die Reichweite |
+| «Übernehmen» einer Variante führt direkt auf «Mein Plan» | erfüllt – Apply-and-return gilt auch hier (Test: Titel «Mein Plan.» und übernommener Anteil im Regler) |
+| Ohne Kapitalbezug kein toter Variantenscreen | erfüllt – «Bereits pensioniert»: keine Variantenzeile, kein Menüpunkt, kein Vergleichseinstieg, kein «Übernehmen»; der Screen führt auf «Mein Plan» zurück |
+| Alte Schema-1-Planung erhält die drei Variantenplätze | erfüllt – sonst fehlten beim ersten Öffnen Vergleichseinstieg und Auswahl (Test mit `version: 1`) |
 | Variantenvergleich ohne Menüpunkt, mit zwei Einstiegen | erfüllt – PK-Bereich auf «Mein Plan» und «Meine Varianten» |
 | Aktueller Plan im Vergleich immer links und grün | erfüllt – «Aktueller Plan», nicht auswählbar, `--v3-green` |
 | Vergleich zeigt keine Empfehlung und übernimmt nichts | erfüllt – dynamisches Fazit ohne Wertung, kein «Übernehmen», Test prüft unveränderten Plan |
@@ -377,6 +405,9 @@ Information, die keine der drei Fragen beantwortet, gehört in keine der drei Eb
 | keine Doppelungen von «Plan verbessern» / «Plan genauer machen» | erfüllt – beide Begriffe entfernt |
 | `information-architecture-v4.md` existiert | erfüllt – dieses Dokument |
 | Dokumentation entspricht der tatsächlichen Implementierung | erfüllt – geprüft in `tests/v4-browser-checks.html` |
+| Deployment erreicht Tester ohne manuelles Löschen | erfüllt – Service Worker netz-zuerst für HTML und Code, `skipWaiting`/`claim`, Reload bei echtem Update (Prüfung + Zweiphasen-Probe mit geändertem Deployment) |
+| Tester sehen ihre App-Version | erfüllt – Menüzeile «App-Version …» plus «Neu laden» ohne Datenverlust |
+| Alte/defekte Speicherstände blockieren nie | erfüllt – Migration, Sicherung + Räumung mit sichtbarer Meldung, Schutz neuerer Stände |
 
 ## 13. Offene, untersuchte Punkte
 

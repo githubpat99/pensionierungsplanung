@@ -105,21 +105,85 @@
     next.confirmed.pension = false;
     return next;
   }
-  function decode(raw) {
-    const record = JSON.parse(raw);
-    if (!record || ![1,2].includes(record.version)) throw Error('Dieser Speicherstand ist ungültig oder stammt aus einer neueren Version. Er bleibt unverändert.');
-    if (!Number.isFinite(Date.parse(record.savedAt))) throw Error('Ungültiges Speicherdatum.');
-    const state = normalize(record.state);
-    if (record.version === 1) {
-      state.position = 'plan';
-      state.v3Variants = [Number(state.details.pension?.pkShare ?? 0)];
-      // Keep old envelope metadata for recovery; no duplicated live person records.
-      const {state:oldState, ...legacyEnvelope} = record; state.legacyV3Envelope = legacyEnvelope;
-    }
-    validate(state);
-    return {...record, state};
+  /* ---------------- Speicherversion, Migration und Invalidierung ----------------
+     Zwei Versionsnummern, zwei Aufgaben:
+       `version`        = **Datenschema** der Hülle (1 = alte V3-Planung, 2 = aktuelle Hülle).
+       `storageVersion` = **Generation der gespeicherten Planstände** (App-seitig). Neue
+                          Deployments erhöhen sie, wenn sich der Zustand so ändert, dass alte
+                          Stände migriert oder verworfen werden müssen.
+     Regeln (verbindlich für jedes Deployment):
+       – Fehlt `storageVersion`, gilt der Stand als Generation 1 (Altbestand vor dieser Regel).
+       – Ältere Generationen laufen durch die Migrationskette; fehlt ein Schritt, ist der Stand
+         **nicht** übernehmbar und wird gemeldet statt halb geladen.
+       – Stände aus einer **neueren** Generation oder einem unbekannten Schema werden **nicht
+         angefasst** (kein Überschreiben, kein Löschen) – die App meldet es sichtbar.
+       – Nicht ladbare eigene Stände werden vom UI **gesichert und geräumt** (`restore` liefert
+         `reason:'invalid'`), damit ein defekter Stand die App nie blockiert. */
+  const STORAGE_VERSION = 3;
+  /* Migrationskette: `migrations[n]` formt Generation n-1 auf Generation n um. */
+  const migrations = {
+    /* 1 → 2: Altbestand ohne `storageVersion`; die drei Variantenplätze werden verbindlich. */
+    2: record => ({...record, state:{...record.state, v3Variants:slots(record.state ?? {})}}),
+    /* 2 → 3: keine Umformung des Zustands (Generation der Varianten-/Vergleichsregeln). */
+    3: record => record
+  };
+  function storageVersionOf(record) {
+    const value = Number(record?.storageVersion);
+    return Number.isInteger(value) && value >= 1 ? value : 1;
   }
-  const api = {normalize, validate, changeMode, variants, slots, remember, activate, remove, decode, routes};
+  /* Lädt eine Hülle, ohne zu werfen. Ergebnis:
+     `{ok:true, record, state, migrated}` oder `{ok:false, reason:'newer'|'invalid', message}`. */
+  function restore(raw) {
+    let record;
+    try { record = JSON.parse(raw); } catch (error) {
+      return {ok:false, reason:'invalid', message:'Dieser Speicherstand ist unlesbar.'};
+    }
+    if (!record || ![1,2].includes(record.version)) {
+      const newer = !!record && Number(record.version) > 2;
+      return {ok:false, reason:newer ? 'newer' : 'invalid', message:newer
+        ? 'Dein gespeicherter Plan stammt aus einer neueren Version der App. Er bleibt unverändert – bitte lade die Seite neu.'
+        : 'Dieser Speicherstand ist ungültig. Er bleibt unverändert.'};
+    }
+    const from = storageVersionOf(record);
+    if (from > STORAGE_VERSION) {
+      return {ok:false, reason:'newer', message:'Dein gespeicherter Plan stammt aus einer neueren Version der App. Er bleibt unverändert – bitte lade die Seite neu.'};
+    }
+    if (!Number.isFinite(Date.parse(record.savedAt))) return {ok:false, reason:'invalid', message:'Ungültiges Speicherdatum.'};
+    try {
+      let current = record, migrated = false;
+      for (let step = from + 1; step <= STORAGE_VERSION; step++) {
+        const apply = migrations[step];
+        if (typeof apply !== 'function') throw Error(`Keine Migration von Speicherversion ${step - 1} auf ${step}.`);
+        current = {...apply(current, step - 1), storageVersion:step};
+        migrated = true;
+      }
+      const state = normalize(current.state);
+      if (current.version === 1) {
+        state.position = 'plan';
+        /* Alte Planungen starten mit denselben drei Variantenplätzen wie neue; `normalize` hat sie
+           bereits aus dem aktuellen Kapitalanteil gebildet. Früher wurde hier auf **einen** Platz
+           gekürzt – dadurch fehlten bei einem alten Speicherstand beim ersten Öffnen der
+           Variantenvergleich und jede Auswahl zum Übernehmen. */
+        // Keep old envelope metadata for recovery; no duplicated live person records.
+        const {state:oldState, ...legacyEnvelope} = current; state.legacyV3Envelope = legacyEnvelope;
+      }
+      validate(state);
+      return {ok:true, record:{...current, state}, state, migrated};
+    } catch (error) {
+      return {ok:false, reason:'invalid', message:`Dieser Plan passt nicht mehr zur aktuellen Version (${error.message})`};
+    }
+  }
+  /* Werfende Variante für Tests und Aufrufer, die einen harten Fehler erwarten. */
+  function decode(raw) {
+    const result = restore(raw);
+    if (!result.ok) throw Error(result.message);
+    return result.record;
+  }
+  /* Aktuelle Hülle – die einzige Stelle, die `version` und `storageVersion` setzt. */
+  function encode(state, stamp = new Date().toISOString()) {
+    return {version:2, storageVersion:STORAGE_VERSION, savedAt:stamp, state};
+  }
+  const api = {normalize, validate, changeMode, variants, slots, remember, activate, remove, decode, restore, encode, storageVersionOf, STORAGE_VERSION, routes};
   root.CheckV3State = api;
   if (typeof module !== 'undefined') module.exports = api;
 })(globalThis);

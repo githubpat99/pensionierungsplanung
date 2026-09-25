@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="css/v3-plan-reference.css?v=61">
   <link rel="stylesheet" href="css/v3-chart-reference.css?v=5">
   <link rel="stylesheet" href="css/canton-picker.css">
-  <link rel="stylesheet" href="css/v4.css?v=57">
+  <link rel="stylesheet" href="css/v4.css?v=58">
 </head>
 <body>
   <div class="v4-hero" id="v4Hero" data-mode="calm" aria-hidden="true"></div>
@@ -31,8 +31,11 @@
     <div class="v4-menu-quiet">
       <button type="button" data-menu-action="report">Angaben für die Beratung</button>
       <button type="button" data-menu-action="reset">Plan zurücksetzen</button>
+      <button type="button" data-menu-action="reload">Neu laden</button>
+      <p class="v4-menu-version" id="v4Version"></p>
     </div>
   </nav>
+  <div id="v4Notice" class="v4-notice" role="status" aria-live="polite" hidden></div>
   <main id="app" class="shell"></main>
   <dialog id="v4Modal" class="v3-modal" aria-labelledby="v4ModalTitle">
     <div class="v3-modal-head"><h2 id="v4ModalTitle" tabindex="-1"></h2><button type="button" class="v3-modal-close" data-modal-close aria-label="Schliessen"></button></div>
@@ -48,11 +51,13 @@
   <script src="js/v2-state.js"></script>
   <script src="js/icons.js?v=6"></script>
   <script src="js/canton-picker.js?v=2"></script>
-  <script src="js/v3-state.js"></script>
+  <script src="js/v3-state.js?v=3"></script>
+  <script src="js/v4-version.js?v=1"></script>
   <script src="js/estimates.js"></script>
   <script src="js/dev-fixture.js"></script>
   <script src="js/v4-pagetitle.js?v=4"></script>
   <script src="js/v4-hero.js?v=4"></script>
-  <script src="js/v4-ui.js?v=68"></script>
+  <script src="js/v4-ui.js?v=70"></script>
+  <script src="js/v4-sw.js?v=1"></script>
 </body>
 </html>

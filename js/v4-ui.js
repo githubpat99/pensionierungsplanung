@@ -65,12 +65,14 @@
   function persist() {
     try {
       if (storageBlocked || globalThis.__v4SuspendSave) return;
-      const stamp = new Date().toISOString();
       state.position = route;
       state = normalizeP3(state);
       V3State.validate(state);
-      localStorage.setItem(storageKey, JSON.stringify({version:2, savedAt:stamp, state}));
-      lastSavedAt = stamp; storageFailed = false;
+      /* Hülle immer über `V3State.encode`: nur so tragen Stände `storageVersion` und können
+         beim nächsten Deployment migriert (statt geräumt) werden. */
+      const record = V3State.encode(state);
+      localStorage.setItem(storageKey, JSON.stringify(record));
+      lastSavedAt = record.savedAt; storageFailed = false;
     } catch (error) { storageFailed = true; globalThis.__v4PersistError = error?.message ?? String(error); }
   }
   function markDirty() {
@@ -80,6 +82,37 @@
   }
   function save() { if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; } persist(); }
   function message(text = '') { const node = document.getElementById('v4Error'); if (node) node.textContent = text; }
+  /* Meldungen, die nicht an eine einzelne Card gebunden sind (Speicherstände, Updates).
+     Sie erscheinen in einem stehenden Banner, damit nichts stillschweigend passiert –
+     `#v4Error` gibt es nur auf einzelnen Screens. */
+  const noticeDismissed = new Set();
+  function notice(text, {id = text, tone = 'info'} = {}) {
+    const bar = document.getElementById('v4Notice');
+    if (!bar || !text || noticeDismissed.has(id)) return;
+    bar.dataset.tone = tone;
+    bar.innerHTML = `<p class="v4-notice-text">${esc(text)}</p><button type="button" class="v4-notice-close" data-notice-close aria-label="Hinweis schliessen">${Icons.icon('close', {size:18})}</button>`;
+    bar.hidden = false;
+    bar.dataset.noticeId = id;
+  }
+  function hideNotice() {
+    const bar = document.getElementById('v4Notice');
+    if (!bar) return;
+    const id = bar.dataset.noticeId;
+    if (id) noticeDismissed.add(id);
+    bar.hidden = true;
+  }
+  /* Gesicherte Alt-/Defektstände: höchstens zwei Sicherungen, damit der Speicher nicht vollläuft. */
+  function parkPlan(raw) {
+    try {
+      const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const prefix = `${storageKey}.backup-`;
+      Object.keys(localStorage).filter(key => key.startsWith(prefix)).sort().slice(0, -1).forEach(key => localStorage.removeItem(key));
+      const backupKey = `${prefix}${stamp}`;
+      localStorage.setItem(backupKey, raw);
+      localStorage.removeItem(storageKey);
+      return backupKey;
+    } catch (error) { globalThis.__v4ParkError = error?.message ?? String(error); return null; }
+  }
   function apply(group, values) { state = State.apply(state, group, values); markDirty(); }
 
   /* ---------------- Schätzwerte (eine Quelle je Zahl) ---------------- */
@@ -232,7 +265,10 @@
   function secondaryRows() {
     const count = variantShares().length;
     const row = (label, page) => `<li><button type="button" class="v4-row" data-v4-next="${page}"><span>${label}</span>${Icons.icon('chevronRight', {size:18})}</button></li>`;
-    return `<ul class="v4-rows">${row('Jahresverlauf', 'years')}${row(`Meine Varianten · ${count} gespeichert`, 'variants')}</ul>`;
+    /* Nach der Pensionierung gibt es keinen Kapitalbezug mehr (TC-02.01: «Post-Ansichten ohne
+       Bezugsregler») – dann entfällt auch der Varianteneinstieg, statt auf einen toten Screen zu führen. */
+    const variants = state.mode === 'pre' ? row(`Meine Varianten · ${count} gespeichert`, 'variants') : '';
+    return `<ul class="v4-rows">${row('Jahresverlauf', 'years')}${variants}</ul>`;
   }
   function dataKnown() {
     const pre = state.mode === 'pre', a = state.details.assets ?? null;
@@ -510,6 +546,9 @@
 
   /* ---------------- Meine Varianten ---------------- */
   function renderVariants() {
+    /* Ohne Kapitalbezug (bereits pensioniert) gibt es keine Varianten: der Screen führt zurück
+       auf «Mein Plan», statt Übernehmen-Knöpfe zu zeigen, die nur fehlschlagen könnten. */
+    if (state.mode !== 'pre') { renderPlan(); return; }
     closeMenu(); route = 'variants'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
     window.scrollTo(0, 0);
     const target = (evaluated(chosenShare()) ?? {}).plan?.retirement.targetAge ?? '';
@@ -537,9 +576,11 @@
       if (current) return `<section class="v4-variant current">${head}${status}${metrics}</section>`;
       return `<section class="v4-variant"><details class="v4-variant-fold"><summary class="v4-variant-summary">${head}${status}<span class="v4-variant-chevron" aria-hidden="true">${Icons.icon('chevronDown', {size:18})}</span></summary>${metrics}</details><div class="v4-variant-actions"><button type="button" data-adopt-variant="${share}">Übernehmen</button></div></section>`;
     }).join('');
-    app.innerHTML = `${title('Meine Varianten.', variantContext(), detailHead)}<p class="v4-lead">Eine Variante ist immer dein aktueller Plan. Auswahl ausschliesslich über «Übernehmen» – ohne zusätzliche Auswahlknöpfe.</p>${cards}${compareEntry('v4-cmp-entry-last')}`;
+    app.innerHTML = `${title('Meine Varianten.', variantContext(), detailHead)}<p class="v4-lead">Eine Variante ist immer dein aktueller Plan. Auswahl ausschliesslich über «Übernehmen» – ohne zusätzliche Auswahlknöpfe.</p>${cards}<p id="v4Error" class="v3-error" role="alert"></p>${compareEntry('v4-cmp-entry-last')}`;
     app.querySelectorAll('[data-adopt-variant]').forEach(button => button.addEventListener('click', () => {
-      try { state = V3State.activate(state, numeric(button.dataset.adoptVariant)); previewShare = null; markDirty(); renderVariants(); }
+      /* «Übernehmen» ist eine planungsrelevante Änderung: sie bestätigt, rechnet neu und führt
+         gemäss der globalen Apply-and-return-Regel direkt auf «Mein Plan». */
+      try { state = V3State.activate(state, numeric(button.dataset.adoptVariant)); previewShare = null; markDirty(); renderPlan(); }
       catch (error) { message(error.message); }
     }));
   }
@@ -955,13 +996,21 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
      Plan», der Jahresverlauf und das Töpfe-Modell. Der Screen gibt keine Anlageempfehlung ab,
      übernimmt keine Variante und verändert keine Anlagestrategie oder Töpfe. */
   /* Die gewählte Vergleichsvariante und die Ansicht (Vermögen/Einkommen) sind Nutzereinstellungen
-     des Vergleichs und werden – getrennt vom Plan – im Browser gemerkt. */
+     des Vergleichs und werden – getrennt vom Plan – im Browser gemerkt. Sie tragen dieselbe
+     `storageVersion` wie der Plan: ein Stand aus einer neueren Generation wird ignoriert statt
+     falsch interpretiert, ein ungültiger Wert fällt auf den Standard zurück. */
   const comparisonStoreKey = 'retirement-v4-compare';
   function readComparisonPrefs() {
-    try { const raw = localStorage.getItem(comparisonStoreKey); return raw ? JSON.parse(raw) : {}; } catch (error) { return {}; }
+    try {
+      const prefs = JSON.parse(localStorage.getItem(comparisonStoreKey) ?? '{}') ?? {};
+      const generation = Number(prefs.storageVersion);
+      if (Number.isInteger(generation) && generation > (V3State.STORAGE_VERSION ?? 0)) return {};
+      const share = Number(prefs.share);
+      return {share:Number.isInteger(share) && share >= 0 && share <= 100 ? share : null, view:prefs.view === 'income' ? 'income' : 'assets'};
+    } catch (error) { return {}; }
   }
   function writeComparisonPrefs() {
-    try { localStorage.setItem(comparisonStoreKey, JSON.stringify({share:comparisonState.share, view:comparisonState.view})); } catch (error) { /* Speicher nicht verfügbar */ }
+    try { localStorage.setItem(comparisonStoreKey, JSON.stringify({storageVersion:V3State.STORAGE_VERSION, share:comparisonState.share, view:comparisonState.view})); } catch (error) { /* Speicher nicht verfügbar */ }
   }
   const comparisonPrefs = readComparisonPrefs();
   const comparisonState = {share:comparisonPrefs.share ?? null, view:comparisonPrefs.view === 'income' ? 'income' : 'assets', last:null};
@@ -1244,6 +1293,12 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
   function setMenuAvailable(available) {
     const button = document.querySelector('.menu-button');
     if (button) button.hidden = !available;
+    /* «Meine Varianten» ist an den Kapitalbezug gebunden und erscheint nur vor der Pensionierung. */
+    const variants = document.querySelector('#v4Menu [data-menu-page="variants"]');
+    if (variants) variants.hidden = state.mode !== 'pre';
+    /* Sichtbare App-Version im Pilotbereich: Tester können ihre Version nennen. */
+    const version = document.getElementById('v4Version');
+    if (version && !version.textContent.trim()) version.textContent = `App-Version ${globalThis.V4Version?.label?.() ?? 'unbekannt'}`;
     if (!available) closeMenu();
   }
   function returnToPlan() { closeMenu(); previewShare = null; markDirty(); renderPlan(); }
@@ -1482,22 +1537,42 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     return `<svg class="v3-donut" viewBox="0 0 140 140" role="img" aria-label="Aufteilung auf die Töpfe">${rings}</svg>`;
   }
 
-  /* ---------------- Laden/Start ---------------- */
+  /* ---------------- Laden/Start ----------------
+     Drei Fälle, drei Reaktionen (kein manuelles Löschen durch Tester):
+       1. Stand passt (ggf. migriert) → laden; migrierte Stände sofort in der neuen Hülle speichern.
+       2. Stand ist defekt/zu alt → **sichern** (Backup-Schlüssel), Hauptschlüssel räumen,
+          sichtbar melden, mit frischem Plan starten. Speichern bleibt erlaubt.
+       3. Stand stammt aus einer **neueren** Version → nichts anfassen, Speichern blockieren
+          (damit der neuere Stand nicht überschrieben wird) und sichtbar melden. */
   function load() {
-    try {
-      const raw = localStorage.getItem(storageKey);
-      if (!raw) return false;
-      const saved = V3State.decode(raw);
-      state = saved.state; previewShare = null; lastSavedAt = saved.savedAt; storageBlocked = false; storageFailed = false;
-      if (state.position === 'variants') renderVariants();
-      else if (state.position === 'comparison') renderCompare();
-      else if (state.position === 'years') renderYear();
-      else if (state.position === 'improve') renderImprove();
-      else if (state.position === 'basics') renderBasics();
-      else if (['plan','rents','need','compare'].includes(state.position)) returnToPlan();
-      else openDetail(state.position);
-      return true;
-    } catch (error) { storageBlocked = true; message(error.message); return false; }
+    let raw = null;
+    try { raw = localStorage.getItem(storageKey); } catch (error) { raw = null; }
+    if (!raw) return false;
+    const result = V3State.restore(raw);
+    if (!result.ok) {
+      if (result.reason === 'newer') {
+        storageBlocked = true;
+        notice(`${result.message} Dieser Plan wird nicht überschrieben.`, {id:'storage-newer', tone:'warn'});
+      } else {
+        storageBlocked = false;
+        const backup = parkPlan(raw);
+        globalThis.__v4StorageReset = {reason:result.reason, backup, at:new Date().toISOString()};
+        notice(`Dein gespeicherter Plan liess sich mit dieser Version nicht mehr öffnen und wurde gesichert. Du startest mit einem frischen Plan.`, {id:'storage-reset', tone:'warn'});
+      }
+      return false;
+    }
+    state = result.state; previewShare = null; lastSavedAt = result.record.savedAt; storageBlocked = false; storageFailed = false;
+    /* Migrierte Stände beim Start einmal in der aktuellen Hülle ablegen. */
+    if (result.migrated) globalThis.__v4StorageMigrated = true;
+    if (state.position === 'variants') renderVariants();
+    else if (state.position === 'comparison') renderCompare();
+    else if (state.position === 'years') renderYear();
+    else if (state.position === 'improve') renderImprove();
+    else if (state.position === 'basics') renderBasics();
+    else if (['plan','rents','need','compare'].includes(state.position)) returnToPlan();
+    else openDetail(state.position);
+    if (result.migrated) markDirty();
+    return true;
   }
 
   document.addEventListener('click', event => {
@@ -1539,14 +1614,16 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       else openDetail(target, 'plan');
       return;
     }
-    /* Pilotwerkzeuge unten im Menü: Rückmeldung geben bzw. wieder bei null starten. */
+    /* Pilotwerkzeuge unten im Menü: Beratungsangaben, Plan zurücksetzen, Seite neu laden. */
     const action = event.target.closest('[data-menu-action]');
     if (action) {
       closeMenu();
       if (action.dataset.menuAction === 'report') openAdvisorModal();
       else if (action.dataset.menuAction === 'reset') openResetModal();
+      else if (action.dataset.menuAction === 'reload') { save(); location.reload(); }
       return;
     }
+    if (event.target.closest('[data-notice-close]')) { hideNotice(); return; }
     if (event.target.closest('[data-report-copy]')) { copyAdvisorReport(); return; }
     if (event.target.closest('[data-report-save]')) { saveAdvisorReport(); return; }
     if (event.target.closest('[data-plan-reset]')) { resetPlan(); return; }

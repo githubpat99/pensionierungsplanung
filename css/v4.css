@@ -554,4 +554,13 @@ body{padding-bottom:18px}
   .v4-cmp-val{min-width:74px;padding:4px 6px;font-size:12px}
   .v4-cmp-row-label{font-size:11.5px}
 }
+/* Schwebendes Hinweis-Banner (Speicherstände, Updates): nie stillschweigend, aber schliessbar. */
+.v4-notice{position:fixed;left:10px;right:10px;top:10px;z-index:60;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:start;gap:10px;max-width:720px;margin:0 auto;padding:10px 12px;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);box-shadow:0 8px 24px #142b3426}
+.v4-notice[data-tone="warn"]{border-color:#d9b36a;background:#fdf8ee}
+.v4-notice[hidden]{display:none}
+.v4-notice-text{margin:0;font:13px/1.45 system-ui,sans-serif;color:var(--v3-ink)}
+.v4-notice-close{display:inline-flex;align-items:center;justify-content:center;width:32px;height:32px;padding:0;border:0;border-radius:999px;background:transparent;color:var(--v3-muted);cursor:pointer}
+.v4-notice-close:hover,.v4-notice-close:focus-visible{background:var(--v3-soft);color:var(--v3-green)}
+@media(min-width:700px){.v4-notice{left:auto;right:18px;max-width:520px}}
+.v4-menu-version{margin:6px 0 0;padding:0 14px;font:11px/1.4 system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap}
 

@@ -99,12 +99,38 @@ s.position='assets';
 const record={version:2,savedAt:new Date().toISOString(),state:s};
 assert.deepEqual(V.decode(JSON.stringify(record)).state,V.normalize(s),'Laden füllt die drei Variantenplätze auf');
 assert.deepEqual(C.evaluatePlan(M.toPlan(V.decode(JSON.stringify(record)).state)),C.evaluatePlan(M.toPlan(s)));
-assert.deepEqual(V.variants(V.decode(JSON.stringify({...record,version:1})).state),[35]);
+/* Auch Schema 1 erhält die drei Variantenplätze: sonst fehlten bei einem alten Speicherstand
+   beim ersten Öffnen der Variantenvergleich und jede Auswahl zum Übernehmen. */
+assert.deepEqual(V.variants(V.decode(JSON.stringify({...record,version:1})).state),V.variants(V.normalize(s)),'Schema 1 erhält die drei Variantenplätze');
 // Doppelte oder unvollständige Altstände werden beim Laden repariert statt verworfen.
 const repaired=V.decode(JSON.stringify({...record,state:{...s,v3Variants:[35,35]}})).state;
 assert.equal(new Set(V.variants(repaired)).size,3,'doppelte Plätze werden zu drei eindeutigen Plätzen');
 assert.ok(V.variants(repaired).includes(Number(s.details.pension.pkShare)),'der aktuelle Plan bleibt in den Varianten');
 for(const raw of ['{','null',JSON.stringify({...record,version:99}),JSON.stringify({...record,savedAt:'bad'})]) assert.throws(()=>V.decode(raw));
+/* Speicherversion, Migration und Invalidierung: Tester dürfen nie manuell löschen müssen. */
+assert.ok(Number.isInteger(V.STORAGE_VERSION)&&V.STORAGE_VERSION>=1,'Speicherversion ist gesetzt');
+const encoded=V.encode(s,'2026-09-25T00:00:00.000Z');
+assert.equal(encoded.storageVersion,V.STORAGE_VERSION,'neue Hüllen tragen die aktuelle Speicherversion');
+assert.equal(encoded.version,2,'das Datenschema bleibt 2');
+/* Ältere Hülle ohne storageVersion → Generation 1, wird migriert und als migriert gemeldet. */
+const legacyEnvelope={version:2,savedAt:record.savedAt,state:{...s,v3Variants:undefined}};
+const restoredLegacy=V.restore(JSON.stringify(legacyEnvelope));
+assert.equal(restoredLegacy.ok,true,'Altstand ohne storageVersion wird geladen');
+assert.equal(restoredLegacy.migrated,true,'Altstand wird als migriert gemeldet');
+assert.equal(restoredLegacy.record.storageVersion,V.STORAGE_VERSION,'migrierter Stand trägt die aktuelle Speicherversion');
+assert.equal(new Set(V.variants(restoredLegacy.state)).size,3,'Migration füllt auf drei eindeutige Variantenplätze auf');
+assert.ok(V.variants(restoredLegacy.state).includes(Number(restoredLegacy.state.details.pension.pkShare)),'der aktuelle Plan bleibt nach der Migration in den Varianten');
+assert.deepEqual(V.restore(JSON.stringify(encoded)).migrated,false,'aktueller Stand wird nicht migriert');
+/* Neuere Generation und unbekanntes Schema: nichts anfassen, nur melden. */
+assert.equal(V.restore(JSON.stringify({...encoded,storageVersion:V.STORAGE_VERSION+1})).reason,'newer');
+assert.equal(V.restore(JSON.stringify({...encoded,version:99})).reason,'newer');
+/* Defekter eigener Stand: nicht werfen, sondern als invalid melden (UI sichert und räumt). */
+for(const broken of ['{','null',JSON.stringify({...encoded,savedAt:'bad'}),JSON.stringify({...encoded,state:{mode:'pre'}})]) {
+  const result=V.restore(broken);
+  assert.equal(result.ok,false,'defekter Stand wird nicht geladen ('+broken.slice(0,24)+')');
+  assert.equal(result.reason,'invalid','defekter Stand gilt als invalid');
+  assert.ok(result.message.length>10,'Meldung nennt den Grund');
+}
 for(const position of V.routes) V.validate({...s,position});
 const noAssets=M.fresh('pre'); noAssets.position='rents'; V.validate(noAssets);
 // Actual UI render functions, no additional financial implementation in the harness.

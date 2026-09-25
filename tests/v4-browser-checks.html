@@ -428,12 +428,14 @@ async function navigationChecks(w, h) {
   ok(!/Plan verbessern|Steuern|Einkommen/.test(d.getElementById('v4Menu').textContent), tag + ' kein «Plan verbessern»/Fachjargon im Menü');
   const labels = entries.map(entry => entry.label);
   ok(labels.includes('Jahresverlauf') && labels.includes('Töpfe-Modell') && labels.includes('Annahmen & Berechnung'), tag + ' «Plan verstehen» enthält Jahresverlauf, Töpfe-Modell, Annahmen');
-  /* Pilotwerkzeuge: dezent unten, keine Navigationsziele. */
+  /* Pilotwerkzeuge: dezent unten, keine Navigationsziele. Der Reload-Knopf gehört dazu:
+     Tester sollen eine neue Version holen können, ohne Daten zu löschen. */
   const quiet = [...d.querySelectorAll('#v4Menu .v4-menu-quiet [data-menu-action]')].map(node => ({action:node.dataset.menuAction, label:node.textContent.trim()}));
-  ok(quiet.length === 2 && quiet[0].label === 'Angaben für die Beratung' && quiet[1].label === 'Plan zurücksetzen', tag + ' Pilotbereich unten im Menü (' + quiet.map(entry => entry.label).join(' · ') + ')');
-  ok(!entries.some(entry => /Beratung|zurücksetzen/.test(entry.label)), tag + ' Pilotwerkzeuge sind keine Menüdestinationen');
+  ok(quiet.length === 3 && quiet[0].label === 'Angaben für die Beratung' && quiet[1].label === 'Plan zurücksetzen' && quiet[2].label === 'Neu laden', tag + ' Pilotbereich unten im Menü (' + quiet.map(entry => entry.label).join(' · ') + ')');
+  ok(!entries.some(entry => /Beratung|zurücksetzen|Neu laden/.test(entry.label)), tag + ' Pilotwerkzeuge sind keine Menüdestinationen');
   const menuOrder = [...d.querySelectorAll('#v4Menu [data-menu-page], #v4Menu [data-menu-action]')].map(node => node.textContent.trim());
-  ok(menuOrder.slice(-2).join(' | ') === 'Angaben für die Beratung | Plan zurücksetzen', tag + ' Reihenfolge im Menü (' + menuOrder.join(' → ') + ')');
+  ok(menuOrder.slice(-3).join(' | ') === 'Angaben für die Beratung | Plan zurücksetzen | Neu laden', tag + ' Reihenfolge im Menü (' + menuOrder.join(' → ') + ')');
+  ok(/^App-Version /.test(d.getElementById('v4Version')?.textContent.trim() ?? ''), tag + ' Menü nennt die App-Version (' + (d.getElementById('v4Version')?.textContent.trim() ?? 'fehlt') + ')');
   /* Beratungs-Zusammenfassung: vollständiger Klartext zum Kopieren, kein automatischer Versand. */
   d.querySelector('[data-menu-action="report"]')?.click();
   await wait(500);
@@ -545,6 +547,98 @@ async function modalCloseStyleChecks() {
   ok(/#v4Modal \.v3-modal-close:hover[^{]*\{[^}]*border-radius:50%/.test(css), 'CSS: Hover/Focus mit border-radius 50%');
   ok(/#v4Modal \.v3-modal-close\{[^}]*background:transparent/.test(css) && !/#v4Modal \.v3-modal-close\{[^}]*background:var\(--v3-soft\)/.test(css), 'CSS: Normalzustand vollständig transparent');
   ok(/#v4Modal \.v3-modal-close\{[^}]*border:0/.test(css) && /#v4Modal \.v3-modal-close\{[^}]*box-shadow:none/.test(css), 'CSS: kein Rahmen, kein Schatten');
+}
+
+/* ---------- Speicherversion, Migration und Invalidierung ----------
+   Neue Deployments dürfen bei Testern nie ein manuelles Löschen verlangen: alte Stände werden
+   migriert, defekte gesichert und geräumt, neuere nicht angefasst – und jeder Fall ist sichtbar. */
+async function storageVersionChecks() {
+  const tag = 'Speicherstand';
+  const f = await frame(390, 844), d = f.contentDocument, win = f.contentWindow;
+  const read = () => { try { return JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? 'null'); } catch (error) { return null; } };
+  const fresh = async (raw) => {
+    win.__v4SuspendSave = true;
+    win.localStorage.setItem('retirement-v3-plan', raw);
+    await new Promise(resolve => { f.onload = resolve; f.src = '/v4.html?store=' + Date.now(); });
+    await wait(900);
+    return {d:f.contentDocument, win:f.contentWindow};
+  };
+  /* 1) Ein normaler Plan liegt in der aktuellen Hülle mit Speicherversion. */
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
+  await wait(700);
+  const saved = read();
+  const version = win.V4Version?.STORAGE_VERSION ?? win.CheckV3State?.STORAGE_VERSION;
+  ok(saved?.version === 2 && Number.isInteger(version) && saved?.storageVersion === version, tag + ': gespeicherte Hülle trägt version 2 und storageVersion ' + saved?.storageVersion + ' (erwartet ' + version + ')');
+  ok(typeof win.V4Version?.APP_VERSION === 'string' && /^\d{4}-\d{2}-\d{2}\.\d+$/.test(win.V4Version.APP_VERSION), tag + ': App-Version vorhanden (' + win.V4Version?.APP_VERSION + ')');
+  const menuVersion = d.getElementById('v4Version')?.textContent.trim() ?? '';
+  ok(/^App-Version \d{2}\.\d{2}\.\d{4}( · Build \d+)?$/.test(menuVersion), tag + ': Menü nennt die App-Version («' + menuVersion + '»)');
+  ok(!!d.querySelector('#v4Menu [data-menu-action="reload"]'), tag + ': Menü bietet «Neu laden» ohne Datenverlust');
+  /* 2) Altstand ohne storageVersion (Generation 1) wird migriert und sofort neu abgelegt. */
+  const legacy = JSON.parse(JSON.stringify(saved));
+  delete legacy.storageVersion;
+  delete legacy.state.v3Variants;
+  const first = await fresh(JSON.stringify(legacy));
+  ok(first.d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.', tag + ': Altstand ohne storageVersion lädt normal');
+  await wait(900);
+  const afterMigration = JSON.parse(first.win.localStorage.getItem('retirement-v3-plan') ?? 'null');
+  ok(afterMigration?.storageVersion === version && first.win.__v4StorageMigrated === true, tag + ': Altstand wird migriert und in der neuen Hülle gespeichert (storageVersion ' + afterMigration?.storageVersion + ')');
+  ok(!first.d.getElementById('v4Notice') || first.d.getElementById('v4Notice').hidden === true, tag + ': Migration läuft ohne Warnbanner');
+  /* 3) Defekter eigener Stand: sichern, räumen, sichtbar melden – und weiter speichern können. */
+  const backupPrefix = 'retirement-v3-plan.backup-';
+  const beforeBackups = Object.keys(first.win.localStorage).filter(key => key.startsWith(backupPrefix)).length;
+  const broken = await fresh(JSON.stringify({version:2, savedAt:new Date().toISOString(), state:{mode:'pre'}}));
+  const notice = broken.d.getElementById('v4Notice');
+  ok(notice && notice.hidden === false && /gesichert/.test(notice.textContent), tag + ': defekter Stand wird sichtbar gemeldet («' + (notice?.textContent.trim().slice(0, 60) ?? '') + '…»)');
+  const backups = Object.keys(broken.win.localStorage).filter(key => key.startsWith(backupPrefix));
+  ok(backups.length === Math.min(2, beforeBackups + 1), tag + ': defekter Stand wird gesichert (' + backups.length + ' Sicherung(en), höchstens zwei)');
+  const backupRaw = backups.length ? broken.win.localStorage.getItem(backups[0]) : null;
+  const mainRaw = broken.win.localStorage.getItem('retirement-v3-plan');
+  const mainParsed = (() => { try { return JSON.parse(mainRaw ?? 'null'); } catch (error) { return null; } })();
+  ok(!!backupRaw && /"mode":"pre"/.test(backupRaw) && !/v3Variants/.test(backupRaw), tag + ': die Sicherung enthält den unveränderten Altstand');
+  ok(mainParsed === null || mainParsed.storageVersion === version, tag + ': der Hauptschlüssel enthält nicht mehr den defekten Stand');
+  ok(broken.d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && /ersten Überblick/.test(broken.d.querySelector('.v4-page-context')?.textContent ?? ''), tag + ': nach der Invalidierung startet der Schnellstart (' + (broken.d.querySelector('.v4-page-context')?.textContent ?? '') + ')');
+  /* Speichern ist wieder erlaubt: ein neuer Plan landet in der aktuellen Hülle. */
+  broken.win.DevFixture.write(broken.win.DevFixture.scenarios['optimiert']()); broken.win.V4.load();
+  await wait(700);
+  const recovered = JSON.parse(broken.win.localStorage.getItem('retirement-v3-plan') ?? 'null');
+  ok(recovered?.storageVersion === version, tag + ': nach der Invalidierung wird wieder normal gespeichert (storageVersion ' + recovered?.storageVersion + ')');
+  /* 4) Stand aus einer neueren Generation: nichts anfassen, sichtbar melden, nicht überschreiben. */
+  const newer = JSON.parse(JSON.stringify(recovered));
+  newer.storageVersion = version + 1;
+  const newerRaw = JSON.stringify(newer);
+  const blocked = await fresh(newerRaw);
+  ok(blocked.win.localStorage.getItem('retirement-v3-plan') === newerRaw, tag + ': neuerer Stand bleibt byte-gleich erhalten (kein Überschreiben)');
+  const newerNotice = blocked.d.getElementById('v4Notice');
+  ok(newerNotice && newerNotice.hidden === false && /neueren Version/.test(newerNotice.textContent), tag + ': neuerer Stand wird sichtbar gemeldet («' + (newerNotice?.textContent.trim().slice(0, 60) ?? '') + '…»)');
+  ok(/ersten Überblick/.test(blocked.d.querySelector('.v4-page-context')?.textContent ?? ''), tag + ': neuerer Stand blockiert nur das Speichern, die App läuft (Schnellstart statt Absturz)');
+  blocked.d.querySelector('[data-notice-close]')?.click();
+  await wait(200);
+  ok(blocked.d.getElementById('v4Notice')?.hidden === true, tag + ': Hinweis ist schliessbar');
+  f.remove();
+}
+
+/* ---------- Service Worker und Update-Mechanismus ----------
+   Ein Deployment muss ohne manuelles Löschen ankommen: der Worker wird mit «updateViaCache none»
+   registriert, überspringt das Warten, räumt alte Caches und lässt Tests/Debug-Aufrufe in Ruhe. */
+async function serviceWorkerChecks() {
+  const tag = 'Service Worker';
+  const response = await fetch('/sw.js');
+  const source = await response.text();
+  ok(response.ok && /skipWaiting/.test(source) && /clients\.claim/.test(source), tag + ': sw.js vorhanden und beansprucht sofort die Kontrolle');
+  ok(/cache:'no-store'/.test(source) && /request\.mode === 'navigate'/.test(source), tag + ': HTML kommt netz-zuerst am HTTP-Cache vorbei');
+  ok(/navigation \|\| code/.test(source) && /CODE = /.test(source), tag + ': Skripte und Styles kommen nie aus dem Cache (kein Mischzustand nach einem Deployment)');
+  ok(/MEDIA/.test(source) && /staleWhileRevalidate/.test(source), tag + ': Bilder laufen stale-while-revalidate');
+  ok(/pathname\.startsWith\('\/tests\/'\)/.test(source) && /searchParams\.has\('dev'\)/.test(source), tag + ': Prüfungen und Debug-Aufrufe werden nicht gecacht');
+  ok(/caches\.keys\(\)/.test(source) && /caches\.delete/.test(source), tag + ': alte Caches werden beim Aktivieren gelöscht');
+  const registration = await (await fetch('/js/v4-sw.js')).text();
+  ok(/updateViaCache:'none'/.test(registration) && /registration\.update\(\)/.test(registration), tag + ': Registrierung prüft den Worker bei jedem Start am Netz');
+  ok(/controllerchange/.test(registration) && /hadController/.test(registration), tag + ': echtes Update lädt die Seite genau einmal neu (Erstinstallation nicht)');
+  const f = await frame(390, 844), win = f.contentWindow;
+  await wait(900);
+  ok(!win.__v4SwError, tag + ': Registrierung wirft keinen Fehler (' + (win.__v4SwError ?? 'ok') + ')');
+  const supported = 'serviceWorker' in win.navigator;
+  ok(supported ? !!win.__v4Sw : true, tag + supported ? ': Worker ist registriert (' + win.__v4Sw?.scope + ')' : ': Umgebung ohne Service-Worker-Unterstützung');
+  f.remove();
 }
 
 /* ---------- Alle Editoren und alle Vermögenssektionen speichern wirklich ---------- */
@@ -1325,13 +1419,45 @@ async function variantChecks(w, h) {
   ok(firstOther?.querySelectorAll('.v4-variant-fold dl > div').length === 6, tag + ' aufgeklappt sechs Kennzahlen (' + firstOther?.querySelectorAll('.v4-variant-fold dl > div').length + ')');
   firstOther?.querySelector('[data-adopt-variant]')?.click();
   await wait(900);
+  /* «Übernehmen» ist eine planungsrelevante Änderung und führt gemäss der globalen
+     Apply-and-return-Regel direkt auf «Mein Plan» – nicht zurück auf den Variantenscreen. */
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.', tag + ' «Übernehmen» springt direkt auf «Mein Plan» (statt «' + (d.querySelector('.v4-page-title')?.textContent ?? '') + '»)');
+  ok(d.getElementById('shareRange')?.value === adoptShare && new RegExp('^' + adoptShare + ' % Kapitalbezug$').test(d.querySelector('.v4-lever-value')?.textContent.trim() ?? ''), tag + ' der übernommene Anteil ist der aktuelle Plan (' + (d.querySelector('.v4-lever-value')?.textContent ?? '') + ')');
+  const storedShare = (() => { try { return JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? '{}')?.state?.details?.pension?.pkShare; } catch (error) { return null; } })();
+  ok(String(storedShare) === adoptShare, tag + ' der übernommene Anteil ist gespeichert (' + storedShare + ' %)');
+  const planRows = [...d.querySelectorAll('#app .v4-rows .v4-row')].map(row => row.textContent.trim());
+  ok(planRows.some(row => /^Meine Varianten · 3 gespeichert$/.test(row)), tag + ' nach «Übernehmen» bleiben drei Varianten gespeichert (' + planRows.join(' | ') + ')');
+  d.querySelector('[data-v4-next="variants"]')?.click();
+  await wait(550);
   const after = [...d.querySelectorAll('#app .v4-variant')];
-  ok(!!after[0]?.classList.contains('current') && new RegExp('^' + adoptShare + ' % Kapitalbezug$').test(after[0]?.querySelector('strong')?.textContent.trim() ?? ''), tag + ' nach «Übernehmen» steht die Variante zuerst als aktueller Plan (' + (after[0]?.querySelector('strong')?.textContent ?? '') + ')');
+  ok(!!after[0]?.classList.contains('current') && new RegExp('^' + adoptShare + ' % Kapitalbezug$').test(after[0]?.querySelector('strong')?.textContent.trim() ?? ''), tag + ' auf «Meine Varianten» steht die übernommene Variante zuerst als aktueller Plan (' + (after[0]?.querySelector('strong')?.textContent ?? '') + ')');
   ok(after.slice(1).every(card => { const fold = card.querySelector('.v4-variant-fold'); return !!fold && fold.open === false; }), tag + ' die übrigen Varianten sind danach wieder zugeklappt');
   d.querySelector('.v4-head-back')?.click();
   await wait(550);
-  const planRows = [...d.querySelectorAll('#app .v4-rows .v4-row')].map(row => row.textContent.trim());
-  ok(planRows.some(row => /^Meine Varianten · 3 gespeichert$/.test(row)), tag + ' nach «Übernehmen» bleiben drei Varianten gespeichert (' + planRows.join(' | ') + ')');
+  /* Schema-1-Speicherstand ohne Variantenplätze: alte Planung erhält sofort die drei Plätze. */
+  const legacy = (() => { try { return JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? '{}'); } catch (error) { return {}; } })();
+  delete legacy.state?.v3Variants;
+  legacy.version = 1;
+  win.__v4SuspendSave = true;
+  win.localStorage.setItem('retirement-v3-plan', JSON.stringify(legacy));
+  await new Promise(resolve => { f.onload = resolve; f.src = '/v4.html?legacy=' + Date.now(); });
+  await wait(900);
+  const dl = f.contentDocument, wl = f.contentWindow;
+  ok(dl.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.', tag + ' Schema-1-Stand öffnet «Mein Plan»');
+  ok(!!dl.querySelector('.v4-lever [data-v4-next="compare"]'), tag + ' alte Planung erhält sofort den Vergleichseinstieg (drei Variantenplätze statt einem)');
+  const legacyRows = [...dl.querySelectorAll('#app .v4-rows .v4-row')].map(row => row.textContent.trim());
+  ok(legacyRows.some(text => /^Meine Varianten · 3 gespeichert$/.test(text)), tag + ' alte Planung nennt drei gespeicherte Varianten (' + legacyRows.join(' | ') + ')');
+  /* Bereits pensioniert: kein Kapitalbezug – also kein Variantenscreen und kein Vergleichseinstieg. */
+  wl.DevFixture.write(wl.DevFixture.scenarios['pensioniert']()); wl.V4.load();
+  await wait(600);
+  const postRows = [...dl.querySelectorAll('#app .v4-rows .v4-row')].map(row => row.textContent.trim());
+  ok(dl.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && !dl.querySelector('.v4-lever'), tag + ' «Bereits pensioniert»: kein Bezugsregler');
+  ok(postRows.length === 1 && /^Jahresverlauf$/.test(postRows[0]), tag + ' ohne Kapitalbezug keine Variantenzeile (' + (postRows.join(' | ') || '–') + ')');
+  ok(dl.querySelector('#v4Menu [data-menu-page="variants"]')?.hidden === true, tag + ' ohne Kapitalbezug kein Menüpunkt «Meine Varianten»');
+  ok(!dl.querySelector('[data-v4-next="compare"]'), tag + ' ohne Kapitalbezug kein Vergleichseinstieg');
+  wl.V4.renderVariants();
+  await wait(600);
+  ok(dl.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && !dl.querySelector('[data-adopt-variant]'), tag + ' der Variantenscreen führt ohne Kapitalbezug auf «Mein Plan» zurück');
   f.remove();
 }
 
@@ -1761,6 +1887,10 @@ async function amountInputChecks(w) {
     try { await yearDetailChecks(w, h); } catch (e) { ok(false, w + ' Jahresansicht: ' + e.message); }
   }
   try { await modalCloseStyleChecks(); } catch (e) { ok(false, 'Modal-Schliessen (CSS): ' + e.message); }
+  flush();
+  try { await storageVersionChecks(); } catch (e) { ok(false, 'Speicherstand: ' + e.message); }
+  flush();
+  try { await serviceWorkerChecks(); } catch (e) { ok(false, 'Service Worker: ' + e.message); }
   const fails = out.filter(l => l.startsWith('FAIL')).length;
   document.getElementById('report').textContent = out.join('\n') + '\n---\n' + (fails ? fails + ' FAIL' : 'ALLE CHECKS PASS');
 })();
