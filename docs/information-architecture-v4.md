@@ -44,11 +44,14 @@ MEIN PLAN (Home)
 │   │     ├── Bedarf netto                   → Editor
 │   │     └── Vermögen                       → Editor (inkl. Säule-3a-Gruppe)
 │   ├── Plan präzisieren / Plan optimieren   (ein Screen, zwei Zustände)
-│   └── Meine Varianten                      (max. 3, genau eine aktiv)
+│   ├── Meine Varianten                      (max. 3, aktueller Plan zuerst und offen)
+│   │     └── Action-Card «Rente oder Kapital?» → Variantenvergleich
+│   └── Rente oder Kapital?                  (Vergleich; Action-Card unter dem PK-Regler,
+│         kein Menüpunkt · CTA → Beratungsflow)
 │
 └── PLAN VERSTEHEN   DETAILS
     ├── Jahresverlauf               («Jahr für Jahr.»)
-    │     └── Deine Töpfe → Töpfe-Modell (Dialog)
+    │     └── Topf-Icon an Abschnitt 1 und 6 → Töpfe-Modell (Dialog)
     ├── Töpfe-Modell                (derselbe Dialog, direkt aus dem Menü)
     └── Annahmen & Berechnung       («Annahmen.»)
 ```
@@ -102,16 +105,111 @@ absichtliche Abschreckung.
 
 - **Jahresverlauf** (`Jahr für Jahr.` / `So arbeitet dein Plan im Detail.`): sechs nummerierte
   Abschnitte (Vermögen Jahresanfang · Einkommen · Bedarf · Entnahme aus den Töpfen · Deine
-  Töpfe Jahresende · Vermögen Jahresende). Abschnitt 5 nennt dynamisch die verwendete
+  Töpfe Jahresende · Vermögen Jahresende) – jeder **zugeklappt mit genau einer Kennzahl**
+  (Total · Netto verfügbar · Fehlbetrag bzw. Überschuss · Total Entnahme · Rendite dieses
+  Jahres · Total), der Rest kommt auf Tap; der aufgeklappte Zustand bleibt beim Jahreswechsel
+  erhalten. Abschnitt 5 nennt aufgeklappt dynamisch die verwendete
   Anlagestrategie (`{Profil} · Annahme {x} % pro Jahr` mit ⓘ). **Renditeannahme** (`4,5 % pro Jahr`)
   und **«Rendite dieses Jahres»** (gerechnetes Jahresergebnis, z. B. + CHF 51'347) bleiben
-  sauber getrennt.
+  sauber getrennt. Das Töpfe-Modell ist über das **Donut-Icon direkt neben den Überschriften 1
+  und 6** erreichbar (derselbe Dialog wie im Menü, aber an der Position der Überschrift);
+  der frühere Textlink am Seitenende ist
+  entfernt, und die Erklärung (Variante, Kaufkraft, Annahmen) steht hinter einem ⓘ in der
+  Jahreszeile – der Screen selbst trägt keinen stehenden Erklärtext.
 - **Töpfe-Modell** (Dialog, siehe §8).
+- **Rente oder Kapital?** (`Rente oder Kapital?` / `Zwei Varianten im Vergleich.`): eigener
+  Vergleichsscreen für **genau zwei** Varianten (Ebene *Planen*, erreichbar über den PK-Bereich
+  auf «Mein Plan» und über «Meine Varianten» – **kein** Menüpunkt). Links fix und grün der
+  **aktuelle Plan**, rechts blau die **Variante** (Auswahl nur aus den übrigen gespeicherten
+  Varianten). Je Karte genau drei Kernwerte (Startkapital netto · PK-Rente netto / Mt. ·
+  Vermögen reicht bis) in exakt ausgerichteten Zeilen, darunter ein dynamisches Kurzfazit, die Grafik
+  «Vermögensentwicklung» mit dem Umschalter **Vermögen / Einkommen** (zwei Linien, keine
+  CHF-Y-Achse, Aufbrauch direkt an der Linie markiert als «0 mit {Alter}»), der Detailvergleich
+  «Die wichtigsten Unterschiede» (sieben Zeilen, Wertspalten in denselben Farben), die Card
+  «Und deine Anlagestrategie?» als **Beratungs-CTA** in den **bestehenden Beratungsflow**.
+  Unter der Grafik stehen nur **zwei eingeklappte Informationszeilen** – der Screen bleibt eine
+  Übersicht und passt bei 390 × 844 exakt auf einen Screen (848 px = 1,00). Der Screen zeigt **keine** Empfehlung und
+  **keine** Übernahme und verändert weder Plan noch Töpfe oder Strategie (Details unten).
 - **Annahmen & Berechnung** (`Annahmen.` / `Renditen & Inflation`): Planungshorizont,
   Inflation, Renditeannahmen, interne Produktsätze. Renditeannahmen haben **genau eine
   Quelle**: das Strategieprofil in `js/risk-profiles.js` (Vorsichtig 2,5 %, Ausgewogen
   4,5 %, Chancenorientiert 6,0 % real). Strategieprofil, Annahmen-Screen, Jahresverlauf und
   Projektion rechnen nie mit unabhängigen Renditewerten.
+
+**Variantenvergleich «Rente oder Kapital?» (verbindlich):** Der Screen vergleicht **genau zwei**
+gespeicherte Varianten und erklärt den Unterschied zwischen mehr Kapital und lebenslanger Rente.
+
+- **Einstieg:** als kompakte, ganzflächig klickbare **Action-Card «Rente oder Kapital?»** direkt
+  unter dem PK-Regler auf «Mein Plan» (Subline «Vergleiche deinen Plan mit einer anderen
+  Variante», Icon `arrowsExchange` links, Chevron rechts, mintfarbene Fläche mit grünem Rahmen,
+  dunkelgrüner Titel) und zusätzlich auf «Meine Varianten». **Kein** Menüpunkt im Hamburger. Der
+  Einstieg erscheint nur, wenn ein Plan mit mehr als einer Variante existiert. Die frühere Zeile
+  «Aktueller Plan» unter dem Regler ist entfernt (nur der Vorschauzustand meldet sich).
+- **Kopf:** `PageTitle` mit Titel «Rente oder Kapital?» und Kontext «Zwei Varianten im
+  Vergleich.», darunter genau ein Rückweg «‹ Mein Plan». **Abweichungen zur Spec-Vorlage:** der
+  Titel endet als Frage **ohne** Punkt (einzige Ausnahme der Punkt-Regel), und der Kontext ist
+  gekürzt, weil der vorgegebene Satz bei 390 px drei Zeilen bräuchte – die V4-Regel erlaubt
+  höchstens zwei.
+- **Karten:** aktuelle Variante **immer links**, grün, Beschriftung exakt «Aktueller Plan»
+  (nicht «Dein aktueller Plan»), nicht auswählbar; rechts blau **«Variante»** (ohne «Zweite»,
+  ebenso in der Grafiklegende) mit Auswahl **ausschliesslich** der übrigen gespeicherten
+  Varianten. Je Karte genau drei Kernwerte: Startkapital netto · PK-Rente netto / Mt. ·
+  Vermögen reicht bis, in beiden Karten auf **derselben Höhe** (drei identische Zeilen: Badge ·
+  Auswahl/Untertitel · Werte; die Auswahl ist 28 px hoch statt der globalen 44 px `select`-Höhe
+  und überdeckt den Badge nicht). Beide Karten bleiben auch auf Mobile (390, 320 px)
+  **nebeneinander** – kein horizontales Scrollen.
+- **Farblogik (global für den Screen):** `currentPlan = grün` (`--v3-green`),
+  `comparisonVariant = blau` (`--v3-pot-bonds`) – für Rahmen, Werte, Wertspalten, Linien und
+  Marker. Farben bedeuten **Identität, keine Bewertung**.
+- **Kurzfazit:** dynamisch aus den beiden Varianten abgeleitet
+  («Mehr Kapital hält in dieser Planung länger Vermögen verfügbar.» / «Mehr Rente gibt dir dafür
+  lebenslang ein höheres Einkommen.»), sonst neutral («Die Varianten unterscheiden sich vor allem
+  bei verfügbarem Startkapital und lebenslanger PK-Rente.»). Nie «besser», «empfohlen» oder
+  «optimal».
+- **Grafik:** eine Chart-Fläche mit dem Umschalter **Vermögen / Einkommen** (Default Vermögen).
+  Zwei Linien (grün/blau) in nahezu voller Kartenbreite, **ohne CHF-Y-Achse**, mit dezenten
+  Hilfslinien und direkten Wertelabels; **je Linie höchstens drei Wertelabels** in der Priorität
+  **Start · gemeinsamer Vergleichszeitpunkt (Mitte) · Ende/Aufbrauch** – die übrigen Datenpunkte
+  bleiben ohne Zahl, nach dem Aufbrauchpunkt kommt keine weitere Null-Marke. **Jedes Label sitzt
+  waagerecht zentriert über seinem Datenpunkt** (`labelX = pointX`), weicht bei Überdeckung nur
+  **vertikal** aus und rutscht erst am Chartrand innerhalb der Kante (≤ 2 px), wo es eine
+  **Leader-Line** zum Punkt bekommt; findet es keinen Platz, entfällt es. Start und
+  Vergleichszeitpunkt tragen beide Linien. **Keine Linie läuft durch ein Label** und kein Label
+  berührt die **X-Achse**, die genau die beschrifteten Zeitpunkte zeigt (ohne Beschriftung «Alter»,
+  mit Abstand unter der Zeichenfläche und unter **jedem** Punkt, keine zusätzlichen
+  Zehnjahreswerte – Beispiel «optimiert»: 66 · 78 · 90). Fällt das freie Vermögen auf 0, steht die Marke **«0 mit {Alter}»** direkt an der
+  Linie (nie «Plan endet» oder «Geld reicht nur bis») – **dieselbe Zahl wie «Vermögen reicht bis»
+  in Karte und Statusbox** (`exhaustionAge()`). Unter der Grafik: «Wichtig: Wenn das
+  freie Vermögen aufgebraucht ist, laufen AHV und PK-Rente weiter.» Die Einkommensansicht zeigt
+  das monatlich verfügbare Nettoeinkommen (Nettoeinkommen + tatsächlich entnommenes Kapital) und
+  damit den Rückfall auf die lebenslangen Einkommen. Die **gewählte Vergleichsvariante und die
+  Ansicht** sind Nutzereinstellungen und werden getrennt vom Plan unter `retirement-v4-compare`
+  (`{share, view}`) gemerkt; nach einem Neuladen zeigt der Vergleich wieder denselben Stand.
+- **Datenquelle:** ausschliesslich die zentrale Jahresprojektion und die bestehenden
+  Rechenfunktionen (`evaluatePlan`, `calculatePension`, `calculateAvailableCapital`,
+  `incomeSourcesAtStart`). **Keine** zweite Finanz- oder Steuerberechnung; Steuerwerte kommen aus
+  dem kantonalen Modell und werden ohne Wohnkanton als «geschätzt» gekennzeichnet.
+- **Detailvergleich «Die wichtigsten Unterschiede»:** sieben Zeilen (Kapitalsteuer beim Bezug ·
+  Verfügbares Startkapital nach Steuern · PK-Rente netto pro Monat · Laufende Einkommensteuer pro
+  Jahr · Vermögen mit 85 · Vermögen reicht bis · Danach Einkommen netto / Mt.), Wertspalten in
+  Grün/Blau. **«Danach Einkommen»** = laufendes Nettoeinkommen nach Aufbrauch des frei
+  verfügbaren Vermögens (AHV, PK-Rente, weitere dauerhafte Einkommen – netto, **ohne**
+  Kapitalentnahme), mit ⓘ.
+- **Beratung als CTA (kein Accordion):** Die Zeile «Und deine Anlagestrategie?» hat mintfarbenen
+  Hintergrund, grünen Rahmen, dunkelgrünen Titel, das Icon `arrowUpRight` und die Subline «Passt
+  deine Strategie zu Rente, Bedarf und Anlagehorizont?»; rechts unten steht «Individuell
+  besprechen →» statt eines Chevrons. Die ganze Fläche öffnet den **bestehenden** Beratungsflow
+  (Dialog «Angaben für die Beratung»). Kein neuer Flow.
+- **Unter der Grafik: zwei Klappzeilen plus Beratungs-CTA.** «Die wichtigsten Unterschiede» und
+  «So haben wir gerechnet» (Tabler-Icon `adjustments`, kein Emoji) sind `<details>` mit Kopfzeile,
+  Kurzzeile und Chevron; die geschlossene Kurzzeile der Berechnungsbasis ist knapp und ohne
+  Beschriftungen («AR · 5,2 % · Ausgewogen · bis 90»), **Inflation und die ausgeschriebenen
+  Bezeichnungen erscheinen erst beim Aufklappen**. Damit passt die Übersicht im zugeklappten
+  Standardzustand bei 390 × 844 **exakt auf einen Screen** (848 px = 1,00; Referenzbreiten
+  390–440 px, darunter darf der Text stärker umbrechen).
+- **Nicht erlaubt:** Empfehlung oder Wertung, «Übernehmen» im Vergleich, automatische Änderung
+  der Anlagestrategie oder der Töpfe (z. B. keinen Obligationentopf entfernen), eigene
+  Steuerformel, Y-Achse mit CHF-Stufen.
 
 ## 7. Navigation (Hamburger)
 
@@ -128,38 +226,27 @@ PLAN VERSTEHEN            DETAILS
     Töpfe-Modell
     Annahmen & Berechnung
 ───────────────────────────────  (dezent abgesetzt, keine Navigation)
-    Feedback geben
+    Angaben für die Beratung
     Plan zurücksetzen
 ```
 
-**Pilotbereich (Pilottesting):** Ganz unten stehen dezent abgesetzt **«Feedback geben»** und
-**«Plan zurücksetzen»** (`.v4-menu-quiet`, gedämpfte Schrift, Trennlinie darüber). Beide sind
-bewusst **keine** Menüdestinationen im Sinn der Informationsarchitektur, sondern Werkzeuge:
+**Pilotbereich (Pilottesting):** Ganz unten stehen dezent abgesetzt **«Angaben für die
+Beratung»** und **«Plan zurücksetzen»** (Klasse .v4-menu-quiet, gedämpfte Schrift, Trennlinie
+darüber). Beide sind bewusst **keine** Menüdestinationen im Sinn der Informationsarchitektur,
+sondern Werkzeuge für die Übergabe bzw. den Neustart:
 
-- **Feedback geben** öffnet einen Dialog mit Freitextfeld und einer Vorlage («Was hat gut
-  funktioniert?», «Was war unklar oder hat gefehlt?», «Sonstiges:»). Der Versand erfolgt erst
-  auf Klick («E-Mail öffnen» → `mailto:`); **Plandaten werden nie automatisch mitgeschickt**.
-  Die Empfängeradresse pflegt das Team in `js/v4-ui.js` (`PILOT_FEEDBACK_EMAIL`); bleibt sie
-  leer, öffnet sich das E-Mail-Programm ohne Empfänger.
+- **Angaben für die Beratung** bereitet den Plan als **Klartext** auf, den der Nutzer kopieren
+  oder als Datei speichern und selbst verschicken kann: Person und Zeitraum · Einkommen im
+  ersten Planjahr · Bedarf und Entnahme · Vermögen zum Pensionierungszeitpunkt · Aufteilung auf
+  die Töpfe · Ergebnis · Annahmen · Varianten. **Transparent:** nicht erfasste Werte stehen als
+  «noch nicht erfasst», geschätzte AHV als «geschätzte AHV-Pauschale», der Kopf nennt «heutige
+  Kaufkraft» und «Modellrechnung, keine Steuer- oder Anlageberatung». Der Text ist bearbeitbar,
+  und es wird **nichts automatisch verschickt** (kein mailto-Link, kein Formular); «Text
+  kopieren» markiert den Text und nutzt die Clipboard-API, wenn verfügbar, «Als Datei
+  speichern» legt eine .txt-Datei ab.
 - **Plan zurücksetzen** fragt zuerst nach («Plan zurücksetzen?» mit «Abbrechen») und entfernt
   danach alle erfassten Angaben, Varianten und die Anlagestrategie aus diesem Browser; die App
   startet wieder im **Schnellstart** (ohne Hamburger, weil kein Plan existiert).
-
-**Keine** eigenen Hauptnavigationseinträge für Steuern, AHV, PK, Säule 3a, Einkommen,
-Bedarf, Vermögen oder «Plan verbessern» – das sind Bestandteile einer Aufgabe, keine
-Destinationen. Sie liegen hinter **einem** Menüpunkt «Angaben & Grundlagen».
-
-**Jede Zeile nennt Zustand UND erfassten Wert.** «Erfasst» allein hilft niemandem, der prüfen
-will, ob die Zahl stimmt. Deshalb steht in jeder Zeile der tatsächlich hinterlegte Betrag bzw.
-die Kurzbeschreibung – z. B. «Pensionskasse (PK) · Beitrag CHF 24'000 / Jahr · CHF 750'000»,
-«Säule 3a · CHF 120'000», «Weitere Einnahmen · Keine», «Vermögen · Bank & Wertschriften ·
-CHF 200'000». Beschreibungen werden nie abgeschnitten, sondern umgebrochen. Dieselbe Regel gilt
-für die Zeilen im Zustand A («Plan präzisieren»); beide Screens nutzen dieselbe Quelle
-(`captured()` in `js/v4-ui.js`).
-
-- **Schnellstart:** solange kein erster Plan existiert, gibt es **keinen** Hamburger.
-- **Menüpunkte dürfen nur diese sechs sein:** `plan`, `basics`, `variants`, `years`, `pots`,
-  `assumptions` (Reihenfolge wie oben).
 
 ## 8. Crosslinks – mehrfach erreichbar, einmal implementiert
 
@@ -168,15 +255,31 @@ Implementierung**:
 
 | Inhalt | Weg 1 | Weg 2 | Implementierung |
 | --- | --- | --- | --- |
-| Töpfe-Modell | Menü → Plan verstehen → Töpfe-Modell | Jahresverlauf → «Deine Töpfe» → Töpfe-Modell | **derselbe Dialog** (`openPotsModal()`, `#v4Modal`, Titel «Das Töpfe-Modell») |
+| Töpfe-Modell | Menü → Plan verstehen → Töpfe-Modell (= Jahresanfang des ersten Planjahres) | Jahresverlauf → Topf-Icon an Abschnitt 1 (Jahresanfang) bzw. 6 (Jahresende) → Töpfe-Modell | **derselbe Dialog** (`openPotsModal()`, `#v4Modal`, Titel «Das Töpfe-Modell») |
 | Angaben-Editor (AHV, PK, 3a, Einnahmen, Bedarf, Vermögen) | Menü → Angaben & Grundlagen → Zeile | Plan präzisieren → Zeile «…» bzw. «Angaben ergänzen» | **dieselbe Editorseite** (`openDetail(page)`) |
 | Anlagestrategie | Plan optimieren → Hebel 1 | Töpfe-Dialog → Card «Anlagestrategie» | **dieselbe Quelle** (`profileComparison()` / `risk-profiles.js`) |
 | Anlagestrategie im Jahresverlauf | Abschnitt 5 «Deine Töpfe (Jahresende)» | Töpfe-Dialog-Card | **dieselbe Quelle** (`risk-profiles.js`) |
+| Variantenvergleich «Rente oder Kapital?» | PK-Bereich auf «Mein Plan» → Action-Card «Rente oder Kapital?» | «Meine Varianten» → dieselbe Action-Card | **derselbe Screen** (`renderCompare()`, `comparisonOf()`), gespeist aus `evaluatePlan()` |
+| Beratung / Anlagestrategie | Menü (Pilotbereich) → «Angaben für die Beratung» | Variantenvergleich → «Individuell besprechen» | **derselbe Dialog** (`openAdvisorModal()`) |
 
-Der Test prüft für das Töpfe-Modell, dass beide Wege **identischen** Inhalt rendern.
+Der Test prüft für das Töpfe-Modell, dass der Menüzugang und das Topf-Icon an Abschnitt 1 im ersten
+Planjahr **identischen** Inhalt rendern (Jahresanfang des ersten Planjahres).
 
-**Töpfe-Modell (verbindlich):** Lead «Dein frei verfügbares Vermögen ist auf drei Töpfe
-verteilt.» · Donut mit hellem, neutralem Zentrum (Mint/Creme) und Navy-Text: «Frei
+**Töpfe-Modell (verbindlich, dynamisch):** Der Dialog zeigt den Zustand **eines Planjahres** aus
+der zentralen Jahresprojektion (`yearlyProjection`) – nicht die statische Startaufteilung und
+nicht aus der Anlagestrategie abgeleitet. Im Kopf steht klein «Alter X · Jahr JJJJ» mit der
+Position («Stand am Ende dieses Jahres» bzw. «Stand am Anfang dieses Jahres»); Donut,
+Zentrum-Betrag und die Zeilen nutzen dieselben Jahreswerte, die Prozentanteile werden aus den
+Beträgen gerechnet (`Betrag / frei verfügbares Vermögen × 100`). **Zwei Positionen, eine
+Rechnung:** der Einstieg über Abschnitt 1 der Jahresansicht zeigt den **Jahresanfang**
+(`buckets` / `free`), der Einstieg über Abschnitt 6 und das Menü das **Jahresende**
+(`endBuckets` / `end`) – nie dieselben Werte für beide. **Invariante:** Summe der Töpfe = frei
+verfügbares Vermögen der gezeigten Position. Aus dem
+Jahresverlauf geöffnet zeigt es das dort gewählte Jahr und die Position des angeklickten Icons, aus
+dem Menü **immer den Jahresanfang des ersten Planjahres** (dieselbe Sicht wie das Icon an
+Abschnitt 1 im ersten Jahr). Jahresverlauf und Töpfe-Modell zeigen damit **niemals zwei verschiedene
+Wahrheiten**; die Anlagestrategie bleibt reine Renditeannahme. Lead «Dein frei verfügbares
+Vermögen ist in diesem Jahr …» · Donut mit hellem, neutralem Zentrum (Mint/Creme) und Navy-Text: «Frei
 verfügbares Vermögen» und darunter der Betrag · genau drei kompakte Zeilen für Geldmarkt
 (IconCash, Grün), Obligationen (IconChartBar, Blau), Wertschöpfung (IconTrendingUp, Violett)
 mit Icon, Namen, CHF-Betrag und Prozentanteil · die Erklärungen der Töpfe hängen als ⓘ an der
@@ -257,10 +360,16 @@ Information, die keine der drei Fragen beantwortet, gehört in keine der drei Eb
 | Plan präzisieren ist zustandsabhängig | erfüllt – nur bei offenen/geschätzten Angaben |
 | Plan optimieren erscheint bei ausreichender Datenqualität | erfüllt – alle Angaben erfasst |
 | Varianten sind eigener Screen | erfüllt – «Meine Varianten», auf «Mein Plan» nur eine Zeile |
+| Aktueller Plan zuerst, übrige Varianten zugeklappt | erfüllt – aktuelle Karte offen, übrige zeigen nur die Reichweite |
+| Variantenvergleich ohne Menüpunkt, mit zwei Einstiegen | erfüllt – PK-Bereich auf «Mein Plan» und «Meine Varianten» |
+| Aktueller Plan im Vergleich immer links und grün | erfüllt – «Aktueller Plan», nicht auswählbar, `--v3-green` |
+| Vergleich zeigt keine Empfehlung und übernimmt nichts | erfüllt – dynamisches Fazit ohne Wertung, kein «Übernehmen», Test prüft unveränderten Plan |
+| Vergleich: jedes Wertelabel über seinem Punkt, X-Achse ohne Zusatzwerte | erfüllt – `labelX = pointX`, nur vertikales Ausweichen, Leader-Line nur am Rand, Achse = Start · Vergleichszeitpunkt · Ende (Test: «66 · 78 · 90») |
+| Vergleich merkt gewählte Variante und Ansicht | erfüllt – `retirement-v4-compare` (`{share, view}`), getrennt vom Plan, Prüfung nach echtem Neuladen |
 | Plan verstehen ist klar als freiwillige Vertiefung erkennbar | erfüllt – eigene Menügruppe mit Badge «DETAILS» |
 | Jahresverlauf ist unter Plan verstehen | erfüllt – Menügruppe und Titel «Jahr für Jahr.» |
-| Töpfe-Modell ist direkt und aus dem Jahresverlauf erreichbar | erfüllt – Menüpunkt und Abschnitt-5-Zeile |
-| beide Wege verwenden dieselbe Komponente | erfüllt – identischer Dialoginhalt (Test) |
+| Töpfe-Modell ist direkt und aus dem Jahresverlauf erreichbar | erfüllt – Menüpunkt und Topf-Icon an den Überschriften 1 und 6 |
+| beide Wege verwenden dieselbe Komponente | erfüllt – Menü = Jahresanfang des ersten Planjahres, identischer Dialoginhalt (Test) |
 | Annahmen sind nicht Teil der normalen User Journey | erfüllt – nur unter «Plan verstehen» |
 | keine unnötigen Fachmenüpunkte | erfüllt – AHV/PK/3a/Einkommen/Bedarf/Vermögen nicht im Menü |
 | Back-Navigation konsistent | erfüllt – genau ein «‹ Mein Plan» pro Screen |

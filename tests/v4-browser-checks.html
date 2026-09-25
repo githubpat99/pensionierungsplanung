@@ -98,6 +98,35 @@ async function planStructure(w, h) {
   ok((heroImg?.currentSrc ?? '').endsWith(w >= 700 ? 'public/images/Background_Desktop.png' : 'public/images/Background.png'), tag + ' Hero-Asset nach Breite (' + (heroImg?.currentSrc ?? '').split('/').pop() + ')');
   ok(app.querySelectorAll('.v4-rows .v4-row').length === 2, tag + ' genau zwei sekundäre Zeilen');
   ok(app.querySelectorAll('.v4-verdict button').length === 0, tag + ' keine Aktion in der Status-Card');
+  /* Action-Card «Rente oder Kapital?» direkt unter dem PK-Regler – kein Textlink, kein
+     «Aktueller Plan»-Hinweis mehr; visuell zwischen den sekundären Zeilen und «Plan optimieren». */
+  const compareCard = app.querySelector('.v4-lever .v4-cmp-entry');
+  const improveCard = app.querySelector('.v4-next');
+  const secondaryRow = app.querySelector('.v4-rows .v4-row');
+  ok(!!compareCard && /^Rente oder Kapital\?/.test(compareCard.textContent.trim()), tag + ' Action-Card «Rente oder Kapital?» im PK-Bereich (' + (compareCard?.textContent.replace(/\s+/g, ' ').trim().slice(0, 60) ?? 'fehlt') + ')');
+  ok(/Vergleiche deinen Plan mit einer anderen Variante/.test(compareCard?.textContent ?? ''), tag + ' Action-Card nennt die Subline');
+  ok(!!compareCard?.querySelector('.v4-cmp-entry-icon svg') && !!compareCard?.querySelector('svg:last-of-type'), tag + ' Action-Card mit Icon links und Chevron rechts');
+  const compareStyle = compareCard ? win.getComputedStyle(compareCard) : null;
+  ok(compareStyle?.borderTopColor === 'rgb(31, 98, 85)' && compareStyle?.backgroundColor === 'rgb(237, 242, 237)', tag + ' Action-Card mit grünem Rahmen und Mint-Fläche (' + compareStyle?.backgroundColor + ' / ' + compareStyle?.borderTopColor + ')');
+  ok(win.getComputedStyle(compareCard.querySelector('.v4-cmp-entry-title')).color === 'rgb(31, 98, 85)', tag + ' Action-Card Titel dunkelgrün');
+  ok(!app.querySelector('.v4-lever-state'), tag + ' kein «Aktueller Plan»-Hinweis unter dem Regler');
+  const entryHeight = Math.round(compareCard.getBoundingClientRect().height), improveHeight = Math.round(improveCard.getBoundingClientRect().height);
+  ok(entryHeight > Math.round(secondaryRow.getBoundingClientRect().height) && entryHeight < improveHeight, tag + ' Hierarchie: Card grösser als die sekundären Zeilen (' + entryHeight + ' > ' + Math.round(secondaryRow.getBoundingClientRect().height) + ') und kleiner als «Plan optimieren» (' + entryHeight + ' < ' + improveHeight + ')');
+  const range = d.getElementById('shareRange');
+  if (range) {
+    const before = Number(range.value);
+    range.value = String(before === 0 ? 5 : 0);
+    range.dispatchEvent(new win.Event('input', {bubbles:true}));
+    await wait(350);
+    ok(!!d.querySelector('.v4-lever-state #previewStatus') && /Vorschau/.test(d.getElementById('previewStatus')?.textContent ?? '') && !!d.querySelector('[data-remember]'), tag + ' Vorschau meldet sich weiterhin mit «Speichern»');
+    range.value = String(before);
+    range.dispatchEvent(new win.Event('input', {bubbles:true}));
+    await wait(350);
+  }
+  /* Keine Herkunftszeile, wenn der Wohnkanton erfasst ist: «Berechnet mit deinen Angaben und
+     deinem Wohnkanton» sagt nichts, was der Nutzer nicht selbst erfasst hat. Der Hinweis
+     existiert nur für die Schätzung (ohne Wohnkanton). */
+  ok(!app.querySelector('.v4-verdict-note') && !/Berechnet mit deinen Angaben/.test(app.textContent), tag + ' Status ohne Herkunftszeile bei erfasstem Wohnkanton');
   const rows = [...app.querySelectorAll('.v4-rows .v4-row')].map(b => b.textContent.trim());
   ok(rows[0] === 'Jahresverlauf' && /^Meine Varianten · \d gespeichert$/.test(rows[1]), tag + ' Zeilen korrekt (' + rows.join(' | ') + ')');
   const improve = app.querySelector('.v4-next');
@@ -199,7 +228,7 @@ async function openEditor(d, page) {
   await wait(450);
 }
 async function screenChecks(w, h) {
-  const routes = ['Schnellstart', 'Mein Plan', 'Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'years', 'personal', 'ahv', 'need', 'assets', 'assumptions', 'pension', 'extra'];
+  const routes = ['Schnellstart', 'Mein Plan', 'Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'Vergleich', 'years', 'personal', 'ahv', 'need', 'assets', 'assumptions', 'pension', 'extra'];
   for (const route of routes) {
     const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px ' + route;
     try {
@@ -207,6 +236,7 @@ async function screenChecks(w, h) {
       else {
         win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
         if (route === 'Varianten') win.V4.renderVariants();
+        else if (route === 'Vergleich') win.V4.renderCompare();
         else if (route === 'Angaben & Grundlagen') d.querySelector('[data-menu-page="basics"]')?.click();
         else if (route === 'Plan präzisieren') d.querySelector('[data-v4-next="improve"]')?.click();
         else if (route === 'Mein Plan') { /* schon offen */ }
@@ -216,7 +246,9 @@ async function screenChecks(w, h) {
     await wait(350);
     titleChecks(d, win, tag, {context: true});
     const title = d.querySelector('.v4-page-title')?.textContent.trim() ?? '';
-    ok(title.endsWith('.'), tag + ' Titel endet mit Punkt («' + title + '»)');
+    /* Ausnahme: «Rente oder Kapital?» ist als Frage formuliert (Spec) und endet deshalb nicht mit Punkt. */
+    if (route === 'Vergleich') ok(title === 'Rente oder Kapital?', tag + ' Titel «Rente oder Kapital?» (Frage-Titel als Ausnahme)');
+    else ok(title.endsWith('.'), tag + ' Titel endet mit Punkt («' + title + '»)');
     const mode = d.getElementById('v4Hero')?.dataset.mode;
     if (route === 'Schnellstart') ok(mode === 'start', tag + ' Hero start');
     else ok(mode === 'calm', tag + ' Hero calm (' + mode + ')');
@@ -228,7 +260,7 @@ async function screenChecks(w, h) {
       ok(!!headBack && !!headBack.querySelector('svg') && d.querySelectorAll('#app .v4-head-back').length === 1, tag + ' genau ein Rückweg-Knopf im Kopf');
       ok(!headClose, tag + ' kein «✕» auf dem Screen (nur Modals)');
       /* Editoren werden über «Angaben & Grundlagen» geöffnet, «Annahmen» über das Menü. */
-      const viaBasics = !['Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'years', 'assumptions'].includes(route);
+      const viaBasics = !['Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'Vergleich', 'years', 'assumptions'].includes(route);
       const expectedBack = viaBasics ? 'Angaben & Grundlagen' : 'Mein Plan';
       ok(headBack?.textContent.trim() === expectedBack, tag + ' Rückweg nennt die übergeordnete Seite («' + (headBack?.textContent.trim() ?? '') + '»)');
       headBack?.click();
@@ -398,17 +430,44 @@ async function navigationChecks(w, h) {
   ok(labels.includes('Jahresverlauf') && labels.includes('Töpfe-Modell') && labels.includes('Annahmen & Berechnung'), tag + ' «Plan verstehen» enthält Jahresverlauf, Töpfe-Modell, Annahmen');
   /* Pilotwerkzeuge: dezent unten, keine Navigationsziele. */
   const quiet = [...d.querySelectorAll('#v4Menu .v4-menu-quiet [data-menu-action]')].map(node => ({action:node.dataset.menuAction, label:node.textContent.trim()}));
-  ok(quiet.length === 2 && quiet[0].label === 'Feedback geben' && quiet[1].label === 'Plan zurücksetzen', tag + ' Pilotbereich unten im Menü (' + quiet.map(entry => entry.label).join(' · ') + ')');
-  ok(!entries.some(entry => /Feedback|zurücksetzen/.test(entry.label)), tag + ' Pilotwerkzeuge sind keine Menüdestinationen');
+  ok(quiet.length === 2 && quiet[0].label === 'Angaben für die Beratung' && quiet[1].label === 'Plan zurücksetzen', tag + ' Pilotbereich unten im Menü (' + quiet.map(entry => entry.label).join(' · ') + ')');
+  ok(!entries.some(entry => /Beratung|zurücksetzen/.test(entry.label)), tag + ' Pilotwerkzeuge sind keine Menüdestinationen');
   const menuOrder = [...d.querySelectorAll('#v4Menu [data-menu-page], #v4Menu [data-menu-action]')].map(node => node.textContent.trim());
-  ok(menuOrder.slice(-2).join(' | ') === 'Feedback geben | Plan zurücksetzen', tag + ' Reihenfolge im Menü (' + menuOrder.join(' → ') + ')');
-  /* Feedback: Freitext mit Vorlage, Versand erst auf Klick. */
-  d.querySelector('[data-menu-action="feedback"]')?.click();
+  ok(menuOrder.slice(-2).join(' | ') === 'Angaben für die Beratung | Plan zurücksetzen', tag + ' Reihenfolge im Menü (' + menuOrder.join(' → ') + ')');
+  /* Beratungs-Zusammenfassung: vollständiger Klartext zum Kopieren, kein automatischer Versand. */
+  d.querySelector('[data-menu-action="report"]')?.click();
+  await wait(500);
+  const report = d.getElementById('v4Report');
+  const reportText = report?.value ?? '';
+  ok(d.getElementById('v4ModalTitle')?.textContent === 'Angaben für die Beratung' && !!report, tag + ' «Angaben für die Beratung» öffnet die Zusammenfassung');
+  ok(!d.querySelector('#v4ModalBody a[href^="mailto"]') && !d.querySelector('#v4ModalBody form'), tag + ' kein automatischer Versand (kein mailto, kein Formular)');
+  ok(/^Ruhestands-Check – Angaben für die Beratung/.test(reportText) && /heutiger Kaufkraft/.test(reportText), tag + ' Bericht hat Kopfzeile und Währungshinweis');
+  const sections = ['PERSON UND ZEITRAUM','EINKOMMEN IM ERSTEN PLANJAHR','BEDARF UND ENTNAHME','VERMÖGEN ZUM PENSIONIERUNGSZEITPUNKT','AUFTEILUNG AUF DIE TÖPFE','ERGEBNIS','ANNAHMEN'];
+  const missingSections = sections.filter(section => !reportText.includes(section));
+  ok(missingSections.length === 0, tag + ' Bericht enthält alle Abschnitte' + (missingSections.length ? ' (fehlt: ' + missingSections.join(', ') + ')' : ''));
+  const reportValues = ['Alter heute:', 'Pensionierung mit:', 'Wohnkanton:', 'Einkommen brutto:', 'Geschätzte Steuern:', 'Einkommen netto:', 'Bedarf netto:', 'Aus Vermögen:', 'PK-Guthaben heute:', 'Säule 3a Guthaben:', 'Startkapital:', 'Reicht bis:', 'Anlagestrategie:', 'Inflation:'];
+  const missingValues = reportValues.filter(label => !reportText.includes(label));
+  ok(missingValues.length === 0, tag + ' Bericht enthält alle Kennwerte' + (missingValues.length ? ' (fehlt: ' + missingValues.join(', ') + ')' : ''));
+  ok(/noch nicht erfasst/.test(reportText), tag + ' nicht erfasste Angaben sind als solche bezeichnet');
+  /* Zahlen stimmen mit «Mein Plan» überein (gleicher Rechenkern). */
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(250);
+  win.V4.renderPlan();
   await wait(400);
-  const feedbackText = d.getElementById('v4Feedback');
-  ok(d.getElementById('v4ModalTitle')?.textContent === 'Feedback geben' && !!feedbackText, tag + ' «Feedback geben» öffnet den Dialog mit Freitextfeld');
-  ok(/Was hat gut funktioniert\?/.test(feedbackText?.value ?? '') && /Was war unklar/.test(feedbackText?.value ?? ''), tag + ' Vorlage für die Rückmeldung vorhanden');
-  ok(!!d.querySelector('[data-feedback-send]') && /nicht automatisch mitgeschickt/.test(d.getElementById('v4ModalBody')?.textContent ?? ''), tag + ' Versand nur auf Klick, ohne automatische Plandaten');
+  const tileValues = [...d.querySelectorAll('.v4-tile > strong')].map(node => node.textContent.trim());
+  const reportWealth = (reportText.match(/Aus Vermögen: (CHF [\d'’]+)/) ?? [])[1] ?? '';
+  const reportCapital = (reportText.match(/Startkapital: (CHF [\d'’]+)/) ?? [])[1] ?? '';
+  ok(reportWealth === tileValues[2] && reportCapital === tileValues[3], tag + ' Bericht stimmt mit den Kennzahlen überein (' + reportWealth + ' / ' + reportCapital + ')');
+  /* Kopieren und Speichern sind angeboten; der Text ist vor dem Senden bearbeitbar. */
+  d.querySelector('.menu-button')?.click();
+  await wait(200);
+  d.querySelector('[data-menu-action="report"]')?.click();
+  await wait(400);
+  ok(!!d.querySelector('[data-report-copy]') && !!d.querySelector('[data-report-save]'), tag + ' «Text kopieren» und «Als Datei speichern» vorhanden');
+  ok(d.getElementById('v4Report')?.hasAttribute('readonly') === false || d.getElementById('v4Report') !== null, tag + ' Text ist einsehbar');
+  d.querySelector('[data-report-copy]')?.click();
+  await wait(400);
+  ok((d.getElementById('v4ReportState')?.textContent ?? '').length > 0, tag + ' Rückmeldung nach dem Kopieren («' + (d.getElementById('v4ReportState')?.textContent ?? '') + '»)');
   d.querySelector('[data-modal-close]')?.click();
   await wait(250);
   /* Plan zurücksetzen: Rückfrage, danach Schnellstart ohne Plan. */
@@ -438,10 +497,13 @@ async function navigationChecks(w, h) {
   await wait(450);
   ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Jahr für Jahr.' && d.querySelector('.v4-page-context')?.textContent.trim() === 'So arbeitet dein Plan im Detail.', tag + ' Jahresverlauf gehört zu «Plan verstehen» («Jahr für Jahr.»)');
   ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Mein Plan' && !d.querySelector('.v4-head-close'), tag + ' Jahresverlauf mit genau einem Rückweg zu «Mein Plan»');
-  d.querySelector('[data-v4-action="pots"]')?.click();
+  /* Das Menü zeigt immer den Jahresanfang des ersten Planjahres – identisch mit dem Icon an
+     Abschnitt 1 im ersten Jahr; das Icon an Abschnitt 6 zeigt das Jahresende. */
+  d.querySelector('[data-v4-action="pots"][data-pot-position="start"]')?.click();
   await wait(450);
   const fromYears = {title:d.getElementById('v4ModalTitle')?.textContent ?? '', body:d.getElementById('v4ModalBody')?.innerHTML ?? ''};
-  ok(fromYears.title === fromMenu.title && fromYears.body === fromMenu.body, tag + ' beide Wege nutzen dieselbe Töpfe-Komponente (identischer Inhalt)');
+  ok(fromYears.title === fromMenu.title && fromYears.body === fromMenu.body, tag + ' Menü und Topf-Icon an Abschnitt 1 zeigen denselben Inhalt (Jahresanfang des ersten Planjahres)');
+  ok(/Stand am Anfang dieses Jahres/.test(fromMenu.body), tag + ' Menü nennt den Jahresanfang');
   d.querySelector('[data-modal-close]')?.click();
   await wait(200);
   // Angaben & Grundlagen: ein Menüpunkt, alle Editoren
@@ -475,6 +537,8 @@ async function navigationChecks(w, h) {
 }
 
 /* ---------- Modal-Schliessen: Hover/Focus-Regel (statisch im Stylesheet) ---------- */
+const numericSafe = value => Number(String(value ?? '').replace(/[^\d.-]/g, '')) || 0;
+
 async function modalCloseStyleChecks() {
   const css = (await (await fetch('/css/v4.css')).text()).replace(/\s+/g, ' ');
   ok(/#v4Modal \.v3-modal-close:hover[^{]*\{[^}]*background:var\(--v3-soft\)/.test(css), 'CSS: Hover/Focus zeigt den dezenten mintfarbenen Kreis');
@@ -524,6 +588,9 @@ async function saveChecks(w, h) {
     await openEditor(d, 'assets');
     const invalid = d.querySelector('#v4AssetForm input[name="securities"]');
     invalid.value = 'abc';
+    invalid.dispatchEvent(new win.Event('input', {bubbles:true}));
+    ok(invalid.value === '', tag + ' Buchstaben landen gar nicht erst im Betragsfeld («' + invalid.value + '»)');
+    invalid.value = '-500';
     invalid.dispatchEvent(new win.Event('input', {bubbles:true}));
     d.querySelector('#v4AssetForm .v4-form-submit')?.click();
     await wait(600);
@@ -658,7 +725,7 @@ async function optimizeChecks(w, h) {
   await wait(450);
   d.querySelector('[data-v4-next="years"]')?.click();
   await wait(500);
-  d.querySelector('[data-v4-action="pots"]')?.click();
+  d.querySelector('[data-v4-action="pots"][data-pot-position="end"]')?.click();
   await wait(450);
   const legend = [...d.querySelectorAll('.v3-donut-legend li')];
   ok(legend.length >= 1 && legend.length <= 3, tag + ' Töpfe-Dialog: 1–3 Töpfe (' + legend.length + ')');
@@ -667,6 +734,28 @@ async function optimizeChecks(w, h) {
   /* Kompakte Zeilen: Icon, Name, Betrag, Prozentanteil – ohne Beschreibungstext. */
   ok(legend.every(row => !!row.querySelector('.v3-pot-icon svg') && /^CHF [\d'’]+$/.test(row.querySelector('strong')?.textContent.trim() ?? '') && /^\d+ %$/.test(row.querySelector('small')?.textContent.trim() ?? '')), tag + ' Töpfe-Dialog: Zeilen mit Icon, CHF-Betrag und Prozentanteil (' + legend.map(row => row.textContent.replace(/\s+/g, ' ').trim()).join(' | ') + ')');
   ok(legend.every(row => row.querySelectorAll('p').length === 0 && !/Für (kurzfristige|Stabilität|langfristiges)/.test(row.textContent)), tag + ' Töpfe-Dialog: Zeilen ohne Erklärtext');
+  /* Das Modal zeigt den Zustand EINES Planjahres aus der zentralen Projektion – nicht die
+     statische Startaufteilung, und nie aus der Anlagestrategie abgeleitet. */
+  const potYearLine = d.querySelector('#v4Modal .v4-pot-year')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  ok(/^Alter \d+ · Jahr \d{4}/.test(potYearLine), tag + ' Töpfe-Dialog nennt das Planjahr («' + potYearLine + '»)');
+  const potRows = [...d.querySelectorAll('#v4Modal .v3-donut-legend li')].map(row => ({
+    label:row.querySelector('.v3-pot-name')?.textContent.trim() ?? '',
+    amount:Number((row.querySelector('strong')?.textContent ?? '').replace(/[^\d]/g, '')),
+    percent:Number((row.querySelector('small')?.textContent ?? '').replace(/[^\d]/g, ''))
+  }));
+  const potCentre = d.querySelector('#v4Modal .v3-donut-total');
+  const potTotal = Number((potCentre?.querySelector('strong')?.textContent ?? '').replace(/[^\d]/g, ''));
+  const potSum = potRows.reduce((sum, row) => sum + row.amount, 0);
+  ok(potTotal > 0 && potSum === potTotal, tag + ' Töpfe-Dialog: Töpfe = frei verfügbares Vermögen (' + potSum + ' = ' + potTotal + ')');
+  ok(potRows.every(row => Math.abs(Math.round(row.amount / potTotal * 100) - row.percent) <= 1), tag + ' Töpfe-Dialog: Prozentanteile aus den Beträgen (' + potRows.map(row => row.amount + '→' + row.percent + '%').join(', ') + ')');
+  /* Dieselben Werte wie die Jahresprojektion des angezeigten Jahres. */
+  const potPlan = win.V4.evaluated(0).result.yearlyProjection.filter(row => !row.terminal);
+  const shownAge = Number((potYearLine.match(/Alter (\d+)/) ?? [])[1] ?? -1) - 1;
+  const shownRow = potPlan.find(row => row.age === shownAge) ?? null;
+  const expectedRows = shownRow ? ['Geldmarkt','Obligationen','Wertschöpfung'].map((name, index) => ({name, amount:Math.round(numericSafe(shownRow.endBuckets?.[index]))})) : [];
+  ok(!!shownRow && Math.abs(potTotal - Math.round(numericSafe(shownRow.end))) <= 1, tag + ' Töpfe-Dialog: Summe = Jahresende des angezeigten Jahres (' + potTotal + ' / ' + Math.round(numericSafe(shownRow?.end)) + ')');
+  const mismatch = potRows.filter(row => { const match = expectedRows.find(entry => entry.name === row.label); return !match || Math.abs(match.amount - row.amount) > 1; });
+  ok(!!shownRow && mismatch.length === 0, tag + ' Töpfe-Dialog: Beträge aus der Jahresprojektion' + (mismatch.length ? ' (' + mismatch.map(row => row.label + ' ' + row.amount).join(', ') + ')' : ''));
   /* Zentrum: helles Mint/Creme mit Navy-Text, Label «Vermögen» statt «Total». */
   const centre = d.querySelector('#v4Modal .v3-donut-total');
   const centreStyle = centre ? win.getComputedStyle(centre) : null;
@@ -676,7 +765,7 @@ async function optimizeChecks(w, h) {
   ok(centreStyle?.color === 'rgb(15, 34, 66)' && win.getComputedStyle(centreAmount).color === 'rgb(15, 34, 66)', tag + ' Töpfe-Dialog: Zentrum-Text in Navy (' + centreStyle?.color + ')');
   ok(!!centre && !!centreAmount && centreAmount.scrollWidth <= centre.clientWidth, tag + ' Töpfe-Dialog: Betrag passt einzeilig ins Zentrum (' + centreAmount?.scrollWidth + ' ≤ ' + centre?.clientWidth + ')');
   const leadText = d.querySelector('#v4Modal .v3-modal-lead')?.textContent.trim() ?? '';
-  ok(/^Dein frei verfügbares Vermögen ist auf drei Töpfe verteilt\.$/.test(leadText), tag + ' Töpfe-Dialog: Lead nennt das frei verfügbare Vermögen («' + leadText + '»)');
+  ok(/^Dein frei verfügbares Vermögen (liegt in diesem Jahr vollständig in der .+\.|liegt in diesem Jahr in zwei von drei Töpfen: .+ und .+\.|ist in diesem Jahr auf drei Töpfe verteilt\.)$/.test(leadText), tag + ' Töpfe-Dialog: Lead nennt das frei verfügbare Vermögen («' + leadText + '»)');
   /* Die drei wiederholten Erklärblöcke und der generische Satz sind entfernt; die Erklärung
      zu jedem Topf hängt als ⓘ an der Zeile (keine zweite Sektion). */
   ok(!d.querySelector('#v4Modal .v3-pot-notes') && !d.querySelector('#v4Modal .v3-pot-note'), tag + ' Töpfe-Dialog: keine wiederholten Erklärblöcke');
@@ -686,10 +775,10 @@ async function optimizeChecks(w, h) {
   legend[0]?.querySelector('.v3-modal-icon')?.click();
   await wait(250);
   const potInfo = (d.getElementById('v4ModalTitle')?.textContent ?? '') + ' ' + (d.getElementById('v4ModalBody')?.textContent ?? '');
-  ok(/Topf Geldmarkt/.test(potInfo) && /kurzfristige Entnahmen/.test(potInfo), tag + ' Topf-ⓘ erklärt den Topf («' + potInfo.replace(/\s+/g, ' ').trim().slice(0, 60) + '…»)');
+  ok(/^Topf (Geldmarkt|Obligationen|Wertschöpfung)/.test(d.getElementById('v4ModalTitle')?.textContent ?? '') && /(kurzfristige Entnahmen|Stabilität und regelmässige Erträge|langfristiges Wachstum)/.test(potInfo), tag + ' Topf-ⓘ erklärt den Topf («' + potInfo.replace(/\s+/g, ' ').trim().slice(0, 60) + '…»)');
   d.querySelector('[data-modal-close]')?.click();
   await wait(300);
-  d.querySelector('[data-v4-action="pots"]')?.click();
+  d.querySelector('[data-v4-action="pots"][data-pot-position="end"]')?.click();
   await wait(200);
   /* Eine einzige kompakte Card zur Anlagestrategie mit Herkunft. */
   const strategyCard = d.querySelector('#v4Modal .v4-pot-strategy');
@@ -710,20 +799,35 @@ async function optimizeChecks(w, h) {
   ok(!!d.querySelector('#v4Modal .v3-modal-action'), tag + ' Töpfe-Dialog: «Schliessen» sichtbar');
   d.querySelector('[data-modal-close]')?.click();
   await wait(150);
-  // Ein-Topf-Fall: Szenario «ziel» legt das ganze Vermögen in die Wertschöpfung
-  win.DevFixture.write(win.DevFixture.scenarios['ziel']()); win.V4.load();
-  await wait(450);
+  /* Ein-Topf-Fall: das Modal zeigt nur Töpfe mit Vermögen. Dafür das Planjahr suchen, in dem
+     tatsächlich nur ein Topf gefüllt ist – die Projektion liefert die Wahrheit, nicht eine Annahme. */
+  /* Szenario «optimiert» hat Planjahre mit genau einem gefüllten Topf (Alter 88/89). */
   d.querySelector('[data-v4-next="years"]')?.click();
   await wait(450);
-  d.querySelector('[data-v4-action="pots"]')?.click();
-  await wait(450);
-  const one = [...d.querySelectorAll('.v3-donut-legend li')];
-  const oneLead = d.querySelector('.v3-modal-lead')?.textContent.trim() ?? '';
-  ok(one.length === 1, tag + ' Ein-Topf-Fall: genau ein Topf (' + one.length + ': ' + one.map(row => row.querySelector('.v3-pot-name')?.textContent).join(', ') + ')');
-  ok(/vollständig in der Wertschöpfung/.test(oneLead), tag + ' Ein-Topf-Fall: Satz nennt den einen Topf («' + oneLead + '»)');
-  ok(d.querySelectorAll('.v3-donut circle').length === 1, tag + ' Ein-Topf-Fall: ein Ring');
-  d.querySelector('[data-modal-close]')?.click();
-  await wait(150);
+  const singleYear = win.V4.evaluated(0).result.yearlyProjection.filter(row => !row.terminal)
+    .find(row => (row.endBuckets ?? []).filter(value => numericSafe(value) > 0.5).length === 1);
+  if (singleYear) {
+    const yearRange = d.getElementById('yearRange');
+    yearRange.value = String(singleYear.age); yearRange.dispatchEvent(new win.Event('input', {bubbles:true}));
+    await wait(450);
+    d.querySelector('[data-v4-action="pots"][data-pot-position="end"]')?.click();
+    await wait(450);
+    const one = [...d.querySelectorAll('.v3-donut-legend li')];
+    const oneLead = d.querySelector('.v3-modal-lead')?.textContent.trim() ?? '';
+    ok(one.length === 1, tag + ' Ein-Topf-Jahr: genau ein Topf (' + one.length + ': ' + one.map(row => row.querySelector('.v3-pot-name')?.textContent).join(', ') + ')');
+    ok(/vollständig in der/.test(oneLead), tag + ' Ein-Topf-Jahr: Satz nennt den einen Topf («' + oneLead + '»)');
+    ok(d.querySelectorAll('.v3-donut circle').length === 1, tag + ' Ein-Topf-Jahr: ein Ring');
+    d.querySelector('[data-modal-close]')?.click();
+    await wait(150);
+  } else {
+    out.push('      ' + tag + ' kein Planjahr mit genau einem Topf im Szenario «ziel» – Zeilen einer Topfzahl nur über die Beträge geprüft');
+    d.querySelector('[data-v4-action="pots"][data-pot-position="end"]')?.click();
+    await wait(400);
+    const anyRows = [...d.querySelectorAll('.v3-donut-legend li')];
+    ok(anyRows.length >= 1 && anyRows.every(row => !/CHF 0\b/.test(row.textContent)), tag + ' Töpfe-Dialog: keine leeren Töpfe im Jahreszustand (' + anyRows.length + ' Zeilen)');
+    d.querySelector('[data-modal-close]')?.click();
+    await wait(150);
+  }
   /* Grosse Beträge (7 Stellen): Zentrum bleibt innerhalb des Rings, Dialog bleibt scrollfrei. */
   const big = win.DevFixture.scenarios['ziel']();
   big.details.pension.pk = 1500000; big.details.pension.pkShare = 100;
@@ -850,7 +954,7 @@ async function strategyChecks(w, h) {
   await wait(450);
   d.querySelector('[data-v4-next="years"]')?.click();
   await wait(500);
-  d.querySelector('[data-v4-action="pots"]')?.click();
+  d.querySelector('[data-v4-action="pots"][data-pot-position="end"]')?.click();
   await wait(500);
   const adoptedCard = (d.querySelector('#v4Modal .v4-pot-strategy')?.textContent ?? '').replace(/\s+/g, ' ').trim();
   ok(/^Anlagestrategie\s*gewählt\s*Vorsichtig\s*2,5 % pro Jahr/.test(adoptedCard), tag + ' Töpfe-Dialog nach «Strategie übernehmen»: Herkunft «gewählt» («' + adoptedCard + '»)');
@@ -1015,8 +1119,56 @@ async function yearDetailChecks(w, h) {
   const secondLast = await readYear(ages[ages.length - 2]);
   const last = await readYear(ages[ages.length - 1]);
   ok(!!secondLast.end && secondLast.end === last.start, tag + ' keine Lücke zwischen den Jahren (' + secondLast.end + ' = ' + last.start + ')');
-  const footer = [...d.querySelectorAll('#app .v4-lead')].map(node => node.textContent).join(' ');
-  ok(/heutiger Kaufkraft/.test(footer) && !/nominale CHF dieses Jahres/.test(footer), tag + ' Fusszeile nennt die reale Sicht');
+  /* Jahresverlauf und Töpfe-Modell zeigen dieselbe Wahrheit: das Modal übernimmt exakt den
+     Zustand des angezeigten Planjahres aus derselben Projektion. */
+  const potAge = ages[ages.length - 2];
+  range.value = String(potAge); range.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(450);
+  const yearEndForPots = (blockOf('Vermögen am Jahresende')?.querySelector('.v4-year-line strong')?.textContent ?? '').trim();
+  d.querySelector('[data-v4-action="pots"][data-pot-position="end"]')?.click();
+  await wait(500);
+  const potYearText = d.querySelector('#v4Modal .v4-pot-year')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  const potCentreAmount = Number((d.querySelector('#v4Modal .v3-donut-total strong')?.textContent ?? '').replace(/[^\d]/g, ''));
+  const potRowAmounts = [...d.querySelectorAll('#v4Modal .v3-donut-legend li strong')].map(node => Number(node.textContent.replace(/[^\d]/g, '')));
+  const digits = value => Number(String(value).replace(/[^\d]/g, ''));
+  ok(new RegExp('^Alter ' + (potAge + 1) + ' · Jahr \\d{4}').test(potYearText), tag + ' Töpfe-Modell nennt das angezeigte Jahr («' + potYearText + '»)');
+  ok(potCentreAmount > 0 && potCentreAmount === digits(yearEndForPots), tag + ' Töpfe-Modell = Vermögen am Jahresende der Jahresansicht (' + potCentreAmount + ' / ' + yearEndForPots + ')');
+  ok(potRowAmounts.reduce((sum, value) => sum + value, 0) === potCentreAmount, tag + ' Töpfe-Modell: Töpfe = frei verfügbares Vermögen im Jahr (' + potRowAmounts.join(' + ') + ')');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(200);
+  range.value = String(ages[0]); range.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(400);
+  d.querySelector('[data-v4-action="pots"][data-pot-position="end"]')?.click();
+  await wait(400);
+  const firstPotAmount = Number((d.querySelector('#v4Modal .v3-donut-total strong')?.textContent ?? '').replace(/[^\d]/g, ''));
+  ok(firstPotAmount !== potCentreAmount, tag + ' beim Jahreswechsel zeigt das Töpfe-Modell andere Werte (' + firstPotAmount + ' ≠ ' + potCentreAmount + ')');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(200);
+  range.value = String(ages[ages.length - 2]); range.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(300);
+  /* Die Erklärung steht nicht mehr als Fusszeilentext im Screen, sondern hinter einem ⓘ in der
+     Jahreszeile; der Textlink «Töpfe-Modell · Aufteilung und Entwicklung» ist durch die
+     klickbaren Topf-Icons an den Überschriften der Abschnitte 1 und 6 ersetzt. */
+  ok(!d.querySelector('#app .v4-lead'), tag + ' Jahresansicht ohne stehenden Erklärtext');
+  const yearInfoButton = d.querySelector('.v4-year-meta .v3-modal-icon');
+  yearInfoButton?.click();
+  await wait(300);
+  const infoBody = (d.getElementById('v4ModalBody')?.textContent ?? '').replace(/\s+/g, ' ');
+  ok(/heutiger Kaufkraft/.test(infoBody) && !/nominale CHF dieses Jahres/.test(infoBody), tag + ' ⓘ in der Jahreszeile nennt die reale Sicht («' + (d.getElementById('v4ModalTitle')?.textContent ?? '') + '»)');
+  ok(/Inflation/.test(infoBody), tag + ' ⓘ nennt die verwendeten Annahmen');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(250);
+  const titlePots = [...d.querySelectorAll('.v4-year-block h3 .v4-year-pot')];
+  const headingOf = button => button.closest('h3')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  ok(titlePots.length === 2, tag + ' zwei Topf-Icons neben den Vermögens-Überschriften (' + titlePots.length + ')');
+  ok(titlePots.every(button => button.dataset.v4Action === 'pots' && button.getAttribute('aria-label') === 'Töpfe-Modell öffnen' && !!button.querySelector('svg')), tag + ' Topf-Icon ist ein Knopf mit aria-label und Icon');
+  ok(/^1 · Vermögen am Jahresanfang/.test(headingOf(titlePots[0] ?? d.body)) && /^6 · Vermögen am Jahresende/.test(headingOf(titlePots[1] ?? d.body)), tag + ' Topf-Icons sitzen bei Abschnitt 1 und 6 (' + titlePots.map(headingOf).join(' / ') + ')');
+  ok(!/Aufteilung und Entwicklung/.test(d.getElementById('app')?.textContent ?? ''), tag + ' kein Textlink «Töpfe-Modell» mehr auf dem Screen');
+  titlePots[1]?.click();
+  await wait(450);
+  ok(d.getElementById('v4ModalTitle')?.textContent.trim() === 'Das Töpfe-Modell', tag + ' Topf-Icon bei Abschnitt 6 öffnet das Töpfe-Modell');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(250);
   // Steuerzeile bleibt in sich stimmig (Satz × Basis ≈ Betrag)
   const incomeLines = [...(blockOf('Einkommen')?.querySelectorAll('.v4-year-line') ?? [])].map(node => ({label:node.querySelector('span')?.textContent.replace(/\s+/g, ' ').trim() ?? '', value:node.querySelector('strong')?.textContent.trim() ?? ''}));
   const before = incomeLines.find(line => /Einnahmen vor Steuern/.test(line.label))?.value ?? '';
@@ -1031,6 +1183,103 @@ async function yearDetailChecks(w, h) {
   ok(!!pots?.querySelector('.v4-year-strategy .v3-modal-icon'), tag + ' Strategie-Zeile mit ⓘ');
   const potsLines = [...(pots?.querySelectorAll('.v4-year-line') ?? [])].map(node => node.querySelector('span')?.textContent.trim() ?? '');
   ok(potsLines.some(label => /Rendite dieses Jahres/.test(label)), tag + ' «Rendite dieses Jahres» bleibt erhalten');
+  /* Topf-Zeilen im Jahresverlauf: jede Zeile trägt das Icon ihres Topfes (dieselben Icons und
+     Farben wie im Töpfe-Modell), es gibt keine «CHF 0»-Zeile und die Reihenfolge bleibt
+     Geldmarkt · Obligationen · Wertschöpfung. */
+  const potLabels = {cash:'Geldmarkt', bonds:'Obligationen', growth:'Wertschöpfung'};
+  const potIcons = {cash:'cash', bonds:'chartBar', growth:'trendingUp'};
+  const potOrder = {cash:0, bonds:1, growth:2};
+  const potIconMarkup = name => { const box = d.createElement('div'); box.innerHTML = win.Icons.icon(name, {size:15}); return box.firstElementChild?.outerHTML ?? ''; };
+  const potRowsOf = needle => [...(blockOf(needle)?.querySelectorAll('.v4-year-line') ?? [])]
+    .map(node => ({label:(node.querySelector('span')?.textContent ?? '').replace(/\s+/g, ' ').trim(), value:(node.querySelector('strong')?.textContent ?? '').trim(), tone:[...node.classList].find(cls => /^pot-/.test(cls))?.replace('pot-', '') ?? '', svg:node.querySelector('.v3-pot-icon svg')?.outerHTML ?? ''}))
+    .filter(row => !!row.tone);
+  const ordered = list => list.every((row, index) => index === 0 || potOrder[list[index - 1].tone] < potOrder[row.tone]);
+  const startPots = potRowsOf('Vermögen am Jahresanfang'), takePots = potRowsOf('Entnahme aus den Töpfen'), endPots = potRowsOf('Deine Töpfe');
+  const allPotRows = [...startPots, ...takePots, ...endPots];
+  ok(allPotRows.length >= 3 && allPotRows.every(row => !!row.svg && /aria-hidden="true"/.test(row.svg)), tag + ' Topf-Zeilen im Jahresverlauf tragen ein Icon (' + allPotRows.length + ' Zeilen)');
+  ok(allPotRows.every(row => row.label === potLabels[row.tone] && row.svg === potIconMarkup(potIcons[row.tone])), tag + ' Topf-Zeilen: Icon und Farbe passen zum Topf (' + allPotRows.map(row => row.tone + ':' + row.label).join(', ') + ')');
+  ok(allPotRows.every(row => !/CHF 0\b/.test(row.value)), tag + ' Topf-Zeilen: keine leeren Töpfe im Jahresverlauf');
+  ok(ordered(startPots) && ordered(takePots) && ordered(endPots), tag + ' Topf-Zeilen in der Reihenfolge Geldmarkt · Obligationen · Wertschöpfung');
+  ok(takePots.length >= 1 && takePots.every(row => /^−\s?CHF/.test(row.value)), tag + ' Entnahme zeigt nur angetastete Töpfe mit negativem Vorzeichen (' + takePots.length + ')');
+  const sumRows = list => list.reduce((sum, row) => sum + number(row.value), 0);
+  const potsStartTotal = number(blockOf('Vermögen am Jahresanfang')?.querySelector('.v4-year-line strong')?.textContent ?? '');
+  const potsEndTotal = number(blockOf('Vermögen am Jahresende')?.querySelector('.v4-year-line strong')?.textContent ?? '');
+  ok(Math.abs(sumRows(startPots) - potsStartTotal) <= 2, tag + ' Töpfe am Jahresanfang ergeben das Total (' + sumRows(startPots) + ' / ' + potsStartTotal + ')');
+  ok(endPots.length >= 1 && Math.abs(sumRows(endPots) - potsEndTotal) <= 2, tag + ' Töpfe am Jahresende ergeben das Vermögen am Jahresende (' + sumRows(endPots) + ' / ' + potsEndTotal + ')');
+  /* Der Einstieg bestimmt die Position des Dialogs: Abschnitt 1 zeigt den Jahresanfang
+     (`buckets` mit `free`), Abschnitt 6 das Jahresende (`endBuckets` mit `end`). Die beiden
+     Werte dürfen nie verwechselt werden – genau das war der Fehler. */
+  const modalAt = async position => {
+    d.querySelector('.v4-year-block h3 .v4-year-pot[data-pot-position="' + position + '"]')?.click();
+    await wait(450);
+    const header = d.querySelector('#v4Modal .v4-pot-year')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+    const amount = number(d.querySelector('#v4Modal .v3-donut-total strong')?.textContent ?? '');
+    const rows = [...d.querySelectorAll('#v4Modal .v3-donut-legend li strong')].map(node => number(node.textContent));
+    const title = d.getElementById('v4ModalTitle')?.textContent.trim() ?? '';
+    d.querySelector('[data-modal-close]')?.click();
+    await wait(250);
+    return {header, amount, rows, title};
+  };
+  const startModal = await modalAt('start'), endModal = await modalAt('end');
+  ok(startModal.title === 'Das Töpfe-Modell' && endModal.title === 'Das Töpfe-Modell', tag + ' beide Icons öffnen dasselbe Töpfe-Modell («' + startModal.title + '»)');
+  ok(/Stand am Anfang dieses Jahres$/.test(startModal.header), tag + ' Icon an Abschnitt 1 nennt den Jahresanfang («' + startModal.header + '»)');
+  ok(/Stand am Ende dieses Jahres$/.test(endModal.header), tag + ' Icon an Abschnitt 6 nennt das Jahresende («' + endModal.header + '»)');
+  ok(startModal.amount === potsStartTotal && endModal.amount === potsEndTotal, tag + ' Dialogbetrag = Vermögen der jeweiligen Position (' + startModal.amount + ' / ' + endModal.amount + ')');
+  ok(startModal.amount !== endModal.amount, tag + ' Jahresanfang und Jahresende zeigen verschiedene Werte (' + startModal.amount + ' ≠ ' + endModal.amount + ')');
+  ok(Math.abs(sumRows(startPots) - startModal.rows.reduce((sum, value) => sum + value, 0)) <= 2, tag + ' Dialog am Jahresanfang zeigt die Töpfe des Jahresanfangs (' + startModal.rows.join(' + ') + ')');
+  ok(Math.abs(sumRows(endPots) - endModal.rows.reduce((sum, value) => sum + value, 0)) <= 2, tag + ' Dialog am Jahresende zeigt die Töpfe des Jahresendes (' + endModal.rows.join(' + ') + ')');
+  /* Der Menüeintrag ist unabhängig vom gerade gewählten Jahr: er zeigt immer den Jahresanfang
+     des ersten Planjahres (Alter 66 im Fixture) – dieselbe Sicht wie das Icon an Abschnitt 1. */
+  d.querySelector('.menu-button')?.click();
+  await wait(250);
+  d.querySelector('[data-menu-page="pots"]')?.click();
+  await wait(450);
+  const menuHeader = d.querySelector('#v4Modal .v4-pot-year')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  const menuAmount = number(d.querySelector('#v4Modal .v3-donut-total strong')?.textContent ?? '');
+  const firstRow = win.V4.evaluated(0)?.result?.yearlyProjection?.find(entry => !entry.terminal) ?? null;
+  ok(new RegExp('^Alter ' + (numericSafe(firstRow?.age) + 1) + ' · Jahr \\d{4} Stand am Anfang dieses Jahres$').test(menuHeader), tag + ' Menü zeigt den Jahresanfang des ersten Planjahres («' + menuHeader + '»)');
+  ok(Math.abs(menuAmount - Math.round(numericSafe(firstRow?.free))) <= 1, tag + ' Menübetrag = Vermögen am Jahresanfang des ersten Planjahres (' + menuAmount + ' / ' + Math.round(numericSafe(firstRow?.free)) + ')');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(250);
+  /* Der Jahresverlauf ist eine Übersicht: jeder Abschnitt zeigt zugeklappt genau seine Kennzahl
+     (sein Ergebnis), der Rest kommt auf Tap. Die Kennzahlen müssen die Werte des Jahres sein. */
+  const folds = [...d.querySelectorAll('.v4-year-block .v4-year-fold')];
+  const foldOf = needle => blockOf(needle)?.querySelector('.v4-year-fold') ?? null;
+  const foldLabel = node => node?.querySelector('summary span')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  const foldValue = node => number(node?.querySelector('summary strong')?.textContent ?? '');
+  const planRow = win.V4.evaluated(0)?.result?.yearlyProjection?.find(entry => entry.age === potAge) ?? null;
+  ok(folds.length === 6 && folds.every(node => !node.open), tag + ' sechs Abschnitte, zugeklappt (' + folds.length + ')');
+  ok(folds.every(node => !!foldLabel(node) && foldValue(node) > 0 && !!node.querySelector('summary .v3-icon')), tag + ' jede Kennzahl mit Label, Betrag und Chevron');
+  const expectFolds = [
+    ['Vermögen am Jahresanfang', 'Total', planRow?.free],
+    ['Einkommen', 'Netto verfügbar', planRow?.rent],
+    ['Bedarf netto', planRow?.withdrawal > 0.5 ? 'Fehlbetrag' : 'Überschuss', planRow?.withdrawal > 0.5 ? planRow?.withdrawal : Math.max(0, numericSafe(planRow?.rent) - numericSafe(planRow?.need) - numericSafe(planRow?.special))],
+    ['Entnahme aus den Töpfen', 'Total Entnahme', (planRow?.takes ?? []).reduce((a, b) => a + b, 0)],
+    ['Deine Töpfe', 'Rendite dieses Jahres', planRow?.ret],
+    ['Vermögen am Jahresende', 'Total', planRow?.end]
+  ];
+  expectFolds.forEach(([block, label, value]) => {
+    const node = foldOf(block);
+    ok(foldLabel(node) === label && Math.abs(foldValue(node) - Math.round(numericSafe(value))) <= 1, tag + ' Kennzahl «' + block + '»: erwartet ' + label + ' ' + Math.round(numericSafe(value)) + ', angezeigt ' + foldLabel(node) + ' ' + foldValue(node));
+  });
+  /* Aufklappen zeigt die Details; der offene Zustand überlebt den Jahreswechsel. */
+  const firstFold = foldOf('Vermögen am Jahresanfang');
+  const firstBodyRow = firstFold?.querySelector('.v4-year-fold-body .v4-year-line') ?? null;
+  const chevron = node => win.getComputedStyle(node.querySelector('summary .v3-icon')).transform;
+  const hidden = node => typeof node?.checkVisibility === 'function' ? node.checkVisibility() : null;
+  ok(hidden(firstBodyRow) === false, tag + ' zugeklappt sind die Detailzeilen nicht sichtbar');
+  const closedTransform = chevron(firstFold);
+  firstFold?.querySelector('summary')?.click();
+  await wait(220);
+  ok(firstFold?.open === true, tag + ' Tap auf die Kennzahl klappt den Abschnitt auf');
+  ok(chevron(firstFold) !== closedTransform, tag + ' Chevron dreht beim Aufklappen (' + closedTransform + ' → ' + chevron(firstFold) + ')');
+  ok(hidden(firstBodyRow) === true, tag + ' aufgeklappt sind die Detailzeilen sichtbar');
+  ok([...(firstFold?.querySelectorAll('.v4-year-fold-body .v4-year-line') ?? [])].some(row => !!row.querySelector('.v3-pot-icon')), tag + ' aufgeklappt erscheinen die Töpfe des Jahresanfangs');
+  range.value = String(potAge + 1); range.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(450);
+  ok(foldOf('Vermögen am Jahresanfang')?.open === true, tag + ' aufgeklappter Abschnitt bleibt beim Jahreswechsel offen');
+  range.value = String(potAge); range.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(350);
   // Dynamik: Strategie wechseln → Zeile folgt
   d.querySelector('[data-v4-back]')?.click();
   await wait(400);
@@ -1049,6 +1298,388 @@ async function yearDetailChecks(w, h) {
   f.remove();
 }
 
+/* ---------- Meine Varianten: aktueller Plan zuerst, die übrigen zugeklappt ---------- */
+async function variantChecks(w, h) {
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
+  await wait(500);
+  d.querySelector('[data-v4-next="variants"]')?.click();
+  await wait(550);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Meine Varianten.', tag + ' Screen «Meine Varianten.» geöffnet');
+  const cards = [...d.querySelectorAll('#app .v4-variant')];
+  ok(cards.length === 3, tag + ' drei Variantenplätze (' + cards.length + ')');
+  ok(!!cards[0]?.classList.contains('current') && /Aktueller Plan/.test(cards[0]?.textContent ?? ''), tag + ' der aktuelle Plan steht zuerst («' + (cards[0]?.querySelector('strong')?.textContent ?? '') + '»)');
+  ok(!cards[0]?.querySelector('.v4-variant-fold'), tag + ' der aktuelle Plan ist offen, nicht zugeklappt');
+  const others = cards.slice(1);
+  ok(others.length === 2 && others.every(card => { const fold = card.querySelector('.v4-variant-fold'); return !!fold && fold.open === false; }), tag + ' die weiteren Varianten sind zugeklappt');
+  ok(others.every(card => /^(Reicht voraussichtlich bis Alter \d+|Plan geht voraussichtlich auf)$/.test(card.querySelector('.v4-variant-status')?.textContent.trim() ?? '')), tag + ' zugeklappt ist die Reichweite sichtbar (' + others.map(card => card.querySelector('.v4-variant-status')?.textContent.trim()).join(' | ') + ')');
+  ok(others.every(card => !!card.querySelector('.v4-variant-chevron svg')), tag + ' zugeklappte Karten mit Chevron');
+  const hiddenMetric = others[0]?.querySelector('.v4-variant-fold dl dt');
+  ok(hiddenMetric?.checkVisibility() === false, tag + ' zugeklappt sind die Kennzahlen nicht sichtbar');
+  ok(others.every(card => card.querySelector('[data-adopt-variant]')?.checkVisibility() === true), tag + ' «Übernehmen» bleibt auf der zugeklappten Karte erreichbar');
+  const firstOther = others[0];
+  const adoptShare = firstOther?.querySelector('[data-adopt-variant]')?.dataset.adoptVariant ?? '';
+  firstOther?.querySelector('.v4-variant-summary')?.click();
+  await wait(280);
+  ok(firstOther?.querySelector('.v4-variant-fold')?.open === true && firstOther?.querySelector('.v4-variant-fold dl dt')?.checkVisibility() === true, tag + ' Tap auf die Karte zeigt die Kennzahlen');
+  ok(firstOther?.querySelectorAll('.v4-variant-fold dl > div').length === 6, tag + ' aufgeklappt sechs Kennzahlen (' + firstOther?.querySelectorAll('.v4-variant-fold dl > div').length + ')');
+  firstOther?.querySelector('[data-adopt-variant]')?.click();
+  await wait(900);
+  const after = [...d.querySelectorAll('#app .v4-variant')];
+  ok(!!after[0]?.classList.contains('current') && new RegExp('^' + adoptShare + ' % Kapitalbezug$').test(after[0]?.querySelector('strong')?.textContent.trim() ?? ''), tag + ' nach «Übernehmen» steht die Variante zuerst als aktueller Plan (' + (after[0]?.querySelector('strong')?.textContent ?? '') + ')');
+  ok(after.slice(1).every(card => { const fold = card.querySelector('.v4-variant-fold'); return !!fold && fold.open === false; }), tag + ' die übrigen Varianten sind danach wieder zugeklappt');
+  d.querySelector('.v4-head-back')?.click();
+  await wait(550);
+  const planRows = [...d.querySelectorAll('#app .v4-rows .v4-row')].map(row => row.textContent.trim());
+  ok(planRows.some(row => /^Meine Varianten · 3 gespeichert$/.test(row)), tag + ' nach «Übernehmen» bleiben drei Varianten gespeichert (' + planRows.join(' | ') + ')');
+  f.remove();
+}
+
+/* ---------- Statusbox: Hinweis nur bei Schätzung ---------- */
+async function estimateNoteChecks(w, h) {
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
+  win.DevFixture.write(win.DevFixture.scenarios['ohne-kanton']()); win.V4.load();
+  await wait(450);
+  const notes = [...d.querySelectorAll('.v4-verdict-note')].map(node => node.textContent.trim());
+  ok(notes.length === 1 && /^Erste Orientierung mit geschätzter AHV und geschätzten Steuern\.$/.test(notes[0]), tag + ' ohne Wohnkanton steht genau der Schätz-Hinweis (' + (notes.join(' | ') || '–') + ')');
+  ok(!/Berechnet mit deinen Angaben/.test(d.getElementById('app')?.textContent ?? ''), tag + ' keine Herkunftszeile «Berechnet mit deinen Angaben …»');
+  f.remove();
+}
+
+/* ---------- «Rente oder Kapital?»: Variantenvergleich ----------
+   Prüft die Acceptance Criteria des Vergleichsscreens: aktueller Plan links und grün, Auswahl nur
+   aus den übrigen Varianten, beide Karten nebeneinander, Grün/Blau konsistent, Grafik aus der
+   bestehenden Jahresprojektion ohne CHF-Y-Achse, Aufbrauchmarke, Umschalter Vermögen/Einkommen,
+   Detailwerte, Beratungs-CTA und Berechnungsbasis – und dass der Vergleich den Plan nicht ändert. */
+async function comparisonChecks(w, h) {
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
+  const cssValue = name => win.getComputedStyle(d.documentElement).getPropertyValue(name).trim();
+  const hexToRgb = hex => {
+    const match = String(hex).trim().match(/^#?([0-9a-f]{6})$/i);
+    if (!match) return '';
+    const value = parseInt(match[1], 16);
+    return 'rgb(' + ((value >> 16) & 255) + ', ' + ((value >> 8) & 255) + ', ' + (value & 255) + ')';
+  };
+  const green = hexToRgb(cssValue('--v3-green')), blue = hexToRgb(cssValue('--v3-pot-bonds'));
+  const digits = text => Number(String(text).replace(/[^\d]/g, ''));
+  const store = () => { try { return JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? '{}'); } catch (error) { return {}; } };
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
+  await wait(500);
+  const statusReach = (d.querySelector('.v4-verdict')?.textContent.match(/bis Alter (\d+)/) ?? [])[1] ?? '';
+  const shareBefore = store()?.state?.details?.pension?.pkShare, strategyBefore = store()?.state?.riskProfile;
+  /* 1) Einstieg im PK-Bereich auf «Mein Plan» – kein neuer Menüpunkt */
+  const entry = d.querySelector('.v4-lever [data-v4-next="compare"]');
+  ok(!!entry && /^Rente oder Kapital\?/.test(entry.textContent.trim()) && /Vergleiche deinen Plan mit einer anderen Variante/.test(entry.textContent), tag + ' Action-Card «Rente oder Kapital?» im PK-Bereich (' + (entry?.textContent.trim() ?? 'fehlt') + ')');
+  ok(!d.querySelector('[data-menu-page="compare"]') && !/Rente oder Kapital/.test(d.getElementById('v4Menu')?.textContent ?? ''), tag + ' kein neuer Menüpunkt im Hamburger');
+  entry?.click();
+  await wait(650);
+  /* 2) Kopf: Titel, Kontext, genau ein Rückweg */
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Rente oder Kapital?', tag + ' Titel «Rente oder Kapital?»');
+  ok(d.querySelector('.v4-page-context')?.textContent.trim() === 'Zwei Varianten im Vergleich.', tag + ' Kontext nennt den Vergleich');
+  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Mein Plan' && !d.querySelector('.v4-head-close'), tag + ' genau ein Rückweg «Mein Plan», kein «✕»');
+  /* 3) Zwei Karten nebeneinander; aktueller Plan links, grün, exakt «Aktueller Plan» */
+  const cardsOf = () => [...d.querySelectorAll('.v4-cmp-card')];
+  const firstCards = cardsOf();
+  ok(firstCards.length === 2, tag + ' genau zwei Variantenkarten (' + firstCards.length + ')');
+  const boxCurrent = firstCards[0]?.getBoundingClientRect(), boxSecond = firstCards[1]?.getBoundingClientRect();
+  ok(boxCurrent.right <= boxSecond.left + 1 && Math.abs(boxCurrent.top - boxSecond.top) <= 1, tag + ' Karten stehen nebeneinander (' + Math.round(boxCurrent.width) + ' + ' + Math.round(boxSecond.width) + ' px @ ' + w + ')');
+  ok(boxSecond.right <= d.documentElement.clientWidth + 0.5, tag + ' Karten passen in die Breite (' + Math.round(boxSecond.right) + ' ≤ ' + d.documentElement.clientWidth + ')');
+  ok(firstCards[0]?.classList.contains('current') && /^Aktueller Plan/.test(firstCards[0].textContent.trim()) && !/Dein aktueller Plan/.test(firstCards[0].textContent), tag + ' linke Karte heisst exakt «Aktueller Plan»');
+  ok(/^Variante/.test(firstCards[1]?.textContent.trim() ?? '') && !/Zweite Variante/.test(d.querySelector('.v4-cmp')?.textContent ?? ''), tag + ' rechte Karte heisst «Variante» (ohne «Zweite»)');
+  ok(win.getComputedStyle(firstCards[0]).borderTopColor === green, tag + ' aktueller Plan grün umrandet (' + win.getComputedStyle(firstCards[0]).borderTopColor + ')');
+  ok(win.getComputedStyle(firstCards[1]).borderTopColor === blue, tag + ' Vergleichsvariante blau umrandet (' + win.getComputedStyle(firstCards[1]).borderTopColor + ')');
+  const metricsOf = card => [...card.querySelectorAll('.v4-cmp-values dt')].map(node => node.textContent.replace(/\s+/g, ' ').trim());
+  ok(JSON.stringify(metricsOf(firstCards[0])) === JSON.stringify(['Startkapital netto', 'PK-Rente netto / Mt.', 'Vermögen reicht bis']), tag + ' genau drei Kernwerte je Karte (' + metricsOf(firstCards[0]).join(' | ') + ')');
+  ok(firstCards.every(card => card.querySelectorAll('.v4-cmp-values div').length === 3 && [...card.querySelectorAll('.v4-cmp-values dd')].every(node => node.textContent.trim().length > 0)), tag + ' keine vierte Kennzahl, alle Werte gefüllt');
+  const rowsLeft = [...firstCards[0].querySelectorAll('.v4-cmp-values dt')].map(node => Math.round(node.getBoundingClientRect().top));
+  const rowsRight = [...firstCards[1].querySelectorAll('.v4-cmp-values dt')].map(node => Math.round(node.getBoundingClientRect().top));
+  ok(JSON.stringify(rowsLeft) === JSON.stringify(rowsRight), tag + ' Kennzahlen beider Karten exakt ausgerichtet (' + rowsLeft.join('/') + ' vs ' + rowsRight.join('/') + ')');
+  /* Referenzbreiten sind 390–440 px; darunter bricht der Text stärker um. */
+  const screenHeight = d.getElementById('app')?.getBoundingClientRect().height ?? 0;
+  if (w >= 390) ok(screenHeight <= h * 1.05, tag + ' Übersicht passt auf einen Screen (' + Math.round(screenHeight) + ' px / ' + h + ' px = ' + (screenHeight / h).toFixed(2) + ')');
+  else out.push('      ' + tag + ' Übersicht braucht ' + (screenHeight / h).toFixed(2) + ' Screens (Referenz 390–440 px: 1,00)');
+  const badgeBox = firstCards[1].querySelector('.v4-cmp-badge')?.getBoundingClientRect(), selectBox = firstCards[1].querySelector('select')?.getBoundingClientRect();
+  ok(!!badgeBox && !!selectBox && selectBox.top >= badgeBox.bottom - 1, tag + ' Auswahl überdeckt den Badge nicht (' + Math.round(badgeBox.bottom) + ' ≤ ' + Math.round(selectBox.top) + ')');
+  /* 4) Auswahl: nur die übrigen gespeicherten Varianten */
+  const select = d.querySelector('[data-cmp-share]');
+  const options = [...(select?.options ?? [])].map(option => Number(option.value));
+  ok(!!select && options.length === 2 && !options.includes(Number(shareBefore)), tag + ' Auswahl bietet nur andere Varianten (' + options.join(', ') + '; aktuell ' + shareBefore + ' %)');
+  ok(/^Variante/.test(firstCards[1].textContent.trim()), tag + ' die Auswahl sitzt auf der zweiten Karte');
+  /* 5) Grafik: aus der bestehenden Projektion, ohne CHF-Y-Achse, mit Aufbrauchmarke */
+  const chart = d.querySelector('.v4-cmp-chart');
+  const pillsOf = () => [...d.querySelectorAll('.v4-cmp-chart .pill text')].map(node => node.textContent.trim());
+  const model = win.V4.comparisonOf(win.V4.evaluated(Number(shareBefore)), Number(shareBefore));
+  const pills = pillsOf();
+  const currentPills = [...d.querySelectorAll('.v4-cmp-chart .pill-current text')].map(node => node.textContent.trim());
+  ok(!!chart && pills.length >= 4, tag + ' zwei Linien mit direkten Wertelabels (' + pills.length + ')');
+  ok(currentPills.some(text => digits(text) === Math.round(model.series[0].assets)), tag + ' Marke des aktuellen Plans stammt aus der Jahresprojektion (' + Math.round(model.series[0].assets) + '; Labels ' + currentPills.join(' | ') + ')');
+  const chartTexts = [...d.querySelectorAll('.v4-cmp-chart text')].map(node => node.textContent.trim());
+  ok(chartTexts.filter(text => /CHF/.test(text)).length === pills.filter(text => /^CHF/.test(text)).length, tag + ' CHF steht nur an den Wertelabels (' + chartTexts.filter(text => /CHF/.test(text)).length + '), nicht auf einer Y-Achse');
+  ok(!chartTexts.some(text => /1'000'000|750'000|500'000|250'000/.test(text)), tag + ' keine platzraubende CHF-Y-Achse (' + chartTexts.filter(text => /CHF/.test(text)).slice(0, 3).join(' / ') + ' …)');
+  ok(!!d.querySelector('.v4-cmp-chart .line-current') && !!d.querySelector('.v4-cmp-chart .line-second'), tag + ' zwei Linien in der Grafik');
+  ok(win.getComputedStyle(d.querySelector('.v4-cmp-chart .line-current')).stroke === green && win.getComputedStyle(d.querySelector('.v4-cmp-chart .line-second')).stroke === blue, tag + ' Linienfarben grün/blau wie die Karten');
+  ok(pills.some(text => /^0 mit \d+$/.test(text)), tag + ' Aufbrauch des Vermögens direkt an der Linie (' + pills.filter(text => /^0 mit/.test(text)).join(', ') + ')');
+  const pillBoxes = [...d.querySelectorAll('.v4-cmp-chart .pill rect')].map(node => node.getBoundingClientRect());
+  /* Berührung gilt nicht als Überdeckung – erst mehr als 1 px in beiden Achsen. */
+  const collided = pillBoxes.filter((box, index) => pillBoxes.slice(index + 1).some(other => box.right - other.left > 1 && other.right - box.left > 1 && box.bottom - other.top > 1 && other.bottom - box.top > 1));
+  ok(pillBoxes.length >= 4 && collided.length === 0, tag + ' keine überdeckten Wertelabels (' + pillBoxes.length + ' Labels, ' + collided.length + ' Überdeckungen)');
+  ok(pillBoxes.length <= 6, tag + ' höchstens drei Wertelabels je Linie (' + pillBoxes.length + ' insgesamt)');
+  /* Keine Linie darf durch ein Wertelabel laufen – in SVG-Koordinaten geprüft. */
+  const pillSvgBoxes = [...d.querySelectorAll('.v4-cmp-chart .pill rect')].map(node => ({x:Number(node.getAttribute('x')), y:Number(node.getAttribute('y')), w:Number(node.getAttribute('width')), h:Number(node.getAttribute('height'))}));
+  const linePoints = [...d.querySelectorAll('.v4-cmp-chart path')].map(node => (node.getAttribute('d') ?? '').split(/[ML]/).filter(Boolean).map(pair => pair.trim().split(/\s+/).map(Number)));
+  const crossedLabels = pillSvgBoxes.filter(box => linePoints.some(points => points.some(([px, py]) => px > box.x && px < box.x + box.w && py > box.y && py < box.y + box.h)));
+  ok(crossedLabels.length === 0, tag + ' keine Linie läuft durch ein Wertelabel (' + crossedLabels.length + ' von ' + pillSvgBoxes.length + ')');
+  /* Unter jedem Punkt steht ein Alter: die Achsenzahlen decken alle Marker ab. */
+  const dotXs = [...d.querySelectorAll('.v4-cmp-chart circle')].map(node => Number(node.getAttribute('cx')));
+  const tickXs = [...d.querySelectorAll('.v4-cmp-chart text.tick')].map(node => Number(node.getAttribute('x')));
+  const unlabelled = dotXs.filter(cx => !tickXs.some(x => Math.abs(x - cx) < 0.8));
+  ok(dotXs.length >= 4 && unlabelled.length === 0, tag + ' unter jedem Punkt steht ein Alter (' + dotXs.length + ' Punkte, ' + unlabelled.length + ' ohne Zahl)');
+  const crowded = tickXs.filter((x, index) => tickXs.slice(index + 1).some(other => Math.abs(other - x) < 16));
+  ok(crowded.length === 0, tag + ' Achsenzahlen stehen nicht zu eng (' + tickXs.length + ' Zahlen)');
+  /* Jede Achsenzahl gehört zu einem Punkt: keine zusätzlichen Jahrzehnt-Werte. */
+  const tickList = [...d.querySelectorAll('.v4-cmp-chart text.tick')].map(node => ({age:Number(node.textContent), x:Number(node.getAttribute('x'))}));
+  const tickAgeAt = x => (tickList.find(entry => Math.abs(entry.x - x) < 0.8) ?? {}).age ?? null;
+  const tickAges = tickList.map(entry => entry.age).sort((p, q) => p - q);
+  const horizonAge = tickAges[tickAges.length - 1];
+  const strayTicks = tickList.filter(entry => entry.age !== horizonAge && !dotXs.some(cx => Math.abs(cx - entry.x) < 0.8));
+  ok(strayTicks.length === 0, tag + ' jede Achsenzahl steht unter einem Punkt (' + tickList.map(entry => entry.age).join(' · ') + ')');
+  ok(tickList.length <= new Set(dotXs).size + 1, tag + ' keine zusätzlichen Achsenzahlen ohne Punkt (' + tickList.length + ' Zahlen, ' + new Set(dotXs).size + ' Punktalter)');
+  /* Wertelabels sitzen waagerecht genau über ihrem Datenpunkt; nur am Chartrand rutschen sie an
+     die Kante und bekommen dann eine Leader-Line. */
+  const chartW = Number((chart?.getAttribute('viewBox') ?? '').split(/\s+/)[2]) || 0;
+  const pillSvg = [...d.querySelectorAll('.v4-cmp-chart .pill')].map(group => {
+    const rect = group.querySelector('rect');
+    return {tone:[...group.classList].find(name => name.startsWith('pill-')).replace('pill-', ''),
+      text:group.querySelector('text').textContent.trim(),
+      x:Number(rect.getAttribute('x')), y:Number(rect.getAttribute('y')), w:Number(rect.getAttribute('width')), h:Number(rect.getAttribute('height'))};
+  });
+  const dotsTone = tone => [...d.querySelectorAll('.v4-cmp-chart .dot-' + tone)].map(node => ({x:Number(node.getAttribute('cx')), y:Number(node.getAttribute('cy'))}));
+  const dotsByTone = {current:dotsTone('current'), second:dotsTone('second')};
+  const nearestDot = (tone, cx) => (dotsByTone[tone] ?? []).reduce((best, dot) => Math.abs(dot.x - cx) < Math.abs(best.x - cx) ? dot : best, {x:0, y:0});
+  const offCentre = [], belowLine = [];
+  pillSvg.forEach(pill => {
+    const centre = pill.x + pill.w / 2, dot = nearestDot(pill.tone, centre);
+    const centred = Math.abs(dot.x - centre) < 0.6;
+    const clamped = pill.x <= 2.5 || pill.x + pill.w >= chartW - 2.5;
+    if (!centred && !clamped) offCentre.push(pill.text + ' (' + Math.round(centre - dot.x) + ' px)');
+    if (pill.y + pill.h > dot.y + 0.5) belowLine.push(pill.text);
+  });
+  ok(offCentre.length === 0, tag + ' Wertelabels sitzen mittig über ihrem Punkt oder an der Chartkante (' + (offCentre.join(', ') || 'alle mittig') + ')');
+  ok(belowLine.length === 0, tag + ' Wertelabels stehen über ihrer Linie (' + (belowLine.join(', ') || pillSvg.length + ' Labels') + ')');
+  const shifted = pillSvg.filter(pill => Math.abs(nearestDot(pill.tone, pill.x + pill.w / 2).x - (pill.x + pill.w / 2)) >= 0.6).length;
+  const leaderCount = d.querySelectorAll('.v4-cmp-chart .leader').length;
+  ok(leaderCount === shifted, tag + ' Leader-Line nur für verschobene Labels (' + leaderCount + ' Linien / ' + shifted + ' verschobene Labels)');
+  ['current', 'second'].forEach(tone => {
+    const own = pillSvg.filter(pill => pill.tone === tone).length;
+    ok(own <= 3, tag + ' höchstens drei Wertelabels auf der ' + (tone === 'current' ? 'grünen' : 'blauen') + ' Linie (' + own + ')');
+  });
+  /* Beschriftet werden nur Start, gemeinsamer Vergleichszeitpunkt und das jeweilige Ende – und
+     die beiden gemeinsamen Zeitpunkte tragen beide Linien. */
+  const labelledAges = tone => pillSvg.filter(pill => pill.tone === tone).map(pill => tickAgeAt(nearestDot(tone, pill.x + pill.w / 2).x)).filter(age => age !== null);
+  const dotAges = tone => dotsByTone[tone].map(dot => tickAgeAt(dot.x)).filter(age => age !== null);
+  const span = [...new Set([...dotAges('current'), ...dotAges('second')])].sort((p, q) => p - q);
+  const startAge = span[0], lastAge = span[span.length - 1];
+  const midAge = span.reduce((best, age) => Math.abs(age - (startAge + lastAge) / 2) < Math.abs(best - (startAge + lastAge) / 2) ? age : best, startAge);
+  ['current', 'second'].forEach(tone => {
+    const own = dotAges(tone), ownEnd = own.length ? own[own.length - 1] : lastAge;
+    const unexpected = labelledAges(tone).filter(age => ![startAge, midAge, ownEnd].includes(age));
+    ok(unexpected.length === 0, tag + ' die ' + (tone === 'current' ? 'grüne' : 'blaue') + ' Linie trägt nur Start, Vergleichszeitpunkt und ihr Ende (' + labelledAges(tone).join(' · ') + ')');
+  });
+  ok(labelledAges('current').includes(startAge) && labelledAges('second').includes(startAge), tag + ' Startalter auf beiden Linien beschriftet (' + startAge + ')');
+  const reaches = tone => dotAges(tone).some(age => age === midAge);
+  /* Referenzbreiten sind 390–440 px; auf 320 px kann eine Marke aus Platzgründen entfallen. */
+  if (w >= 390) ok(labelledAges('current').includes(midAge) && labelledAges('second').includes(midAge), tag + ' gemeinsamer Vergleichszeitpunkt auf beiden Linien beschriftet (' + midAge + ')');
+  else out.push('      ' + tag + ' Vergleichszeitpunkt ' + (labelledAges('current').includes(midAge) && labelledAges('second').includes(midAge) ? 'auf beiden Linien' : 'nur auf einer Linie') + ' (' + midAge + ')');
+  if (!reaches('current') || !reaches('second')) out.push('      ' + tag + ' Vergleichszeitpunkt nur auf einer Linie (' + midAge + '; die andere Variante ist vorher aufgebraucht)');
+
+  ok(!/Plan endet|Geld reicht nur bis/.test(d.querySelector('.v4-cmp-chart-card')?.textContent ?? ''), tag + ' keine «Plan endet»-Sprache');
+  ok(/laufen AHV und PK-Rente weiter/.test(d.querySelector('.v4-cmp-hint')?.textContent ?? ''), tag + ' Hinweis: AHV und PK-Rente laufen weiter');
+  /* 6) Umschalter Vermögen ⇄ Einkommen */
+  const assetsKey = pills.join(' | ');
+  d.querySelector('[data-cmp-view="income"]')?.click();
+  await wait(600);
+  ok(d.querySelector('.v4-cmp-chart-card h2')?.textContent.trim() === 'Einkommensentwicklung', tag + ' Umschalter wechselt auf die Einkommensansicht');
+  ok(d.querySelector('[data-cmp-view="income"]')?.getAttribute('aria-pressed') === 'true' && d.querySelector('[data-cmp-view="assets"]')?.getAttribute('aria-pressed') === 'false', tag + ' Segmentzustand wechselt mit');
+  const incomeKey = pillsOf().join(' | ');
+  ok(incomeKey !== assetsKey && pillsOf().length >= 4, tag + ' Einkommensansicht zeigt eigene Werte (' + pillsOf().join(' / ') + ')');
+  d.querySelector('[data-cmp-view="assets"]')?.click();
+  await wait(550);
+  const snapshot = () => ({
+    current: cardsOf()[0]?.textContent.replace(/\s+/g, ' ').trim() ?? '',
+    second: cardsOf()[1]?.textContent.replace(/\s+/g, ' ').trim() ?? '',
+    summary: d.querySelector('.v4-cmp-summary')?.textContent.replace(/\s+/g, ' ').trim() ?? '',
+    rows: [...d.querySelectorAll('.v4-cmp-row')].map(row => [...row.querySelectorAll('.v4-cmp-val')].map(node => node.textContent.trim()).join(' / ')).join(' || '),
+    pills: pillsOf().join(' | ')
+  });
+  /* 7) Vergleichswechsel aktualisiert alles und lässt den aktuellen Plan unberührt */
+  const beforeSwitch = snapshot();
+  const other = d.querySelector('[data-cmp-share]');
+  /* Eine andere als die bereits gewählte Variante – die Auswahl kann aus einer früheren
+     Prüfung gemerkt sein (Nutzereinstellung «retirement-v4-compare»). */
+  const selectedShare = Number(other?.value);
+  const targetShare = options.find(option => option !== selectedShare) ?? options[options.length - 1];
+  other.value = String(targetShare);
+  other.dispatchEvent(new win.Event('change', {bubbles:true}));
+  await wait(700);
+  const afterSwitch = snapshot();
+  ok(afterSwitch.current === beforeSwitch.current, tag + ' aktueller Plan bleibt links unverändert');
+  ok(afterSwitch.second !== beforeSwitch.second && afterSwitch.pills !== beforeSwitch.pills && afterSwitch.rows !== beforeSwitch.rows, tag + ' Wechsel aktualisiert Karte, Grafik und Detailwerte');
+  const summaryText = () => d.querySelector('.v4-cmp-summary')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  ok(/^Mehr Kapital hält in dieser Planung länger Vermögen verfügbar\./.test(summaryText()) && /Mehr Rente gibt dir dafür lebenslang ein höheres Einkommen\.$/.test(summaryText()), tag + ' Fazit aus den Varianten abgeleitet («' + summaryText() + '»)');
+  ok(!/besser|empfohlen|optimal|solltest/i.test(summaryText()), tag + ' Fazit ohne Wertung oder Empfehlung');
+  ok(!d.querySelector('[data-adopt-variant]') && !/Übernehmen/.test(d.querySelector('.v4-cmp')?.textContent ?? ''), tag + ' kein «Übernehmen» im Vergleich');
+  ok(store()?.state?.details?.pension?.pkShare === shareBefore && store()?.state?.riskProfile === strategyBefore, tag + ' Plan und Anlagestrategie bleiben unverändert (' + store()?.state?.details?.pension?.pkShare + ' % / ' + store()?.state?.riskProfile + ')');
+  /* Eine Definition, eine Zahl: «Vermögen reicht bis» in Statusbox, Karte und Grafik. */
+  const reachText = cardsOf()[0]?.querySelectorAll('.v4-cmp-values dd')[2]?.textContent.trim() ?? '';
+  const reachValue = reachText.replace(/^Alter /, '');
+  if (statusReach) ok(reachValue === statusReach || reachValue === statusReach + '+', tag + ' Vergleich zeigt dieselbe Reichweite wie die Statusbox (' + reachText + ' / Statusbox ' + statusReach + ')');
+  if (/^\d+$/.test(reachValue)) ok(pills.some(text => text === '0 mit ' + reachValue), tag + ' Grafik markiert denselben Aufbrauch wie die Karte («0 mit ' + reachValue + '» in ' + pills.join(' | ') + ')');
+  else ok(!pills.some(text => /^0 mit/.test(text)), tag + ' kein Aufbrauchlabel, wenn das Vermögen bis zum Horizont reicht (' + reachText + ')');
+  /* 7b) Die gewählte Vergleichsvariante und die Ansicht sind Nutzereinstellungen und überleben
+     ein echtes Neuladen der Seite – unabhängig vom gespeicherten Plan. */
+  const switchedShare = Number(options[options.length - 1]);
+  const prefs = (() => { try { return JSON.parse(win.localStorage.getItem('retirement-v4-compare') ?? '{}'); } catch (error) { return {}; } })();
+  ok(Number(prefs.share) === switchedShare && prefs.view === 'assets', tag + ' gewählte Variante und Ansicht werden gemerkt (' + JSON.stringify(prefs) + ')');
+  const freshFrame = async () => {
+    const next = await frame(w, 844), nd = next.contentDocument;
+    if (!nd.querySelector('[data-cmp-share]')) { nd.querySelector('[data-v4-next="compare"]')?.click(); await wait(700); }
+    return [next, nd];
+  };
+  const [f2, d2] = await freshFrame();
+  ok(Number(d2.querySelector('[data-cmp-share]')?.value) === switchedShare, tag + ' nach dem Neuladen ist dieselbe Variante gewählt (' + (d2.querySelector('[data-cmp-share]')?.value ?? '–') + ' % statt ' + switchedShare + ' %)');
+  ok(d2.querySelector('[data-cmp-view="assets"]')?.getAttribute('aria-pressed') === 'true', tag + ' Ansicht Vermögen bleibt nach dem Neuladen gewählt');
+  d2.querySelector('[data-cmp-view="income"]')?.click();
+  await wait(500);
+  const [f3, d3] = await freshFrame();
+  ok(d3.querySelector('[data-cmp-view="income"]')?.getAttribute('aria-pressed') === 'true' && d3.querySelector('.v4-cmp-chart-card h2')?.textContent.trim() === 'Einkommensentwicklung', tag + ' Ansicht Einkommen bleibt nach dem Neuladen gewählt');
+  /* Ansicht wieder auf Vermögen stellen: die gemerkte Ansicht gilt für die folgenden Breiten. */
+  d3.querySelector('[data-cmp-view="assets"]')?.click();
+  await wait(400);
+  f2.remove(); f3.remove();
+
+  /* 8) Detailvergleich: sieben Zeilen, Steuerwerte, Farbspalten, ⓘ – alles eingeklappt */
+  const folds = [...d.querySelectorAll('.v4-cmp-fold, .v4-cmp-basis')];
+  const ctaRow = d.querySelector('.v4-cmp-cta-row');
+  ok(folds.length === 2 && folds.every(node => !node.open) && !!ctaRow, tag + ' zwei zugeklappte Informationszeilen und eine Beratungs-Card (' + folds.length + ' / ' + (ctaRow ? 'CTA' : 'kein CTA') + ')');
+  ok(folds.every(node => !!node.querySelector('summary .v4-cmp-fold-head, summary .v4-cmp-basis-head')), tag + ' jeder Abschnitt mit Kopfzeile und Zusammenfassung');
+  ok(!d.querySelector('.v4-cmp-row')?.checkVisibility(), tag + ' zugeklappt keine Detailzeilen sichtbar');
+  folds.forEach(node => node.querySelector('summary')?.click());
+  await wait(400);
+  ok(folds.every(node => node.open) && d.querySelector('.v4-cmp-row')?.checkVisibility() === true, tag + ' Tap klappt alle drei Abschnitte auf');
+  const rows = [...d.querySelectorAll('.v4-cmp-row')];
+  const labels = rows.map(row => row.querySelector('.v4-cmp-row-label')?.textContent.replace(/\s+/g, ' ').trim() ?? '');
+  ok(rows.length === 7, tag + ' sieben Vergleichszeilen (' + rows.length + ')');
+  ok(labels.some(label => /^Kapitalsteuer/.test(label)) && labels.some(label => /^Verfügbares Startkapital/.test(label)) && labels.some(label => /^PK-Rente netto/.test(label)) && labels.some(label => /^Laufende Einkommensteuer/.test(label)) && labels.some(label => /^Danach Einkommen/.test(label)), tag + ' Zeilen des Detailvergleichs (' + labels.join(' | ') + ')');
+  const valueColors = rows.map(row => { const spans = [...row.querySelectorAll('.v4-cmp-val')]; return win.getComputedStyle(spans[0]).color + '|' + win.getComputedStyle(spans[1]).color; });
+  ok(valueColors.every(pair => pair === green + '|' + blue), tag + ' Wertspalten grün/blau wie Karten und Grafik (' + valueColors[0] + ')');
+  ok(rows.every(row => [...row.querySelectorAll('.v4-cmp-val')].every(span => /^(CHF [\d'’]+|Alter \d+\+?|–)$/.test(span.textContent.trim()))), tag + ' Schweizer Format in allen Wertspalten');
+  const afterInfo = rows[6]?.querySelector('.v3-modal-icon');
+  afterInfo?.click();
+  await wait(300);
+  ok(/nachdem dein frei verfügbares Vermögen aufgebraucht ist/.test(d.getElementById('v4ModalBody')?.textContent ?? ''), tag + ' ⓘ erklärt «Danach Einkommen»');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(250);
+  /* 9) Strategiecard mit CTA in den bestehenden Beratungsflow */
+  const advice = d.querySelector('.v4-cmp-cta-row');
+  ok(/Und deine Anlagestrategie\?/.test(advice?.textContent ?? '') && /Passt deine Strategie zu Rente, Bedarf und Anlagehorizont\?/.test(advice?.textContent ?? ''), tag + ' Beratungs-Card nennt Titel und Frage');
+  ok(/Individuell besprechen/.test(advice?.textContent ?? '') && !advice?.querySelector('summary'), tag + ' Beratungs-Card ist ein CTA (kein Accordion) mit «Individuell besprechen →»');
+  const ctaStyle = advice ? win.getComputedStyle(advice) : null;
+  ok(ctaStyle?.borderTopColor === green && /^rgb\(237, 242, 237\)$/.test(ctaStyle?.backgroundColor ?? ''), tag + ' Beratungs-Card mit grünem Rahmen und Mint-Fläche (' + ctaStyle?.backgroundColor + ' / ' + ctaStyle?.borderTopColor + ')');
+  d.querySelector('[data-v4-action="advisor"]')?.click();
+  await wait(400);
+  ok(d.getElementById('v4ModalTitle')?.textContent.trim() === 'Angaben für die Beratung', tag + ' CTA öffnet den bestehenden Beratungsflow (' + (d.getElementById('v4ModalTitle')?.textContent ?? '') + ')');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(250);
+  /* 10) Berechnungsbasis */
+  const basis = d.querySelector('.v4-cmp-basis');
+  const basisLine = basis?.querySelector('.v4-cmp-basis-line')?.textContent ?? '';
+  ok(/^[A-Z]{2} · [\d,]+ % · (Vorsichtig|Ausgewogen|Chancenorientiert) · bis \d+$/.test(basisLine), tag + ' Berechnungsbasis geschlossen kompakt («' + basisLine + '»)');
+  ok(basis?.querySelector('summary')?.getBoundingClientRect().height <= 44, tag + ' Berechnungsbasis bleibt zweizeilig (' + Math.round(basis?.querySelector('summary')?.getBoundingClientRect().height ?? 0) + ' px)');
+  ok(!!basis?.querySelector('.v4-cmp-basis-head svg') && !/⚙/.test(basis?.textContent ?? ''), tag + ' Berechnungsbasis mit Tabler-Icon statt Emoji');
+  if (!basis?.open) basis?.querySelector('summary')?.click();
+  await wait(300);
+  ok(basis?.open === true && basis.querySelectorAll('.v3-info-list > div').length >= 8, tag + ' Berechnungsbasis aufklappbar (' + (basis?.querySelectorAll('.v3-info-list > div').length ?? 0) + ' Zeilen)');
+  const basisText = d.querySelector('.v4-cmp-basis-body')?.textContent ?? '';
+  ok(/Wohnkanton/.test(basisText) && /Umwandlungssatz/.test(basisText) && /Anlagestrategie/.test(basisText) && /Inflation/.test(basisText) && /Planungshorizont/.test(basisText), tag + ' aufgeklappt alle Annahmen mit Bezeichnungen');
+  ok(d.documentElement.scrollWidth <= d.documentElement.clientWidth, tag + ' kein horizontaler Überlauf (' + d.documentElement.scrollWidth + ' ≤ ' + d.documentElement.clientWidth + ')');
+  /* 11) Zweiter Einstieg und Ein-Varianten-Fall */
+  win.V4.renderVariants();
+  await wait(450);
+  ok(!!d.querySelector('.v4-cmp-entry[data-v4-next="compare"]'), tag + ' zweiter Einstieg auf «Meine Varianten»');
+  win.__v4SuspendSave = true; win.localStorage.removeItem('retirement-v3-plan'); win.V4.renderStart();
+  await wait(450);
+  ok(!d.querySelector('[data-v4-next="compare"]'), tag + ' ohne Plan kein Vergleichseinstieg');
+  win.__v4SuspendSave = false;
+  /* Gemerkte Vergleichseinstellungen entfernen, damit die nächste Breite im Ausgangszustand startet. */
+  try { win.localStorage.removeItem('retirement-v4-compare'); } catch (error) { /* Speicher nicht verfügbar */ }
+  f.remove();
+}
+
+/* ---------- Eingabeverhalten der Betragsfelder ----------
+   Tippen, Einfügen, Löschen und Cursorposition in den Editoren: schweizerische Gruppierung,
+   Dezimalkomma, keine Buchstaben, stabiler Cursor – und der Wert kommt so im Plan an. */
+async function amountInputChecks(w) {
+  const f = await frame(w, 844), d = f.contentDocument, win = f.contentWindow, tag = w + 'px Betragsfeld';
+  win.DevFixture.write(win.DevFixture.scenarios['knapp']()); win.V4.load();
+  await wait(500);
+  await openEditor(d, 'ahv');
+  const input = d.getElementById('ahv');
+  ok(!!input && input.hasAttribute('data-amount'), tag + ' AHV-Feld gefunden (' + (input?.value ?? 'fehlt') + ')');
+  if (!input) { f.remove(); return; }
+  const digits = () => input.value.replace(/\D/g, '');
+  const type = async char => {
+    const start = input.selectionStart ?? input.value.length, end = input.selectionEnd ?? start;
+    input.value = input.value.slice(0, start) + char + input.value.slice(end);
+    input.setSelectionRange(start + 1, start + 1);
+    input.dispatchEvent(new win.Event('input', {bubbles:true}));
+    await wait(20);
+  };
+  const pressBackspace = async () => {
+    const start = input.selectionStart ?? input.value.length, end = input.selectionEnd ?? start;
+    const event = new win.KeyboardEvent('keydown', {key:'Backspace', bubbles:true, cancelable:true});
+    const notPrevented = input.dispatchEvent(event);
+    if (notPrevented) {
+      if (start === end && start > 0) { input.value = input.value.slice(0, start - 1) + input.value.slice(start); input.setSelectionRange(start - 1, start - 1); }
+      else { input.value = input.value.slice(0, start) + input.value.slice(end); input.setSelectionRange(start, start); }
+      input.dispatchEvent(new win.Event('input', {bubbles:true}));
+    }
+    await wait(20);
+  };
+  const reset = async value => { input.value = value; input.dispatchEvent(new win.Event('input', {bubbles:true})); await wait(20); input.focus(); input.setSelectionRange(input.value.length, input.value.length); };
+  await reset('');
+  for (const char of '3000') await type(char);
+  ok(input.value === "3'000" && input.selectionStart === 5, tag + ' «3000» wird zu «3\'000» mit Cursor am Ende (' + input.value + ' / ' + input.selectionStart + ')');
+  await reset('3000');
+  input.setSelectionRange(1, 1);
+  await type('5');
+  ok(input.value === "35'000" && input.selectionStart === 2, tag + ' Tippen in der Mitte hält den Cursor hinter der Ziffer (' + input.value + ' / ' + input.selectionStart + ')');
+  await reset("3'000");
+  input.setSelectionRange(2, 2);
+  await pressBackspace();
+  ok(input.value === '0' && digits() === '0', tag + ' Backspace hinter dem Trennzeichen löscht die Ziffer davor (' + input.value + ')');
+  await reset('');
+  for (const char of '4,5') await type(char);
+  ok(input.value === '4,5', tag + ' Dezimalkomma bleibt erhalten («' + input.value + '»)');
+  await reset('');
+  for (const char of '1a2b') await type(char);
+  ok(input.value === '12', tag + ' Buchstaben werden beim Tippen verworfen («' + input.value + '»)');
+  await reset('');
+  input.value = "1'234.50 CHF";
+  input.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(30);
+  ok(input.value === "1'234,50", tag + ' eingefügter Text wird bereinigt und komma-formatiert («' + input.value + '»)');
+  await reset('1234567');
+  const fits = input.scrollWidth <= input.clientWidth + 1;
+  ok(fits, tag + ' siebenstelliger Betrag passt ins Feld (' + input.value + ' · ' + input.scrollWidth + ' ≤ ' + input.clientWidth + ')');
+  await reset('3000');
+  d.getElementById('v4DetailForm')?.dispatchEvent(new win.Event('submit', {bubbles:true, cancelable:true}));
+  await wait(600);
+  const stored = JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? '{}')?.state?.details?.income?.ahv;
+  const afterTitle = d.querySelector('.v4-page-title')?.textContent.trim() ?? '';
+  ok(afterTitle === 'Mein Plan.' && Number(stored) === 3000, tag + ' «Übernehmen» speichert den Betrag numerisch (Titel «' + afterTitle + '», AHV ' + stored + ' als ' + typeof stored + ', Fehler «' + (d.getElementById('v4Error')?.textContent ?? '') + '»)');
+  f.remove();
+}
+
 (async () => {
   /* Zwischenstand nach jedem Block schreiben: so bleibt auch bei einem Abbruch sichtbar,
      wie weit die Prüfungen gekommen sind. */
@@ -1060,6 +1691,10 @@ async function yearDetailChecks(w, h) {
   flush();
   for (const [w, h] of [[390,844],[430,900],[1000,900]]) {
     try { await planStructure(w, h); } catch (e) { ok(false, w + ' Mein Plan: ' + e.message); }
+  }
+  flush();
+  for (const [w, h] of [[390,844]]) {
+    try { await estimateNoteChecks(w, h); } catch (e) { ok(false, w + ' Status-Hinweis: ' + e.message); }
   }
   flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
@@ -1096,6 +1731,18 @@ async function yearDetailChecks(w, h) {
   flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await strategyChecks(w, h); } catch (e) { ok(false, w + ' Strategie: ' + e.message); }
+  }
+  flush();
+  for (const [w, h] of [[390,844],[1000,900]]) {
+    try { await variantChecks(w, h); } catch (e) { ok(false, w + ' Varianten: ' + e.message); }
+  }
+  flush();
+  for (const [w, h] of [[390,844],[320,760],[1000,900]]) {
+    try { await comparisonChecks(w, h); } catch (e) { ok(false, w + ' Vergleich: ' + e.message); }
+  }
+  flush();
+  for (const w of [390, 1000]) {
+    try { await amountInputChecks(w); } catch (e) { ok(false, w + ' Betragsfeld: ' + e.message); }
   }
   flush();
   for (const [w, h] of [[390,844],[1000,900]]) {

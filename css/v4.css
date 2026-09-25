@@ -147,7 +147,7 @@ body{position:relative}
 .v4-variant-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .v4-variant-head strong{font:600 17px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
 .v4-variant-head .v4-badge{margin-left:auto;display:inline-flex;align-items:center;gap:5px;font:600 12px system-ui,sans-serif;color:var(--v3-green)}
-.v4-variant-status{margin:8px 0 0;font:600 13px system-ui,sans-serif;color:var(--v3-muted)}
+.v4-variant-status{display:block;margin:8px 0 0;font:600 13px system-ui,sans-serif;color:var(--v3-muted)}
 .v4-variant-status.covered{color:var(--v3-green)}
 .v4-variant-status.watch{color:#8a6100}
 .v4-variant-status.gap{color:#a0443c}
@@ -156,6 +156,18 @@ body{position:relative}
 .v4-variant dt{font:12px system-ui,sans-serif;color:var(--v3-muted)}
 .v4-variant dd{margin:2px 0 0;font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
 .v4-variant-actions{margin-top:12px}
+/* Der aktuelle Plan steht zuerst und offen; die weiteren Varianten sind zugeklappt und zeigen
+   nur ihre Reichweite – die Kennzahlen kommen auf Tap, «Übernehmen» bleibt sichtbar. */
+.v4-variant-summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 8px;cursor:pointer;list-style:none}
+.v4-variant-summary::-webkit-details-marker{display:none}
+.v4-variant-summary .v4-variant-head{grid-column:1}
+.v4-variant-summary .v4-variant-status{grid-column:1}
+.v4-variant-summary .v4-variant-chevron{grid-column:2;grid-row:1 / span 2;display:grid;place-items:center;color:var(--v3-muted)}
+.v4-variant-summary:hover .v4-variant-head strong,.v4-variant-summary:focus-visible .v4-variant-head strong{color:var(--v3-green)}
+.v4-variant-summary:hover .v4-variant-chevron,.v4-variant-summary:focus-visible .v4-variant-chevron{color:var(--v3-green)}
+.v4-variant-summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px;border-radius:8px}
+.v4-variant-fold[open] .v4-variant-chevron .v3-icon{transform:rotate(180deg)}
+.v4-variant-fold[open] .v4-variant-summary{margin-bottom:2px}
 .v4-variant-actions button{min-height:44px;padding:0 16px;border-radius:999px;border:1px solid var(--v3-green);background:var(--v3-surface);color:var(--v3-green);font:600 14px system-ui,sans-serif;cursor:pointer}
 
 /* ---------- Detail-Editoren als Tabelle (Label links, Wert rechts) ----------
@@ -167,8 +179,8 @@ body{position:relative}
 .v4-form-table>*:nth-child(n+3){border-top:1px solid var(--v3-line)}
 .v4-form-table label{display:flex;align-items:center;gap:4px;font:600 14px/1.3 system-ui,sans-serif;color:var(--v3-ink);hyphens:auto;overflow-wrap:break-word}
 .v4-form-value{display:flex;align-items:center;justify-content:flex-end;gap:6px}
-.v4-form-value input{width:84px;max-width:38vw;padding:2px 0;border:0;border-bottom:1px solid var(--v3-line);background:transparent;text-align:right;font:600 17px/1.2 Georgia,"Times New Roman",serif;font-variant-numeric:tabular-nums;color:var(--v3-ink)}
-.v4-form-value input:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px;border-radius:4px}
+.v4-form-value input{width:94px;max-width:44vw;padding:2px 3px;border:0;border-bottom:1px solid var(--v3-line);background:transparent;text-align:right;font:600 17px/1.2 Georgia,"Times New Roman",serif;font-variant-numeric:tabular-nums;color:var(--v3-ink)}
+.v4-form-value input:focus-visible{outline:2px solid var(--v3-green);outline-offset:1px;border-radius:8px;border-bottom-color:transparent;background:var(--v3-soft)}
 .v4-form-value .v4-form-unit{flex:none;min-width:40px;font:12px system-ui,sans-serif;color:var(--v3-muted)}
 .v4-form-value select{max-width:52vw;padding:6px 8px;border:1px solid var(--v3-line);border-radius:8px;background:var(--v3-surface);color:var(--v3-ink);font:14px system-ui,sans-serif}
 .v4-form-value .canton-picker{width:100%}
@@ -182,6 +194,9 @@ body{position:relative}
 .v4-dev button{border:1px solid var(--v3-green);background:var(--v3-surface);color:var(--v3-green);border-radius:6px;min-height:30px;padding:0 10px;font:600 12px system-ui,sans-serif;cursor:pointer}
 .v4-year-nav{display:grid;gap:6px;margin:0 0 14px}
 .v4-year-nav .v4-year-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.v4-year-meta{display:inline-flex;align-items:center;gap:2px}
+.v4-year-meta .v3-modal-icon{padding:5px;margin:-5px -5px -5px 0;border-radius:50%;color:var(--v3-green)}
+.v4-year-meta .v3-modal-icon:hover{background:var(--v3-soft)}
 .v4-year-nav strong{font:600 16px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
 /* Jahresnavigation: «‹ ein Jahr» · Regler · «ein Jahr ›» – die Schritte sind an den Enden aus. */
 .v4-year-slider{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:8px}
@@ -190,12 +205,33 @@ body{position:relative}
 .v4-year-step:hover:not([disabled]),.v4-year-step:focus-visible{box-shadow:inset 0 0 0 1px var(--v3-green)}
 .v4-year-step[disabled]{opacity:.4;cursor:default}
 .v4-year-block{border-top:1px solid var(--v3-line);padding:12px 0}
-.v4-year-block h3{margin:0 0 8px;font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-year-block h3{display:flex;align-items:center;gap:8px;margin:0 0 8px;font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
+/* Das Donut-Icon direkt neben den Vermögens-Überschriften öffnet das Töpfe-Modell: neutrale
+   Bedienfarbe (kein Topf-Farbcode), 36 px Touchfläche, mint Kreis erst bei Hover/Tastatur-Focus,
+   negativer Aussenabstand – so bleibt die Überschriftenzeile gleich hoch. */
+.v4-year-pot{flex:none;display:grid;place-items:center;width:36px;height:36px;margin:-8px 0;padding:0;border:0;border-radius:50%;background:transparent;color:var(--v3-green);cursor:pointer}
+.v4-year-pot:hover,.v4-year-pot:focus-visible{background:var(--v3-soft)}
+.v4-year-pot:focus-visible{outline:2px solid var(--v3-green);outline-offset:-2px}
+.v4-year-pot .v3-icon{display:block}
 .v4-year-strategy{display:flex;align-items:center;gap:6px;margin:0 0 8px;font:600 13px system-ui,sans-serif;color:var(--v3-green)}
 .v4-year-strategy .v3-modal-icon{color:var(--v3-green)}
 .v4-year-carry{margin:0 0 8px;font:12px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
 .v4-year-line{display:flex;justify-content:space-between;gap:12px;font:13px system-ui,sans-serif;color:var(--v3-muted);padding:3px 0}
 .v4-year-line strong{color:var(--v3-ink)}
+.v4-year-line .v3-pot-icon{display:inline-flex;align-items:center;margin-right:6px;vertical-align:-2px}
+/* Jahresverlauf als Übersicht: jeder Abschnitt zeigt zugeklappt genau seine Kennzahl, der Rest
+   kommt auf Tap. Die Kennzahl ist eine gewöhnliche Zeile (`.v4-year-line`) plus Chevron. */
+.v4-year-fold{margin:0}
+.v4-year-fold>summary.v4-year-line{justify-content:flex-start;gap:0;cursor:pointer;list-style:none}
+.v4-year-fold>summary.v4-year-line::-webkit-details-marker{display:none}
+.v4-year-fold>summary.v4-year-line strong{margin-left:auto;padding-left:10px}
+.v4-year-fold>summary.v4-year-line .v3-icon{flex:none;margin-left:6px;color:var(--v3-muted)}
+.v4-year-fold>summary.v4-year-line:hover span,.v4-year-fold>summary.v4-year-line:focus-visible span{color:var(--v3-green)}
+.v4-year-fold>summary.v4-year-line:hover .v3-icon,.v4-year-fold>summary.v4-year-line:focus-visible .v3-icon{color:var(--v3-green)}
+.v4-year-fold>summary.v4-year-line:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v4-year-fold[open]>summary.v4-year-line{margin-bottom:4px}
+.v4-year-fold[open]>summary.v4-year-line .v3-icon{transform:rotate(180deg)}
+.v4-year-fold-body{padding:0}
 
 /* Wohnkanton direkt im Schnellstart (ein Klick, Steuern geklärt). */
 .v4-canton{display:grid;gap:4px;margin:16px 0 0}
@@ -366,9 +402,10 @@ body{padding-bottom:18px}
 .v4-form-group small{font-weight:400;color:var(--v3-muted)}
 .v4-asset-form .v4-form-table label{font-size:13.5px}
 .v4-form-value input::placeholder{font:13px system-ui,sans-serif;color:var(--v3-muted);opacity:1}
-/* Pilot: Feedback-Dialog (Freitext, Empfängeradresse pflegt das Team in js/v4-ui.js). */
-.v4-feedback-label{display:block;margin:0 0 4px;font:600 13px system-ui,sans-serif;color:var(--v3-ink)}
-.v4-feedback{width:100%;min-height:132px;padding:10px;border:1px solid var(--v3-line);border-radius:10px;background:var(--v3-surface);color:var(--v3-ink);font:14px/1.5 system-ui,sans-serif;resize:vertical}
+/* Pilot: Beratungs-Zusammenfassung als Klartext zum Kopieren oder Speichern. */
+.v4-report-label{display:block;margin:0 0 4px;font:600 13px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-report{width:100%;min-height:240px;padding:10px;border:1px solid var(--v3-line);border-radius:10px;background:var(--v3-surface);color:var(--v3-ink);font:12.5px/1.5 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;white-space:pre;overflow:auto;resize:vertical}
+.v4-report-state{margin:8px 0 0;font:13px system-ui,sans-serif;color:var(--v3-green)}
 /* Info-Dialoge: Schliessen-Knopf als reines «✕» (IconX, 22 px, Strichstärke 1,7) in der
    dunkelgrünen Textfarbe – kein Kreis, kein Hintergrund, kein Rahmen, kein Schatten.
    Mindestens 40 × 40 px unsichtbare Touchfläche, sauber oben rechts im Kopf; erst Hover
@@ -394,6 +431,8 @@ body{padding-bottom:18px}
 #v4Modal .v3-donut-legend{margin:0 0 10px;gap:0}
 #v4Modal .v3-donut-legend li{grid-template-columns:24px minmax(0,1fr) auto auto auto;padding:5px 0;gap:8px}
 #v4Modal .v3-donut-legend strong{font:600 15px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-pot-year{margin:0 0 6px;font:600 15px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-pot-year span{margin-left:6px;font:12px system-ui,sans-serif;font-weight:400;color:var(--v3-muted)}
 .v4-pot-strategy{display:grid;grid-template-columns:auto minmax(0,1fr);gap:10px;align-items:start;padding:10px 12px;border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-soft)}
 .v4-pot-strategy-icon{display:inline-flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:9px;background:var(--v3-surface);color:var(--v3-green)}
 .v4-pot-strategy-copy{min-width:0}
@@ -405,3 +444,114 @@ body{padding-bottom:18px}
 .v4-pot-strategy .v3-modal-icon{flex:none}
 /* Der Herkunfts-Badge liegt auf der mintfarbenen Card und braucht dort Flächenkontrast. */
 #v4Modal .v4-pot-strategy .v4-badge-tone{background:var(--v3-surface)}
+/* «Rente oder Kapital?» – Variantenvergleich (mobile Referenz, kein Y-Achsen-Plot) */
+.v4-cmp{max-width:640px;margin:0 auto;--cmp-current:var(--v3-green);--cmp-current-soft:var(--v3-soft);--cmp-second:var(--v3-pot-bonds);--cmp-second-soft:#eaf1f8}
+.v4-cmp h2{margin:0;font:600 16px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+/* Kompakte Action-Card «Rente oder Kapital?» – stärker als die sekundären Zeilen, dezenter als
+   die Karte «Plan optimieren» (kleiner, ohne Icon-Kachel, grüner statt grauer Rahmen). */
+.v4-cmp-entry{display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;gap:10px;width:100%;margin:10px 0 0;padding:9px 11px;border:1px solid var(--v3-green);border-radius:12px;background:var(--v3-soft);cursor:pointer;text-align:left;font-family:system-ui,sans-serif}
+.v4-cmp-entry:hover,.v4-cmp-entry:focus-visible{background:#e2ece4}
+.v4-cmp-entry:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v4-cmp-entry-icon{display:inline-flex;align-items:center;justify-content:center;color:var(--v3-green)}
+.v4-cmp-entry-copy{display:grid;gap:1px;min-width:0}
+.v4-cmp-entry-title{font:600 14px Georgia,"Times New Roman",serif;color:var(--v3-green)}
+.v4-cmp-entry-line{font:11.5px/1.35 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-cmp-entry>svg{flex:none;color:var(--v3-green)}
+.v4-cmp-entry-last{margin-top:14px}
+.v4-cmp-cards-wrap{margin:0 0 8px}
+.v4-cmp-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.v4-cmp-card{display:grid;grid-template-rows:17px 30px auto;gap:1px;border:1.5px solid var(--v3-line);border-radius:14px;padding:9px 10px;background:var(--v3-surface);min-width:0}
+.v4-cmp-card.current{border-color:var(--cmp-current);background:var(--cmp-current-soft)}
+.v4-cmp-card.second{border-color:var(--cmp-second);background:var(--cmp-second-soft)}
+.v4-cmp-badge{display:inline-flex;align-items:center;gap:5px;font:600 11px system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap}
+.v4-cmp-card.current .v4-cmp-badge{color:var(--cmp-current)}
+.v4-cmp-card.second .v4-cmp-badge{color:var(--cmp-second)}
+.v4-cmp-dot{width:14px;height:14px;border:1.7px solid var(--cmp-second);border-radius:50%;flex:none}
+.v4-cmp-sub{display:flex;align-items:center;margin:0;font:600 13px system-ui,sans-serif;color:var(--cmp-current)}
+.v4-cmp-select{display:flex;align-items:center;gap:2px;margin:0;color:var(--cmp-second);min-width:0;overflow:hidden}
+.v4-cmp-select select{-webkit-appearance:none;appearance:none;min-height:0;height:28px;border:1px solid var(--cmp-second);border-radius:8px;background:var(--v3-surface);color:var(--cmp-second);font:600 12px system-ui,sans-serif;padding:0 4px;max-width:100%;line-height:1.4}
+.v4-cmp-select svg{flex:none;margin-left:-20px;pointer-events:none}
+.v4-cmp-select{padding-right:0}
+.v4-cmp-select select{padding-right:20px}
+.v4-cmp-values{display:grid;gap:4px;margin:5px 0 0}
+.v4-cmp-values div{display:grid;gap:1px}
+.v4-cmp-values dt{font:11px/1.3 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-cmp-values dd{margin:0;font:700 15px/1.25 system-ui,sans-serif;color:var(--v3-ink);font-variant-numeric:tabular-nums;overflow-wrap:break-word}
+.v4-cmp-card.current .v4-cmp-values dd{color:var(--cmp-current)}
+.v4-cmp-card.second .v4-cmp-values dd{color:var(--cmp-second)}
+.v4-cmp-summary{display:flex;gap:9px;align-items:flex-start;margin:7px 0 0;padding:9px 10px;border-radius:12px;background:#f6f1e4;border:1px solid #ecdfc4;font:12.5px/1.45 system-ui,sans-serif;color:var(--v3-ink)}
+.v4-cmp-summary-icon{flex:none;color:var(--v3-muted);margin-top:1px}
+.v4-cmp-chart-card{margin:0 0 8px;padding:9px 9px 6px;border:1px solid var(--v3-line);border-radius:14px;background:var(--v3-surface)}
+.v4-cmp-chart-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap}
+.v4-cmp-seg{display:inline-flex;border:1px solid var(--v3-line);border-radius:999px;padding:2px;background:#f1f3f0}
+.v4-cmp-seg-item{min-height:28px;padding:0 12px;border:0;border-radius:999px;background:transparent;font:600 12px system-ui,sans-serif;color:var(--v3-muted);cursor:pointer}
+.v4-cmp-seg-item[aria-pressed="true"]{background:var(--v3-green);color:#fff}
+.v4-cmp-seg-item:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v4-cmp-legend{display:flex;flex-wrap:wrap;gap:2px 14px;margin:6px 0 0;font:600 11px system-ui,sans-serif}
+.v4-cmp-legend .current{color:var(--cmp-current)}
+.v4-cmp-legend .second{color:var(--cmp-second)}
+.v4-cmp-legend span::before{content:"";display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px;vertical-align:-1px;background:currentColor}
+.v4-cmp-canvas{margin:4px 0 0}
+.v4-cmp-canvas svg{display:block;width:100%}
+.v4-cmp-chart .grid{stroke:var(--v3-line);stroke-width:1}
+.v4-cmp-chart .tick{font:11px system-ui,sans-serif;fill:var(--v3-muted)}
+.v4-cmp-chart .line-current{fill:none;stroke:var(--cmp-current);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.v4-cmp-chart .line-second{fill:none;stroke:var(--cmp-second);stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.v4-cmp-chart .leader{stroke-width:1;stroke-dasharray:2 2;fill:none}
+.v4-cmp-chart .leader-current{stroke:var(--cmp-current)}
+.v4-cmp-chart .leader-second{stroke:var(--cmp-second)}
+.v4-cmp-chart .dot-current{fill:var(--cmp-current)}
+.v4-cmp-chart .dot-second{fill:var(--cmp-second)}
+.v4-cmp-chart .pill rect{stroke-width:1}
+.v4-cmp-chart .pill text{font:600 10px system-ui,sans-serif}
+.v4-cmp-chart .pill-current rect{fill:var(--cmp-current-soft);stroke:var(--cmp-current);stroke-opacity:.45}
+.v4-cmp-chart .pill-current text{fill:var(--cmp-current)}
+.v4-cmp-chart .pill-second rect{fill:var(--cmp-second-soft);stroke:var(--cmp-second);stroke-opacity:.45}
+.v4-cmp-chart .pill-second text{fill:var(--cmp-second)}
+.v4-cmp-hint{display:flex;gap:7px;align-items:flex-start;margin:6px 0 0;font:11.5px/1.4 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-cmp-hint svg{flex:none;margin-top:2px}
+.v4-cmp-rows{display:grid;gap:6px;padding:2px 0 12px}
+.v4-cmp-row{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;align-items:center;gap:6px}
+.v4-cmp-row-icon{display:grid;place-items:center;color:var(--v3-muted)}
+.v4-cmp-row-label{font:11.5px/1.35 system-ui,sans-serif;color:var(--v3-muted);min-width:0;overflow-wrap:break-word;hyphens:auto}
+.v4-cmp-row-label small{display:block;font-size:11px;opacity:.9}
+.v4-cmp-val{min-width:74px;padding:5px 6px;border-radius:8px;font:600 12px system-ui,sans-serif;text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.v4-cmp-val.current{background:var(--cmp-current-soft);color:var(--cmp-current)}
+.v4-cmp-val.second{background:var(--cmp-second-soft);color:var(--cmp-second)}
+.v4-cmp-fold{border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);margin:0 0 5px;padding:0 10px}
+.v4-cmp-fold>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 8px;min-height:40px;cursor:pointer;list-style:none}
+.v4-cmp-fold>summary::-webkit-details-marker{display:none}
+.v4-cmp-fold-head{display:inline-flex;align-items:center;gap:7px;font:600 14px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-cmp-fold-head svg{color:var(--v3-green)}
+.v4-cmp-fold-line{grid-column:1;font:11.5px/1.35 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-cmp-fold>summary>svg{grid-column:2;grid-row:1/span 2;color:var(--v3-muted)}
+.v4-cmp-fold[open]>summary>svg{transform:rotate(180deg)}
+.v4-cmp-fold[open]>summary{padding-bottom:2px}
+.v4-cmp-fold>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px;border-radius:8px}
+.v4-cmp-cta-row{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:center;gap:2px 9px;width:100%;margin:0 0 6px;padding:8px 11px;border:1.5px solid var(--cmp-current);border-radius:12px;background:var(--v3-soft);color:var(--v3-ink);text-align:left;cursor:pointer}
+.v4-cmp-cta-row:hover,.v4-cmp-cta-row:focus-visible{background:#e2ece4}
+.v4-cmp-cta-row:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px}
+.v4-cmp-cta-icon{grid-column:1;grid-row:1 / span 2;align-self:start;margin-top:2px;color:var(--cmp-current)}
+.v4-cmp-cta-title{grid-column:2;grid-row:1;font:600 14px Georgia,"Times New Roman",serif;color:var(--cmp-current)}
+.v4-cmp-cta-line{grid-column:2;grid-row:2;font:11.5px/1.35 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-cmp-cta-action{grid-column:1 / span 2;grid-row:3;justify-self:end;display:inline-flex;align-items:center;gap:4px;font:600 12px system-ui,sans-serif;color:var(--cmp-current);white-space:nowrap}
+.v4-cmp-cta{min-height:40px;padding:0 14px;border-radius:999px;font:600 13px system-ui,sans-serif}
+.v4-cmp-basis{border:1px solid var(--v3-line);border-radius:12px;background:var(--v3-surface);margin:0;padding:0 10px}
+.v4-cmp-basis>summary{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:0 8px;min-height:40px;cursor:pointer;list-style:none}
+.v4-cmp-basis>summary::-webkit-details-marker{display:none}
+.v4-cmp-basis-head{display:inline-flex;align-items:center;gap:7px;font:600 14px Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-cmp-basis-head svg{color:var(--v3-muted)}
+.v4-cmp-basis-line{grid-column:1;font:11.5px/1.4 system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.v4-cmp-basis>summary>svg{grid-column:2;grid-row:1/span 2;color:var(--v3-muted)}
+.v4-cmp-basis[open]>summary>svg{transform:rotate(180deg)}
+.v4-cmp-basis>summary:focus-visible{outline:2px solid var(--v3-green);outline-offset:2px;border-radius:8px}
+.v4-cmp-basis-body{padding:0 0 12px}
+.v4-cmp-basis-body .v3-info-list dd{white-space:normal;overflow-wrap:break-word}
+@media(max-width:389px){
+  .v4-cmp-card{padding:8px 9px;border-radius:12px}
+  .v4-cmp-values dd{font-size:13.5px}
+  .v4-cmp-row{gap:6px}
+  .v4-cmp-val{min-width:74px;padding:4px 6px;font-size:12px}
+  .v4-cmp-row-label{font-size:11.5px}
+}
+

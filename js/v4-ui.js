@@ -30,13 +30,17 @@
   const entered = value => value !== undefined && value !== null && String(value).trim() !== '';
   const amountRaw = value => String(value ?? '').replace(/['\s\u00a0]/g, '');
   const amountValue = value => { const raw = amountRaw(value).replace(',', '.'); return raw === '' ? '' : raw; };
+  /* Beträge werden schweizerisch angezeigt: Gruppierung mit Apostroph, Dezimaltrennzeichen ist
+     das Komma («3'000», «1'234,50»). Das Komma bleibt beim Tippen stehen – der frühere Weg über
+     den Punkt hat «4,5» zu «45.» verstümmelt. */
   const formatAmount = value => {
-    const raw = amountValue(value);
-    if (raw === '' || !/^-?\d*\.?\d*$/.test(raw)) return String(value ?? '');
-    const [whole = '', decimals] = raw.split('.');
+    const text = String(value ?? '').replace(/['\s\u00a0]/g, '').replace(/\./g, ',');
+    if (text === '') return '';
+    if (!/^-?\d*,?\d*$/.test(text)) return String(value ?? '');
+    const [whole = '', decimals] = text.split(',');
     const sign = whole.startsWith('-') ? '-' : '', digits = whole.replace('-', '');
     const grouped = digits ? plain(Number(digits)) : '';
-    return `${sign}${grouped}${decimals === undefined ? '' : `.${decimals}`}`;
+    return `${sign}${grouped}${decimals === undefined ? '' : `,${decimals}`}`;
   };
   const isAmountField = field => String(field?.unit ?? '').startsWith('CHF');
   const requiredMark = field => field.optional === true ? '' : ' <span class="v3-required" aria-hidden="true">*</span>';
@@ -110,17 +114,27 @@
   const hasCanton = () => !!State.canton(state);
 
   /* ---------------- Antwort: Planstatus ---------------- */
-  function reachAge(result, targetAge) { return result.capitalExhaustionAge ? `Alter ${result.capitalExhaustionAge}` : `Alter ${targetAge}+`; }
+  /* Die Oberfläche beschriftet jedes Planjahr mit `row.age + 1` (die erste Zeile der Projektion
+     heisst «Alter 66»). Die Reichweite des Rechenkerns (`capitalExhaustionAge`) ist der rohe
+     Zeilenindex des Jahres, in dem das Vermögen aufgebraucht ist – sie wird hier mit derselben
+     Konvention ausgegeben. So zeigen Statusbox, Varianten, Strategien, Vergleich, Bericht und
+     Grafik dieselbe Zahl aus derselben Quelle. */
+  function exhaustionAge(result) { return result?.capitalExhaustionAge ? numeric(result.capitalExhaustionAge) + 1 : null; }
+  function reachAge(result, targetAge) { const age = exhaustionAge(result); return age ? `Alter ${age}` : `Alter ${targetAge}+`; }
   function outcomeOf(item) {
     if (!item) return {tone:'pending', short:'Noch keine Angaben', long:''};
     const result = item.result, target = item.plan.retirement.targetAge;
     if (!hasCanton()) {
       const note = 'Erste Orientierung mit geschätzter AHV und geschätzten Steuern.';
-      if (result.capitalExhaustionAge) return {tone:'watch', short:'Dein Plan ist noch knapp.', long:`Mit den bisherigen Angaben reicht dein Vermögen voraussichtlich bis ${reachAge(result, target)}.`, note};
+      if (exhaustionAge(result)) return {tone:'watch', short:'Dein Plan ist noch knapp.', long:`Mit den bisherigen Angaben reicht dein Vermögen voraussichtlich bis ${reachAge(result, target)}.`, note};
       return {tone:'covered', short:'Dein erster Plan geht voraussichtlich auf.', long:`Dein Vermögen reicht bis zum Planungshorizont ${reachAge(result, target)}.`, note};
     }
-    if (result.capitalExhaustionAge) return {tone:'gap', short:'Dein Plan ist noch knapp.', long:`Mit den bisherigen Angaben reicht dein Vermögen voraussichtlich bis ${reachAge(result, target)}.`, note:'Berechnet mit deinen Angaben und deinem Wohnkanton.'};
-    return {tone:'covered', short:'Dein Plan geht voraussichtlich auf.', long:`Dein Vermögen reicht bis zum Planungshorizont ${reachAge(result, target)}.`, note:'Berechnet mit deinen Angaben und deinem Wohnkanton.'};
+    /* Ist der Wohnkanton erfasst und rechnen wir mit den eigenen Angaben, braucht der Status
+       keine Herkunftszeile: «Berechnet mit deinen Angaben und deinem Wohnkanton» sagt nichts,
+       was der Nutzer nicht schon weiss – er hat die Angaben ja selbst erfasst. Der Hinweis
+       bleibt nur dort, wo er etwas erklärt: bei der geschätzten AHV und den geschätzten Steuern. */
+    if (exhaustionAge(result)) return {tone:'gap', short:'Dein Plan ist noch knapp.', long:`Mit den bisherigen Angaben reicht dein Vermögen voraussichtlich bis ${reachAge(result, target)}.`};
+    return {tone:'covered', short:'Dein Plan geht voraussichtlich auf.', long:`Dein Vermögen reicht bis zum Planungshorizont ${reachAge(result, target)}.`};
   }
   function verdictCard(item) {
     const outcome = outcomeOf(item);
@@ -189,7 +203,7 @@
     if (state.mode !== 'pre') return '';
     const share = previewShare ?? chosenShare();
     const preview = share !== chosenShare();
-    return `<section class="v4-lever"><div class="v4-lever-head"><h2>PK-Bezug wählen ${modalInfo({title:'PK-Bezug', aria:'PK-Bezug erklären', body:'<p>Der Kapitalanteil bestimmt, wie viel deines PK-Guthabens du bei Pensionierung als Kapital beziehst. Der Rest wird zur Rente.</p><p>Wenn du den PK-Bezug änderst, verändern sich deine PK-Rente, dein verfügbares Startkapital und dein Vermögensverlauf.</p>'})}</h2><span class="v4-lever-value">${share} % Kapitalbezug</span></div><input id="shareRange" type="range" min="0" max="100" step="1" value="${share}" aria-label="Kapitalbezug in Prozent"><div class="v4-lever-labels"><span>0 % Kapital</span><span>100 % Kapital</span></div><div class="v4-lever-state"><span id="previewStatus" class="v4-detail-state">${preview ? 'Vorschau – noch nicht gespeichert' : 'Aktueller Plan'}</span>${preview ? '<button type="button" class="primary" data-remember>Als aktuellen Plan speichern</button>' : ''}</div><p id="v4Error" class="v3-error" role="alert"></p></section>`;
+    return `<section class="v4-lever"><div class="v4-lever-head"><h2>PK-Bezug wählen ${modalInfo({title:'PK-Bezug', aria:'PK-Bezug erklären', body:'<p>Der Kapitalanteil bestimmt, wie viel deines PK-Guthabens du bei Pensionierung als Kapital beziehst. Der Rest wird zur Rente.</p><p>Wenn du den PK-Bezug änderst, verändern sich deine PK-Rente, dein verfügbares Startkapital und dein Vermögensverlauf.</p>'})}</h2><span class="v4-lever-value">${share} % Kapitalbezug</span></div><input id="shareRange" type="range" min="0" max="100" step="1" value="${share}" aria-label="Kapitalbezug in Prozent"><div class="v4-lever-labels"><span>0 % Kapital</span><span>100 % Kapital</span></div>${preview ? `<div class="v4-lever-state"><span id="previewStatus" class="v4-detail-state">Vorschau – noch nicht gespeichert</span><button type="button" class="primary" data-remember>Als aktuellen Plan speichern</button></div>` : ''}${compareEntry()}<p id="v4Error" class="v3-error" role="alert"></p></section>`;
   }
 
   /* ---------------- GENAUIGKEIT / NÄCHSTER SCHRITT (genau EINE Card) ----------------
@@ -252,7 +266,7 @@
         label: profileLabels[key] ?? profile?.label ?? key,
         rate: (numeric(profile?.expectedRealReturn) * 100).toLocaleString('de-DE', {maximumFractionDigits:1}),
         rest: Math.max(0, horizonValue({plan, result}).value),
-        age: result.capitalExhaustionAge ?? null,
+        age: exhaustionAge(result),
         current: key === currentKey
       };
     });
@@ -499,7 +513,13 @@
     closeMenu(); route = 'variants'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
     window.scrollTo(0, 0);
     const target = (evaluated(chosenShare()) ?? {}).plan?.retirement.targetAge ?? '';
-    const cards = variantShares().map((share, index) => {
+    const active = chosenShare();
+    /* Der aktuelle Plan steht immer zuerst und offen; alle weiteren Varianten sind zugeklappt und
+       zeigen nur ihre Reichweite («reicht bis Alter X» bzw. «geht voraussichtlich auf»). Die
+       Kennzahlen kommen auf Tap – dieselbe Karte, nur eingeklappt; «Übernehmen» bleibt direkt
+       erreichbar, damit die Auswahl ein Tap bleibt. */
+    const order = [...variantShares()].sort((a, b) => (a === active ? -1 : b === active ? 1 : a - b));
+    const cards = order.map(share => {
       const item = evaluated(share);
       if (!item) return '';
       const result = item.result;
@@ -507,13 +527,17 @@
       const sources = Calculator.incomeSourcesAtStart(item.plan);
       const monthly = id => (sources.find(source => source.id === id)?.annualIncome ?? 0) / 12;
       const rents = monthly('ahv') + monthly('pk') + monthly('other');
-      const current = share === chosenShare();
+      const current = share === active;
       const outcome = outcomeOf(item);
-      const reach = result.capitalExhaustionAge ? `Reicht voraussichtlich bis Alter ${result.capitalExhaustionAge}` : 'Plan geht voraussichtlich auf';
+      const reach = exhaustionAge(result) ? `Reicht voraussichtlich bis Alter ${exhaustionAge(result)}` : 'Plan geht voraussichtlich auf';
       const line = (label, value) => `<div><dt>${label}</dt><dd>${value}</dd></div>`;
-      return `<section class="v4-variant${current ? ' current' : ''}"><div class="v4-variant-head"><strong>${share} % Kapitalbezug</strong>${current ? `<span class="v4-badge">${Icons.icon('circleCheck', {size:15})} Aktueller Plan</span>` : ''}</div><p class="v4-variant-status ${outcome.tone}">${reach}</p><dl>${line('Total-Rente / Monat', money(rents))}${line('Startkapital', money(result.availableCapital))}${result.capitalExhaustionAge ? line('Reicht bis', `Alter ${result.capitalExhaustionAge}`) : line(`Restvermögen mit ${target}`, money(horizonValue(item).value))}${line('PK-Rente / Monat', money(item.pension.rent / 12))}${line('PK-Kapital netto', money(capital.netPkCapitalWithdrawal))}${line('Entnahme / Monat', money(result.monthlyGap))}</dl>${current ? '' : `<div class="v4-variant-actions"><button type="button" data-adopt-variant="${share}">Übernehmen</button></div>`}</section>`;
+      const head = `<span class="v4-variant-head"><strong>${share} % Kapitalbezug</strong>${current ? `<span class="v4-badge">${Icons.icon('circleCheck', {size:15})} Aktueller Plan</span>` : ''}</span>`;
+      const status = `<span class="v4-variant-status ${outcome.tone}">${reach}</span>`;
+      const metrics = `<dl>${line('Total-Rente / Monat', money(rents))}${line('Startkapital', money(result.availableCapital))}${exhaustionAge(result) ? line('Reicht bis', `Alter ${exhaustionAge(result)}`) : line(`Restvermögen mit ${target}`, money(horizonValue(item).value))}${line('PK-Rente / Monat', money(item.pension.rent / 12))}${line('PK-Kapital netto', money(capital.netPkCapitalWithdrawal))}${line('Entnahme / Monat', money(result.monthlyGap))}</dl>`;
+      if (current) return `<section class="v4-variant current">${head}${status}${metrics}</section>`;
+      return `<section class="v4-variant"><details class="v4-variant-fold"><summary class="v4-variant-summary">${head}${status}<span class="v4-variant-chevron" aria-hidden="true">${Icons.icon('chevronDown', {size:18})}</span></summary>${metrics}</details><div class="v4-variant-actions"><button type="button" data-adopt-variant="${share}">Übernehmen</button></div></section>`;
     }).join('');
-    app.innerHTML = `${title('Meine Varianten.', variantContext(), detailHead)}<p class="v4-lead">Eine Variante ist immer dein aktueller Plan. Auswahl ausschliesslich über «Übernehmen» – ohne zusätzliche Auswahlknöpfe.</p>${cards}`;
+    app.innerHTML = `${title('Meine Varianten.', variantContext(), detailHead)}<p class="v4-lead">Eine Variante ist immer dein aktueller Plan. Auswahl ausschliesslich über «Übernehmen» – ohne zusätzliche Auswahlknöpfe.</p>${cards}${compareEntry('v4-cmp-entry-last')}`;
     app.querySelectorAll('[data-adopt-variant]').forEach(button => button.addEventListener('click', () => {
       try { state = V3State.activate(state, numeric(button.dataset.adoptVariant)); previewShare = null; markDirty(); renderVariants(); }
       catch (error) { message(error.message); }
@@ -695,9 +719,26 @@
     // Der Satz stammt aus der nominalen Steuerbasis (massgebende Progression); der ausgewiesene
     // Steuerbetrag ist derselbe Wert in heutiger Kaufkraft.
     const rate = TaxModel.getIncomeTaxRate(code, numeric((row.nominal ?? row).taxableAnnualIncome));
-    const line = (label, amount, note = '') => `<div class="v4-year-line"><span>${label}${note ? ` <small>${note}</small>` : ''}</span><strong>${amount}</strong></div>`;
-    const pot = (position, take) => line(['Geldmarkt','Obligationen','Wertschöpfung'][position], `${take > 0.5 ? '− ' : ''}${money(Math.abs(take))}`);
+    /* Topf-Zeilen tragen das Icon ihres Topfes (dieselben Icons und Farben wie im Töpfe-Modell):
+       so ist auf einen Blick erkennbar, welche Zeile welcher Topf ist. */
+    const line = (label, amount, note = '', {icon = '', tone = ''} = {}) => `<div class="v4-year-line${tone ? ` pot-${tone}` : ''}"><span>${icon ? `<span class="v3-pot-icon" aria-hidden="true">${Icons.icon(icon, {size:15})}</span>` : ''}${label}${note ? ` <small>${note}</small>` : ''}</span><strong>${amount}</strong></div>`;
+    const potLine = (position, amount, note = '') => line(['Geldmarkt','Obligationen','Wertschöpfung'][position], amount, note, {icon:bucketConfig[position].icon, tone:bucketConfig[position].tone});
+    const pot = (position, take) => potLine(position, `${take > 0.5 ? '− ' : ''}${money(Math.abs(take))}`);
     const takes = row.takes ?? [0,0,0];
+    /* Nur Töpfe mit Vermögen: «Geldmarkt CHF 0» erklärt nichts. Im Töpfe-Modell gilt dieselbe
+       Regel (keine Null-Zeile); bleibt kein Topf übrig, sagt genau eine Zeile das offen. */
+    const potRows = amountAt => {
+      const rows = [0,1,2].filter(position => numeric(amountAt(position)) > 0.5).map(position => potLine(position, money(numeric(amountAt(position)))));
+      return rows.length ? rows.join('') : line('Töpfe leer', money(0));
+    };
+    const takeRows = () => [0,1,2].filter(position => numeric(takes[position]) > 0.5).map(position => pot(position, numeric(takes[position]))).join('');
+    /* Der Jahresverlauf ist eine Übersicht: jeder Abschnitt zeigt zugeklappt genau seine
+       Kennzahl (sein Ergebnis) und den Rest erst auf Tap. Gibt es nichts aufzuklappen, bleibt
+       es bei einer einzelnen Zeile ohne Chevron. Der offene Zustand bleibt beim Jahreswechsel
+       erhalten (`yearState.fold`). */
+    const fold = (key, label, amount, body) => body
+      ? `<details class="v4-year-fold" data-fold="${key}"${yearState.fold?.[key] ? ' open' : ''}><summary class="v4-year-line"><span>${label}</span><strong>${amount}</strong>${Icons.icon('chevronDown', {size:18})}</summary><div class="v4-year-fold-body">${body}</div></details>`
+      : line(label, amount);
     /* Kein zweites «Restvermögen am Planungshorizont» unter «Vermögen am Jahresende»: im
        letzten Planjahr ist «Total» bereits genau dieser Wert. Der Horizontwert bleibt über
        `horizonValue()` in den Strategie-Szenarien und Variantenkarten verfügbar. */
@@ -713,8 +754,21 @@
        (an den Enden deaktiviert). Darunter der erreichte Stand. */
     const first = index === 0, last = index === ages.length - 1;
     const step = (direction, label, icon, disabled) => `<button type="button" class="v4-year-step" data-year-step="${direction}" aria-label="${label}"${disabled ? ' disabled' : ''}>${Icons.icon(icon, {size:18})}</button>`;
-    app.innerHTML = `${title('Jahr für Jahr.', 'So arbeitet dein Plan im Detail.', detailHead)}<section class="v4-year-nav"><div class="v4-year-slider">${step(-1, 'Ein Jahr früher', 'chevronLeft', first)}<input id="yearRange" type="range" min="${ages[0]}" max="${ages[ages.length - 1]}" step="1" value="${row.age}" aria-label="Alter wählen">${step(1, 'Ein Jahr später', 'chevronRight', last)}</div><div class="v4-year-row"><span class="v4-detail-state">Alter ${value.age + 1}</span><span class="v4-detail-state">${ages.length} Planjahre</span></div></section><section class="v4-year-block"><h3>1 · Vermögen am Jahresanfang</h3>${line('Total', money(value.free))}${['Geldmarkt','Obligationen','Wertschöpfung'].map((name, position) => line(name, money(value.buckets?.[position] ?? 0))).join('')}</section><section class="v4-year-block"><h3>2 · Einkommen</h3>${(value.sources ?? []).filter(source => source.gross > 0.5).map(source => line(esc(source.name), money(source.gross), source.taxable ? 'brutto' : 'nicht steuerbar')).join('')}${line('Einnahmen vor Steuern', money(value.grossIncome))}${line(`Steuern (${percent(rate)} %)`, `− ${money(numeric(value.estimatedIncomeTax))}`)}${line('Netto verfügbar', money(value.rent))}</section><section class="v4-year-block"><h3>3 · Bedarf netto</h3>${line('Lebenshaltung netto', money(value.need))}${value.special > 0.5 ? line('Sonderausgabe', money(value.special)) : ''}${line(value.withdrawal > 0.5 ? 'Fehlbetrag' : 'Überschuss', money(value.withdrawal > 0.5 ? value.withdrawal : Math.max(0, value.rent - value.need - (value.special ?? 0))))}</section><section class="v4-year-block"><h3>4 · Entnahme aus den Töpfen</h3>${takes.map((take, position) => pot(position, take)).join('')}${line('Total Entnahme', money(takes.reduce((a, b) => a + b, 0)))}</section><section class="v4-year-block"><h3>5 · Deine Töpfe (Jahresende)</h3>${strategyLine}${['Geldmarkt','Obligationen','Wertschöpfung'].map((name, position) => line(name, money(value.endBuckets?.[position] ?? 0))).join('')}${line('Rendite dieses Jahres', `${value.ret >= 0 ? '+' : '−'} ${money(Math.abs(value.ret))}`)}${line('Umbuchungen (intern)', money((value.transfers ?? []).reduce((a, b) => a + Math.abs(b), 0)))}</section><section class="v4-year-block"><h3>6 · Vermögen am Jahresende</h3>${line('Total', money(value.end))}${line('Veränderung', `${value.net >= 0 ? '+' : '−'} ${money(Math.abs(value.net))}`)}</section><ul class="v4-rows"><li><button type="button" class="v4-row" data-v4-action="pots"><span>Töpfe-Modell · Aufteilung und Entwicklung</span>${Icons.icon('chevronRight', {size:18})}</button></li></ul><p class="v4-lead">${state.mode === 'pre' ? `Variante ${chosenShare()} % Kapitalbezug · ` : ''}Alle Beträge in heutiger Kaufkraft – so bleiben die Jahre untereinander vergleichbar. Gerechnet mit den bestehenden Annahmen (Inflation ${percent(item.plan.assumptions.rates.inflation)} %).</p>`;
+    /* Das Töpfe-Modell ist einen Tap entfernt: dasselbe Donut-Icon steht direkt neben den
+       Überschriften der beiden Vermögensabschnitte und öffnet denselben Dialog wie das Menü –
+       aber an der Position, die zur Überschrift gehört (Abschnitt 1 = Jahresanfang,
+       Abschnitt 6 = Jahresende). Der frühere Textlink am Seitenende ist damit überflüssig. */
+    const potButton = position => `<button type="button" class="v4-year-pot" data-v4-action="pots" data-pot-position="${position}" aria-label="Töpfe-Modell öffnen">${Icons.icon('chartDonut', {size:18})}</button>`;
+    /* Die frühere Fusszeile (Variante, Kaufkraft, Annahmen) steht jetzt hinter einem ⓘ in der
+       Jahreszeile – die Ansicht selbst bleibt ohne stehenden Erklärtext. */
+    const yearInfo = modalInfo({title:'So rechnet diese Ansicht', aria:'Erklärung zur Jahresansicht', body:`<p>${state.mode === 'pre' ? `Variante ${chosenShare()} % Kapitalbezug · ` : ''}Alle Beträge in heutiger Kaufkraft – so bleiben die Jahre untereinander vergleichbar.</p><p>Gerechnet mit den bestehenden Annahmen (Inflation ${percent(item.plan.assumptions.rates.inflation)} %).</p>`});
+    app.innerHTML = `${title('Jahr für Jahr.', 'So arbeitet dein Plan im Detail.', detailHead)}<section class="v4-year-nav"><div class="v4-year-slider">${step(-1, 'Ein Jahr früher', 'chevronLeft', first)}<input id="yearRange" type="range" min="${ages[0]}" max="${ages[ages.length - 1]}" step="1" value="${row.age}" aria-label="Alter wählen">${step(1, 'Ein Jahr später', 'chevronRight', last)}</div><div class="v4-year-row"><span class="v4-detail-state">Alter ${value.age + 1}</span><span class="v4-year-meta"><span class="v4-detail-state">${ages.length} Planjahre</span>${yearInfo}</span></div></section><section class="v4-year-block"><h3>1 · Vermögen am Jahresanfang ${potButton('start')}</h3>${fold('start', 'Total', money(value.free), potRows(position => value.buckets?.[position]))}</section><section class="v4-year-block"><h3>2 · Einkommen</h3>${fold('income', 'Netto verfügbar', money(value.rent), `${(value.sources ?? []).filter(source => source.gross > 0.5).map(source => line(esc(source.name), money(source.gross), source.taxable ? 'brutto' : 'nicht steuerbar')).join('')}${line('Einnahmen vor Steuern', money(value.grossIncome))}${line(`Steuern (${percent(rate)} %)`, `− ${money(numeric(value.estimatedIncomeTax))}`)}`)}</section><section class="v4-year-block"><h3>3 · Bedarf netto</h3>${fold('need', value.withdrawal > 0.5 ? 'Fehlbetrag' : 'Überschuss', money(value.withdrawal > 0.5 ? value.withdrawal : Math.max(0, value.rent - value.need - (value.special ?? 0))), `${line('Lebenshaltung netto', money(value.need))}${value.special > 0.5 ? line('Sonderausgabe', money(value.special)) : ''}`)}</section><section class="v4-year-block"><h3>4 · Entnahme aus den Töpfen</h3>${takeRows() ? fold('take', 'Total Entnahme', money(takes.reduce((a, b) => a + b, 0)), takeRows()) : line('Keine Entnahme nötig', money(0))}</section><section class="v4-year-block"><h3>5 · Deine Töpfe (Jahresende)</h3>${fold('pots', 'Rendite dieses Jahres', `${value.ret >= 0 ? '+' : '−'} ${money(Math.abs(value.ret))}`, `${strategyLine}${potRows(position => value.endBuckets?.[position])}${line('Umbuchungen (intern)', money((value.transfers ?? []).reduce((a, b) => a + Math.abs(b), 0)))}`)}</section><section class="v4-year-block"><h3>6 · Vermögen am Jahresende ${potButton('end')}</h3>${fold('end', 'Total', money(value.end), line('Veränderung', `${value.net >= 0 ? '+' : '−'} ${money(Math.abs(value.net))}`))}</section>`;
     document.getElementById('yearRange')?.addEventListener('input', event => { yearState.age = numeric(event.target.value); renderYear(); });
+    /* Aufgeklappte Abschnitte bleiben beim Jahreswechsel offen. */
+    app.querySelectorAll('.v4-year-fold').forEach(node => node.addEventListener('toggle', () => {
+      if (!yearState.fold) yearState.fold = {};
+      yearState.fold[node.dataset.fold] = node.open;
+    }));
     /* Schrittknöpfe: genau ein Jahr vor/zurück, nie über die Planjahre hinaus. */
     app.querySelectorAll('[data-year-step]').forEach(button => button.addEventListener('click', () => {
       const next = numeric(ages[index]) + numeric(button.dataset.yearStep);
@@ -894,6 +948,280 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     });
   }
 
+  /* ---------------- «Rente oder Kapital?» – Variantenvergleich ----------------
+     Der Screen erklärt den Unterschied zwischen zwei gespeicherten Varianten. Es wird nichts neu
+     gerechnet: alle Werte kommen aus `evaluatePlan()` (Jahresprojektion), `calculatePension()`,
+     `calculateAvailableCapital()` und `incomeSourcesAtStart()` – denselben Quellen wie «Mein
+     Plan», der Jahresverlauf und das Töpfe-Modell. Der Screen gibt keine Anlageempfehlung ab,
+     übernimmt keine Variante und verändert keine Anlagestrategie oder Töpfe. */
+  /* Die gewählte Vergleichsvariante und die Ansicht (Vermögen/Einkommen) sind Nutzereinstellungen
+     des Vergleichs und werden – getrennt vom Plan – im Browser gemerkt. */
+  const comparisonStoreKey = 'retirement-v4-compare';
+  function readComparisonPrefs() {
+    try { const raw = localStorage.getItem(comparisonStoreKey); return raw ? JSON.parse(raw) : {}; } catch (error) { return {}; }
+  }
+  function writeComparisonPrefs() {
+    try { localStorage.setItem(comparisonStoreKey, JSON.stringify({share:comparisonState.share, view:comparisonState.view})); } catch (error) { /* Speicher nicht verfügbar */ }
+  }
+  const comparisonPrefs = readComparisonPrefs();
+  const comparisonState = {share:comparisonPrefs.share ?? null, view:comparisonPrefs.view === 'income' ? 'income' : 'assets', last:null};
+  /* Einstieg nur, wenn es überhaupt zwei unterschiedliche Varianten gibt. */
+  function compareEntry(extraClass = '') {
+    if (variantShares().length < 2) return '';
+    /* Kompakte Action-Card: Icon links, Titel und Subline, Chevron rechts. Bewusst zwischen den
+       sekundären Zeilen (Jahresverlauf/Varianten) und der Karte «Plan optimieren»: mintfarbene
+       Fläche mit grünem Rahmen, aber kleiner und ohne Icon-Kachel. */
+    return `<button type="button" class="v4-cmp-entry${extraClass ? ` ${extraClass}` : ''}" data-v4-next="compare">`
+      + `<span class="v4-cmp-entry-icon" aria-hidden="true">${Icons.icon('arrowsExchange', {size:18})}</span>`
+      + `<span class="v4-cmp-entry-copy"><span class="v4-cmp-entry-title">Rente oder Kapital?</span><span class="v4-cmp-entry-line">Vergleiche deinen Plan mit einer anderen Variante</span></span>`
+      + `${Icons.icon('chevronRight', {size:18})}</button>`;
+  }
+  /* ViewModel des Vergleichs – abgeleitet, keine zweite Rechnung. */
+  function comparisonOf(item, share) {
+    if (!item) return null;
+    const result = item.result, plan = item.plan;
+    const sources = Calculator.incomeSourcesAtStart(plan);
+    const rows = (result.yearlyProjection ?? []).filter(row => !row.terminal);
+    const retirement = numeric(plan.retirement.age);
+    const phase = rows.filter(row => row.age + 1 >= retirement);
+    const exhaustAge = exhaustionAge(result);
+    const rowAt85 = rows.find(row => row.age + 1 === 85) ?? null;
+    /* «Danach Einkommen»: laufendes Nettoeinkommen (nach Steuern, ohne Kapitalentnahme) im Jahr,
+       in dem das frei verfügbare Vermögen aufgebraucht ist – bzw. am Planungshorizont, wenn es
+       reicht. `rent` enthält AHV, PK-Rente und weitere dauerhafte Einkommen. */
+    const afterRow = (exhaustAge ? rows.find(row => row.age + 1 >= exhaustAge) : null) ?? rows[rows.length - 1] ?? null;
+    return {share, label:`${share} % Kapital`,
+      netStartCapital:numeric(result.availableCapital),
+      netPkPensionMonthly:numeric(sources.find(source => source.id === 'pk')?.annualIncome) / 12,
+      capitalWithdrawalTax:numeric(item.pension?.capitalTax),
+      annualIncomeTax:numeric(result.incomeTax),
+      assetsAt85:rowAt85 ? numeric(rowAt85.end) : null,
+      assetsLastUntilAge:exhaustAge,
+      postDepletionNetIncomeMonthly:numeric(afterRow?.rent) / 12,
+      retirementAge:retirement, targetAge:numeric(plan.retirement.targetAge),
+      /* Eine Linie je Ansicht: Vermögen am Jahresende bzw. monatlich verfügbares Einkommen
+         (Nettoeinkommen + Kapitalentnahme, solange Vermögen vorhanden ist). */
+      /* Monatlich verfügbares Einkommen: Nettoeinkommen plus der tatsächlich entnommene
+         Kapitalbetrag (`takes`). Nach dem Aufbrauch des Vermögens fällt die Entnahme weg – dann
+         bleibt genau das lebenslange Einkommen sichtbar. */
+      series:phase.map(row => ({age:row.age + 1, assets:numeric(row.end), income:(numeric(row.rent) + (row.takes ?? []).reduce((sum, value) => sum + numeric(value), 0)) / 12}))};
+  }
+  function compareReach(comparison) {
+    if (!comparison) return '–';
+    return comparison.assetsLastUntilAge ? `Alter ${comparison.assetsLastUntilAge}` : `Alter ${comparison.targetAge}+`;
+  }
+  /* Fazit: ausschliesslich aus den beiden Vergleichen abgeleitet und ohne Wertung. Die
+     Zwei-Zeilen-Aussage gilt nur, wenn genau die Variante mit mehr Kapital auch mindestens so
+     lange Vermögen hält und die andere die höhere lebenslange Rente hat; sonst neutral. */
+  function compareSummary(a, b) {
+    if (!a || !b) return ['Für einen Vergleich fehlen zwei Varianten.'];
+    const moreCapital = a.netStartCapital >= b.netStartCapital ? a : b;
+    const morePension = a.netPkPensionMonthly >= b.netPkPensionMonthly ? a : b;
+    const lastsLonger = numeric(moreCapital.assetsLastUntilAge ?? 999) >= numeric(morePension.assetsLastUntilAge ?? 999);
+    const spread = Math.abs(a.netStartCapital - b.netStartCapital) > 1000 && Math.abs(a.netPkPensionMonthly - b.netPkPensionMonthly) > 20;
+    if (moreCapital !== morePension && spread && lastsLonger) {
+      return ['Mehr Kapital hält in dieser Planung länger Vermögen verfügbar.', 'Mehr Rente gibt dir dafür lebenslang ein höheres Einkommen.'];
+    }
+    return ['Die Varianten unterscheiden sich vor allem bei verfügbarem Startkapital und lebenslanger PK-Rente.'];
+  }
+  /* Grafik: zwei Linien in voller Kartenbreite, bewusst ohne CHF-Y-Achse. Beschriftet werden
+     Start, Mitte, Alter 85 und der Punkt «Kapital aufgebraucht» – direkt am Punkt, grün über der
+     Linie des aktuellen Plans, blau unter der Vergleichslinie. */
+  function compareChartSvg(width, a, b, view) {
+    const W = Math.max(240, Math.round(width)), H = 126, padTop = 30, padBottom = 24, padX = 12;
+    const all = [...(a?.series ?? []), ...(b?.series ?? [])];
+    if (!all.length) return '';
+    const ages = [...new Set(all.map(point => point.age))].sort((p, q) => p - q);
+    const minAge = ages[0], maxAge = ages[ages.length - 1];
+    const value = point => view === 'income' ? point.income : point.assets;
+    const max = Math.max(1, ...all.map(value));
+    const step = Math.pow(10, Math.max(0, String(Math.round(max)).length - 1));
+    const nice = Math.ceil(max / step) * step;
+    const x = age => padX + (age - minAge) / Math.max(1, maxAge - minAge) * (W - padX * 2);
+    const y = amount => padTop + (1 - amount / nice) * (H - padTop - padBottom);
+    const path = series => series.map((point, index) => `${index ? 'L' : 'M'}${x(point.age).toFixed(1)} ${y(value(point)).toFixed(1)}`).join(' ');
+    const grid = [0.25, 0.5, 0.75, 1].map(share => {
+      const line = (padTop + (1 - share) * (H - padTop - padBottom)).toFixed(1);
+      return `<line class="grid" x1="${padX}" x2="${W - padX}" y1="${line}" y2="${line}"/>`;
+    }).join('');
+    /* Genau drei beschriftete Zeitpunkte je Linie: Start · Mitte · Ende (bzw. Aufbrauch). Die
+       Punkte dazwischen bleiben als Marker sichtbar, tragen aber keine Zahl – so konkurrenzieren
+       die Labels nicht mehr. Das Ende ist `assetsLastUntilAge` aus derselben Projektion wie die
+       Summary («Vermögen reicht bis»), damit beide dieselbe Zahl zeigen. */
+    const markersFor = (series, endAge) => {
+      const change = view === 'income' ? series.find((point, index) => index > 0 && Math.abs(point.income - series[index - 1].income) > 1)?.age : undefined;
+      const stop = view === 'income' ? (change ?? maxAge) : (endAge ?? maxAge);
+      /* Nach dem Aufbrauch bleibt die Linie auf 0 – dort braucht es keine weitere Marke. */
+      const wanted = (view === 'income' ? [minAge, stop] : [minAge, (minAge + maxAge) / 2, stop])
+        .filter(age => view === 'income' || endAge === null || endAge === undefined || age <= endAge);
+      const picked = [];
+      wanted.forEach(target => {
+        if (target === null || target === undefined) return;
+        const closest = ages.reduce((best, age) => Math.abs(age - target) < Math.abs(best - target) ? age : best, ages[0]);
+        if (!picked.some(age => Math.abs(age - closest) < 4)) picked.push(closest);
+      });
+      return picked.sort((p, q) => p - q);
+    };
+    /* Beschriftung ohne Überdeckung: jede Marke bekommt eine Box (grün über, blau unter der
+       Linie). Kollidiert sie mit einer schon gesetzten Box oder mit einer Linie, rutscht sie
+       schrittweise weiter nach aussen; findet sie keinen Platz, entfällt sie – lieber ein Label
+       weniger als übereinanderliegende Zahlen. */
+    const seriesList = [[a?.series ?? [], 'current', a?.assetsLastUntilAge], [b?.series ?? [], 'second', b?.assetsLastUntilAge]];
+    const candidates = [];
+    seriesList.forEach(([series, tone, endAge]) => { const order = []; return markersFor(series, endAge).forEach(age => {
+      const point = series.find(entry => entry.age === age);
+      if (!point) return;
+      const amount = value(point);
+      const zero = view === 'assets' && amount <= 1;
+      const text = zero ? `0 mit ${age}` : money(amount);
+      candidates.push({tone, age, amount, text, zero, index:order.length, width:Math.min(W - 8, Math.round(text.length * 5.7) + 14)});
+      order.push(age);
+    }); });
+    /* Reihenfolge: erst die Aufbrauchmarke (die Kernaussage), dann abwechslungsweise je Linie
+       die nächste Marke – so bekommen beide Varianten ihre Labels. */
+    const priority = entry => (entry.zero ? -1 : entry.index) * 2 + (entry.tone === 'current' ? 0 : 1);
+    candidates.sort((p, q) => priority(p) - priority(q));
+    const boxes = [];
+    const hits = box => boxes.some(other => !(box.right < other.left || other.right < box.left || box.bottom < other.top || other.bottom < box.top));
+    const covers = box => all.some(point => {
+      const px = x(point.age), py = y(value(point));
+      return px >= box.left - 2 && px <= box.right + 2 && py >= box.top - 2 && py <= box.bottom + 2;
+    });
+    const placed = [];
+    candidates.forEach(entry => {
+      const dotX = x(entry.age), dotY = y(entry.amount);
+      /* Ein Wertelabel gehört zu genau einem Datenpunkt: es sitzt waagerecht **zentriert über
+         seinem Punkt** (labelX = pointX). Bei Überdeckung weicht es ausschliesslich **vertikal**
+         aus – zuerst weiter nach oben, zur Not unter die Linie. Nur wenn es am linken/rechten Rand
+         abgeschnitten würde, rutscht es innerhalb der Chartgrenze und bekommt eine Leader-Line
+         zum Punkt. Findet es keinen freien Platz, entfällt es (lieber kein Label als ein falsch
+         zugeordnetes). */
+      const wanted = dotX - entry.width / 2;
+      const left = Math.min(Math.max(wanted, 2), W - entry.width - 2);
+      const leader = Math.abs(left - wanted) > 0.5;
+      const offsets = [];
+      for (let step = 0; step <= 12; step++) { offsets.push(-9 * step); if (step > 0) offsets.push(9 * step); }
+      for (const offset of offsets) {
+        const top = dotY - 27 + offset;
+        if (top < 2 || top + 17 > H - padBottom - 3) continue;
+        const box = {left, right:left + entry.width, top, bottom:top + 17};
+        if (hits(box) || covers(box)) continue;
+        boxes.push(box);
+        placed.push({...entry, ...box, dotX, dotY, leader});
+        return;
+      }
+    });
+    /* X-Achse = die beschrifteten Zeitpunkte: Start, der **gemeinsame Vergleichspunkt** (Mitte),
+       der Aufbrauch beider Varianten und der Planungshorizont. Keine zusätzlichen Zehnjahreswerte –
+       so entspricht jede Zahl genau einem Punkt im Chart. */
+    const markerAges = [...new Set(seriesList.flatMap(([series, tone, endAge]) => markersFor(series, endAge)))].sort((p, q) => p - q);
+    const ticks = [...new Set([...markerAges, minAge, maxAge])].sort((p, q) => p - q);
+    const labelledTicks = ticks.filter((age, index) => index === 0 || age - ticks[index - 1] >= 2);
+    const tickLabels = labelledTicks.map(age => `<text class="tick" x="${x(age).toFixed(1)}" y="${H - 7}" text-anchor="middle">${age}</text>`).join('');
+    const dots = seriesList.map(([series, tone, endAge]) => markersFor(series, endAge).map(age => {
+      const point = series.find(entry => entry.age === age);
+      if (!point) return '';
+      return `<circle class="dot-${tone}" cx="${x(age).toFixed(1)}" cy="${y(value(point)).toFixed(1)}" r="3.2"/>`;
+    }).join('')).join('');
+    /* Leader-Line nur, wenn das Label am Rand verschoben werden musste. */
+    const leaders = placed.filter(entry => entry.leader).map(entry => {
+      const fromX = entry.dotX < entry.left ? entry.left : entry.right;
+      return `<line class="leader leader-${entry.tone}" x1="${fromX.toFixed(1)}" y1="${(entry.top + 8.5).toFixed(1)}" x2="${entry.dotX.toFixed(1)}" y2="${entry.dotY.toFixed(1)}"/>`;
+    }).join('');
+    const pills = placed.map(entry => `<g class="pill pill-${entry.tone}"><rect x="${entry.left.toFixed(1)}" y="${entry.top.toFixed(1)}" width="${entry.width}" height="17" rx="4"/>`
+      + `<text x="${(entry.left + entry.width / 2).toFixed(1)}" y="${(entry.top + 12.4).toFixed(1)}" text-anchor="middle">${esc(entry.text)}</text></g>`).join('');
+    return `<svg class="v4-cmp-chart" viewBox="0 0 ${W} ${H}" width="100%" height="${H}" role="img" aria-label="${view === 'income' ? 'Monatliches Einkommen' : 'Vermögensentwicklung'} im Vergleich">`
+      + grid + tickLabels
+      + `<path class="line-second" d="${path(b?.series ?? [])}"/>` + `<path class="line-current" d="${path(a?.series ?? [])}"/>`
+      + leaders + dots + pills + '</svg>';
+  }
+  /* Berechnungsbasis: dieselben Annahmen wie «Annahmen & Berechnung», kompakt zusammengefasst. */
+  function compareAssumptions() {
+    const plan = planFor(chosenShare());
+    const rates = plan?.assumptions?.rates ?? {};
+    const profile = globalThis.RiskProfiles?.getRiskProfile(plan?.riskProfile ?? state.riskProfile);
+    const canton = State.canton(state);
+    const strategy = `${strategyLabels[profile?.key] ?? profile?.label ?? '–'} · ${percent(numeric(profile?.expectedRealReturn) * 100)} % pro Jahr`;
+    return {
+      /* Kurzzeile für die zugeklappte Zeile (ohne Beschriftungen, ohne Inflation – die steht
+         ausgeschrieben im aufgeklappten Teil). */
+      short:[`${canton || 'Kanton geschätzt'}`, `${percent(rates.uws)} %`, `${strategyLabels[profile?.key] ?? profile?.label ?? '–'}`, `bis ${plan?.retirement?.targetAge ?? '–'}`],
+      rows:[['Pensionierungsalter', state.mode === 'post' ? 'bereits pensioniert' : `Alter ${plan?.retirement?.age ?? '–'}`],
+        ['Planungshorizont', `Alter ${plan?.retirement?.targetAge ?? '–'}`],
+        ['Wohnkanton', canton || 'geschätzt (mittleres Kantonsmodell)'],
+        ['Umwandlungssatz PK', `${percent(rates.uws)} %`],
+        ['PK-Verzinsung', `${percent(rates.pkInterest)} %`],
+        ['Säule 3a', `${percent(rates.p3Return)} %`],
+        ['Anlagestrategie', strategy],
+        ['Inflation', `${percent(rates.inflation)} %`],
+        ['Wertschriftenrendite bis Pensionierung', `${percent(assumedSecuritiesRate())} %`],
+        ['Zahlenwelt', 'heutige Kaufkraft (real)']]
+    };
+  }
+  function renderCompare() {
+    closeMenu(); route = 'comparison'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
+    window.scrollTo(0, 0);
+    const active = chosenShare();
+    const others = variantShares().filter(share => share !== active);
+    if (!others.length) { renderPlan(); return; }
+    if (!others.includes(comparisonState.share)) { comparisonState.share = others[0]; writeComparisonPrefs(); }
+    const current = comparisonOf(evaluated(active), active);
+    const other = comparisonOf(evaluated(comparisonState.share), comparisonState.share);
+    comparisonState.last = {current, other};
+    const summary = compareSummary(current, other);
+    const basis = compareAssumptions();
+    const cantonNote = hasCanton() ? '' : ' · geschätzt';
+    const values = comparison => `<dl class="v4-cmp-values"><div><dt>Startkapital netto</dt><dd>${money(comparison.netStartCapital)}</dd></div><div><dt>PK-Rente netto / Mt.</dt><dd>${money(comparison.netPkPensionMonthly)}</dd></div><div><dt>Vermögen reicht bis</dt><dd>${compareReach(comparison)}</dd></div></dl>`;
+    /* Beide Karten haben genau drei Zeilen (Badge · Auswahl/Untertitel · Werte), damit die
+       Kennzahlen untereinander exakt auf derselben Höhe stehen. */
+    const cards = `<div class="v4-cmp-cards">`
+      + `<section class="v4-cmp-card current"><span class="v4-cmp-badge">${Icons.icon('circleCheck', {size:15})} Aktueller Plan</span><span class="v4-cmp-sub">${current.label}</span>${values(current)}</section>`
+      + `<section class="v4-cmp-card second"><span class="v4-cmp-badge"><span class="v4-cmp-dot" aria-hidden="true"></span> Variante</span>`
+      + `<label class="v4-cmp-select"><span class="v3-visually-hidden">Variante wählen</span><select data-cmp-share aria-label="Variante wählen">${others.map(share => `<option value="${share}"${share === comparisonState.share ? ' selected' : ''}>${share} % Kapital</option>`).join('')}</select>${Icons.icon('chevronDown', {size:14})}</label>`
+      + `${values(other)}</section></div>`;
+    const view = comparisonState.view;
+    const row = (icon, label, note, a, b, info = '') => `<div class="v4-cmp-row"><span class="v4-cmp-row-icon" aria-hidden="true">${Icons.icon(icon, {size:16})}</span>`
+      + `<span class="v4-cmp-row-label">${label}${note ? ` <small>${note}</small>` : ''}${info}</span>`
+      + `<span class="v4-cmp-val current">${a}</span><span class="v4-cmp-val second">${b}</span></div>`;
+    const infoAfter = modalInfo({title:'Danach Einkommen', aria:'Danach Einkommen erklären', body:`<p><strong>Danach Einkommen</strong> – Einkommen, das dir weiterhin zur Verfügung steht, nachdem dein frei verfügbares Vermögen aufgebraucht ist.</p><p>Enthalten sind AHV, PK-Rente und weitere dauerhafte Einkommen – netto nach Steuern und <strong>ohne</strong> Kapitalentnahme. Die Zahl stammt aus dem Jahr, in dem das Vermögen aufgebraucht ist (bzw. aus dem Planungshorizont, wenn es reicht).</p>`});
+    const infoTax = modalInfo({title:'Steuern im Vergleich', aria:'Steuern im Vergleich erklären', body:`<p>Die <strong>Kapitalsteuer</strong> ist die geschätzte einmalige Steuer auf dem PK-Kapitalbezug deines Wohnkantons; die <strong>laufende Einkommensteuer</strong> ist die geschätzte Jahressteuer im ersten Planjahr (Pensionierungsjahr).</p><p>Beide Werte kommen aus dem kantonalen Steuermodell der App – keine eigene Steuerformel für diesen Screen.</p>`});
+    /* Unterhalb der Grafik ist alles eingeklappt: der Screen bleibt eine Übersicht und passt
+       auf einen Screen. Die Zusammenfassungen nennen, was drinsteckt. */
+    const details = `<details class="v4-cmp-fold"><summary><span class="v4-cmp-fold-head">Die wichtigsten Unterschiede</span><span class="v4-cmp-fold-line">Kapitalsteuer · Startkapital · PK-Rente · Steuern · Vermögen · Danach Einkommen</span>${Icons.icon('chevronDown', {size:18})}</summary><div class="v4-cmp-rows">`
+      + row('receiptTax', 'Kapitalsteuer', `beim Bezug${cantonNote}`, money(current.capitalWithdrawalTax), money(other.capitalWithdrawalTax), infoTax)
+      + row('wallet', 'Verfügbares Startkapital', 'nach Steuern', money(current.netStartCapital), money(other.netStartCapital))
+      + row('buildingBank', 'PK-Rente netto', 'pro Monat', money(current.netPkPensionMonthly), money(other.netPkPensionMonthly))
+      + row('receiptTax', 'Laufende Einkommensteuer', `pro Jahr${cantonNote}`, money(current.annualIncomeTax), money(other.annualIncomeTax))
+      + row('trendingUp', 'Vermögen mit 85', '', current.assetsAt85 === null ? '–' : money(current.assetsAt85), other.assetsAt85 === null ? '–' : money(other.assetsAt85))
+      + row('target', 'Vermögen reicht bis', '', compareReach(current), compareReach(other))
+      + row('chartLine', 'Danach Einkommen', 'netto / Mt.', money(current.postDepletionNetIncomeMonthly), money(other.postDepletionNetIncomeMonthly), infoAfter)
+      + `</div></details>`;
+    const chartCard = `<section class="v4-cmp-chart-card"><div class="v4-cmp-chart-head"><h2>${view === 'income' ? 'Einkommensentwicklung' : 'Vermögensentwicklung'}</h2>`
+      + `<div class="v4-cmp-seg" role="group" aria-label="Ansicht wählen"><button type="button" class="v4-cmp-seg-item" data-cmp-view="assets" aria-pressed="${view === 'assets'}">Vermögen</button><button type="button" class="v4-cmp-seg-item" data-cmp-view="income" aria-pressed="${view === 'income'}">Einkommen</button></div></div>`
+      + `<p class="v4-cmp-legend"><span class="current">Aktueller Plan · ${current.label}</span><span class="second">Variante · ${other.label}</span></p>`
+      + `<div class="v4-cmp-canvas" id="v4CmpCanvas"></div>`
+      + `<p class="v4-cmp-hint">${Icons.icon('infoCircle', {size:15})} Wichtig: Wenn das freie Vermögen aufgebraucht ist, laufen AHV und PK-Rente weiter.</p></section>`;
+    /* Klar als Beratungs-CTA erkennbar (nicht als Informations-Accordion): mintfarbene Fläche,
+       grüner Rahmen, dunkelgrüner Titel und rechts «Individuell besprechen →» statt Chevron. */
+    const advice = `<button type="button" class="v4-cmp-cta-row" data-v4-action="advisor"><span class="v4-cmp-cta-icon" aria-hidden="true">${Icons.icon('arrowUpRight', {size:18})}</span><span class="v4-cmp-cta-title">Und deine Anlagestrategie?</span><span class="v4-cmp-cta-line">Passt deine Strategie zu Rente, Bedarf und Anlagehorizont?</span><span class="v4-cmp-cta-action">Individuell besprechen <span aria-hidden="true">→</span></span></button>`;
+    const basisBlock = `<details class="v4-cmp-basis"><summary><span class="v4-cmp-basis-head">${Icons.icon('adjustments', {size:16})} So haben wir gerechnet</span><span class="v4-cmp-basis-line">${basis.short.map(esc).join(' · ')}</span>${Icons.icon('chevronDown', {size:18})}</summary><div class="v4-cmp-basis-body">${infoRows(basis.rows)}<p class="v4-info-source">Beide Varianten werden mit denselben Angaben und derselben Anlagestrategie gerechnet; nur der PK-Kapitalanteil unterscheidet sich. Der Vergleich verändert weder deinen Plan noch deine Töpfe.</p></div></details>`;
+    app.innerHTML = `${title('Rente oder Kapital?', 'Zwei Varianten im Vergleich.', detailHead)}<div class="v4-cmp"><div class="v4-cmp-cards-wrap">${cards}<p class="v4-cmp-summary"><span class="v4-cmp-summary-icon" aria-hidden="true">${Icons.icon('arrowsExchange', {size:18})}</span><span>${summary.map(esc).join('<br>')}</span></p></div>${chartCard}${details}${advice}${basisBlock}</div>`;
+    const canvas = document.getElementById('v4CmpCanvas');
+    if (canvas) canvas.innerHTML = compareChartSvg(canvas.clientWidth || 320, current, other, view);
+    app.querySelector('[data-cmp-share]')?.addEventListener('change', event => { comparisonState.share = numeric(event.target.value); writeComparisonPrefs(); renderCompare(); });
+    app.querySelectorAll('[data-cmp-view]').forEach(button => button.addEventListener('click', () => { comparisonState.view = button.dataset.cmpView; writeComparisonPrefs(); renderCompare(); }));
+  }
+  /* Breite ändert sich (Rotation, Fenstergröße): nur die Grafik neu zeichnen, nicht der Screen. */
+  let comparisonResizeTimer = null;
+  window.addEventListener('resize', () => {
+    if (route !== 'comparison' || !comparisonState.last) return;
+    clearTimeout(comparisonResizeTimer);
+    comparisonResizeTimer = setTimeout(() => {
+      const canvas = document.getElementById('v4CmpCanvas');
+      if (canvas) canvas.innerHTML = compareChartSvg(canvas.clientWidth || 320, comparisonState.last.current, comparisonState.last.other, comparisonState.view);
+    }, 180);
+  });
+
   /* ---------------- Modal, Menü, Navigation ---------------- */
   function modalInfo({title, body, aria = 'Erklärung öffnen'}) {
     return `<button type="button" class="v3-info v3-info-sub v3-modal-icon" data-modal data-modal-title="${esc(title)}" data-modal-body="${esc(body)}" aria-label="${esc(aria)}">${Icons.icon('infoCircle', {size:18})}</button>`;
@@ -922,20 +1250,127 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
   /* ---------------- Pilot: Feedback und Zurücksetzen (dezent unten im Menü) ----------------
      Beide Einträge sind bewusst keine Navigationsziele der App, sondern Werkzeuge für das
      Pilottesting: Rückmeldung geben und wieder bei null starten. */
-  const PILOT_FEEDBACK_EMAIL = '';
-  const feedbackTemplate = () =>
-    ['Was hat gut funktioniert?', '', '', 'Was war unklar oder hat gefehlt?', '', '', 'Sonstiges:', ''].join('\n');
-  function openFeedbackModal() {
-    const address = PILOT_FEEDBACK_EMAIL || (TaxModel?.config?.pilot?.feedbackEmail ?? '');
-    const body = `<p class="v3-modal-lead">Deine Rückmeldung hilft uns, den Ruhestands-Check zu verbessern.</p><label class="v4-feedback-label" for="v4Feedback">Deine Rückmeldung</label><textarea id="v4Feedback" class="v4-feedback" rows="7" spellcheck="true">${esc(feedbackTemplate())}</textarea><p class="v4-info-source">Deine Angaben aus dem Plan werden nicht automatisch mitgeschickt – es geht nur dieser Text.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-feedback-send>${address ? 'E-Mail öffnen' : 'E-Mail-Programm öffnen'} <span aria-hidden="true">→</span></button></div>`;
-    openModal({modalTitle:'Feedback geben', modalBody:body});
+  /* ---------------- Pilot: Angaben für die Beratung, Plan zurücksetzen ----------------
+     Zwei Werkzeuge unten im Menü. «Angaben für die Beratung» bereitet den Plan als Klartext
+     auf, den der Nutzer kopieren oder als Datei speichern und selbst verschicken kann –
+     nichts wird automatisch gesendet, und es ist sichtbar, was drinsteht. */
+  const pad = value => String(value ?? '').padEnd(0, ' ');
+  const reportLine = (label, value, note = '') => `${label}: ${value}${note ? `   ${note}` : ''}`;
+  /* Klartext-Bericht aus demselben Zustand und Rechenkern wie die Oberfläche. */
+  function advisorReport(item = evaluated(previewShare ?? chosenShare())) {
+    const when = new Date();
+    const stamp = `${String(when.getDate()).padStart(2, '0')}.${String(when.getMonth() + 1).padStart(2, '0')}.${when.getFullYear()}, ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
+    const out = [];
+    const h = text => { out.push('', text, '─'.repeat(Math.max(24, text.length))); };
+    const pre = state.mode === 'pre';
+    const known = dataKnown(), amounts = captured();
+    const ahv = Estimates ? Estimates.ahvOf(state) : {origin:'estimated', monthly:0};
+    const profile = globalThis.RiskProfiles?.getRiskProfile(state.riskProfile);
+    const plan = state.details.assumptions ?? {};
+    const a = state.details.assets ?? {}, p3 = state.details.pension3a ?? {}, pension = state.details.pension ?? {};
+    const inAge = value => entered(value) ? `${numeric(value)} Jahre` : 'nicht erfasst';
+    const amount = value => entered(value) ? money(numeric(value)) : 'noch nicht erfasst';
+
+    out.push('Ruhestands-Check – Angaben für die Beratung');
+    out.push(`Erstellt: ${stamp}`);
+    out.push('Alle Beträge in heutiger Kaufkraft (real). Modellrechnung, keine Steuer- oder Anlageberatung.');
+
+    h('PERSON UND ZEITRAUM');
+    out.push(reportLine('Alter heute', inAge(state.values.age)));
+    out.push(reportLine('Pensionierung mit', state.values.retirement !== undefined ? `${numeric(state.values.retirement)}` : (pre ? 'nicht erfasst' : 'bereits pensioniert')));
+    out.push(reportLine('Planungshorizont bis', state.targetAge !== undefined && state.targetAge !== null ? `${numeric(state.targetAge)}` : 'automatisch'));
+    out.push(reportLine('Wohnkanton', State.canton(state) || 'nicht erfasst'));
+    out.push(reportLine('Situation', pre ? 'vor der Pensionierung' : 'bereits pensioniert'));
+
+    if (item) {
+      const sources = Calculator.incomeSourcesAtStart(item.plan).filter(source => source.annualIncome > 0.5);
+      h('EINKOMMEN IM ERSTEN PLANJAHR');
+      if (!sources.length) out.push(reportLine('Einnahmen', 'keine erfasst'));
+      sources.forEach(source => out.push(reportLine(source.name, `${money(source.annualIncome / 12)} / Monat`, source.id === 'ahv' && ahv.origin === 'estimated' ? '(geschätzte AHV-Pauschale)' : '')));
+      out.push(reportLine('Einkommen brutto', `${money(numeric(item.result.incomeGross) / 12)} / Monat`));
+      out.push(reportLine('Geschätzte Steuern', `− ${money(numeric(item.result.incomeTax) / 12)} / Monat`, `(kantonales Modell ${State.canton(state) || '–'})`));
+      out.push(reportLine('Einkommen netto', `${money(Math.round(numeric(item.result.monthlyIncomeNet)))} / Monat`));
+
+      const needMonthly = Math.round(numeric(item.result.monthlyNeed)), incomeMonthly = Math.round(numeric(item.result.monthlyIncomeNet));
+      const fromWealth = Math.max(0, needMonthly - incomeMonthly);
+      h('BEDARF UND ENTNAHME');
+      out.push(reportLine('Bedarf netto', `${money(needMonthly)} / Monat`));
+      out.push(reportLine('Aus Vermögen', `${money(fromWealth)} / Monat`, fromWealth > 0 ? '(= Bedarf − Einkommen netto)' : '(Einkommen deckt den Bedarf)'));
+
+      h('VERMÖGEN ZUM PENSIONIERUNGSZEITPUNKT');
+      out.push(reportLine('PK-Guthaben heute', amount(pension.pk)));
+      out.push(reportLine('PK-Beiträge pro Jahr', amount(pension.pkContrib)));
+      out.push(reportLine('PK-Kapitalbezug', `${chosenShare()} %`, `(Varianten ${variantShares().join(' / ')} %)`));
+      out.push(reportLine('PK-Kapital netto', money(Calculator.calculateAvailableCapital(item.plan, chosenShare()).netPkCapitalWithdrawal)));
+      out.push(reportLine('Säule 3a Guthaben', amounts.p3 !== null ? money(amounts.p3) : 'noch nicht erfasst'));
+      out.push(reportLine('Säule 3a Beiträge pro Jahr', amounts.p3Contrib ? money(amounts.p3Contrib) : 'keine erfasst'));
+      out.push(reportLine('Bank / liquide Mittel', amount(a.cash)));
+      out.push(reportLine('Wertschriften', amount(a.securities)));
+      out.push(reportLine('Weitere Positionen', amount(a.otherAssets)));
+      /* Das freie Kapital aus dem Schnellstart steckt nicht in den Einzelpositionen – ohne
+         diese Zeile klaffte zwischen den Positionen und dem Startkapital eine Lücke. */
+      if (amounts.free > 0) out.push(reportLine('Frei verfügbares Kapital', money(amounts.free), state.details.assets ? '(Summe der Positionen)' : '(Angabe aus dem Schnellstart, nicht weiter aufgeteilt)'));
+      out.push(reportLine('Immobilienwert', amount(a.propertyValue), '(gebundenes Vermögen)'));
+      out.push(reportLine('Hypotheken', amount(a.mortgage)));
+      if (amounts.property > 0) out.push(reportLine('Immobilien netto', money(amounts.property)));
+      out.push(reportLine('Startkapital', money(numeric(item.result.availableCapital))));
+
+      const allocation = roundedParts(item.result.bucketAllocation ?? [], item.result.availableCapital);
+      h('AUFTEILUNG AUF DIE TÖPFE (Modell)');
+      ['Geldmarkt','Obligationen','Wertschöpfung'].forEach((name, position) => out.push(reportLine(name, money(allocation[position] ?? 0))));
+
+      h('ERGEBNIS');
+      out.push(reportLine('Reicht bis', reachAge(item.result, item.plan.retirement.targetAge)));
+      if (!exhaustionAge(item.result)) out.push(reportLine('Restvermögen am Planungshorizont', money(horizonValue(item).value)));
+    }
+
+    h('ANNAHMEN');
+    out.push(reportLine('Anlagestrategie', profile ? `${profile.label} · ${percent(numeric(profile.expectedRealReturn) * 100)} % pro Jahr` : 'nicht erfasst', state.strategyChosen === true ? '(vom Nutzer gewählt)' : '(Modellannahme)'));
+    out.push(reportLine('Inflation', `${percent(numeric(plan.inflation ?? State.defaults.inflation))} % pro Jahr`));
+    out.push(reportLine('PK-Verzinsung bis Pensionierung', `${percent(numeric(plan.pkInterest ?? State.defaults.pkInterest))} %`));
+    out.push(reportLine('3a-Rendite bis Pensionierung', `${percent(numeric(plan.p3Return ?? State.defaults.p3Return))} %`));
+    out.push(reportLine('Wertschriftenrendite bis Pensionierung', `${percent(assumedSecuritiesRate())} %`, '(interner Produktsatz)'));
+
+    if (variantShares().length > 1) {
+      h('VARIANTEN (PK-Kapitalbezug)');
+      variantShares().forEach(share => out.push(reportLine(`${share} % Kapitalbezug`, share === chosenShare() ? 'aktueller Plan' : 'gespeicherte Variante')));
+    }
+
+    out.push('', 'Erstellt mit dem Ruhestands-Check. Die Werte stammen aus dem gemeinsamen Rechenkern und den oben genannten Annahmen.', '');
+    return out.join('\n');
   }
-  function sendFeedback() {
-    const address = PILOT_FEEDBACK_EMAIL || (TaxModel?.config?.pilot?.feedbackEmail ?? '');
-    const text = document.getElementById('v4Feedback')?.value ?? '';
-    const subject = encodeURIComponent('Ruhestands-Check: Feedback');
-    const bodyText = encodeURIComponent(text);
-    globalThis.location.href = `mailto:${address}?subject=${subject}&body=${bodyText}`;
+  function openAdvisorModal() {
+    const body = `<p class="v3-modal-lead">Diese Zusammenfassung ist für dein Beratungsgespräch gedacht. Kopiere sie oder speichere sie als Datei – sie wird <strong>nicht</strong> automatisch verschickt.</p><label class="v4-report-label" for="v4Report">Deine Angaben</label><textarea id="v4Report" class="v4-report" rows="14" readonly spellcheck="false">${esc(advisorReport())}</textarea><p class="v4-info-source">Enthalten sind Person und Zeitraum, Einkommen, Bedarf, Vermögen, das Ergebnis sowie die verwendeten Annahmen – geschätzte Werte sind als solche bezeichnet. Du kannst den Text vor dem Kopieren bearbeiten.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-report-copy>Text kopieren</button><button type="button" class="v4-chip" data-report-save>Als Datei speichern</button></div><p class="v4-report-state" id="v4ReportState" role="status"></p>`;
+    openModal({modalTitle:'Angaben für die Beratung', modalBody:body});
+  }
+  async function copyAdvisorReport() {
+    const field = document.getElementById('v4Report');
+    const note = document.getElementById('v4ReportState');
+    if (!field) return;
+    /* Zuerst markieren: damit funktioniert «Kopieren» auch ohne Clipboard-API (und der
+       Nutzer kann jederzeit mit Ctrl/Cmd + C nachhelfen). Danach der bequeme Weg. */
+    field.removeAttribute('readonly');
+    field.focus();
+    field.select();
+    if (note) note.textContent = 'Text ist markiert – mit Ctrl/Cmd + C kopieren.';
+    try {
+      if (!navigator.clipboard?.writeText) return;
+      await navigator.clipboard.writeText(field.value);
+      if (note) note.textContent = 'Kopiert – jetzt in deine E-Mail einfügen.';
+    } catch (error) { /* Auswahl bleibt bestehen; Hinweis oben steht schon */ }
+  }
+  function saveAdvisorReport() {
+    const text = document.getElementById('v4Report')?.value ?? advisorReport();
+    const stamp = new Date().toISOString().slice(0, 10);
+    try {
+      const url = URL.createObjectURL(new Blob([text], {type:'text/plain;charset=utf-8'}));
+      const link = document.createElement('a');
+      link.href = url; link.download = `ruhestands-check-angaben-${stamp}.txt`;
+      document.body.append(link); link.click(); link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      const note = document.getElementById('v4ReportState');
+      if (note) note.textContent = 'Datei gespeichert.';
+    } catch (error) { /* Download nicht möglich – der Text bleibt zum Kopieren */ }
   }
   function openResetModal() {
     const body = `<p class="v3-modal-lead">Damit startest du wieder beim Schnellstart. Alle erfassten Angaben, Varianten und die Anlagestrategie werden aus diesem Browser entfernt.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-plan-reset>Plan zurücksetzen <span aria-hidden="true">→</span></button><button type="button" class="v4-chip" data-modal-close>Abbrechen</button></div>`;
@@ -954,19 +1389,36 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
   function openPotsModal(trigger) {
     const item = evaluated(previewShare ?? chosenShare());
     if (!item) return;
-    const values = item.result.bucketAllocation, total = item.result.availableCapital;
-    const amounts = roundedParts(values, total), percents = roundedParts(values.map(value => total > 0 ? value / total * 100 : 0), 100);
+    /* Das Töpfe-Modell zeigt den Zustand EINES Planjahres – gelesen aus der zentralen
+       Jahresprojektion (`yearlyProjection`), nach Entnahme, Rendite und Umbuchungen. Es wird
+       hier nichts neu gerechnet, und die Aufteilung wird nie aus der Anlagestrategie
+       abgeleitet (die Strategie liefert nur die Renditeannahme, siehe Card unten). */
+    /* Zwei Positionen desselben Jahres, eine Rechnung: der Einstieg über Abschnitt 1 zeigt den
+       Jahresanfang (`buckets` mit dem frei verfügbaren Vermögen `free`), der Einstieg über
+       Abschnitt 6 das Jahresende (`endBuckets` / `end`). Der Menüeintrag zeigt immer den
+       Jahresanfang des ersten Planjahres – genau die Sicht des Icons an Abschnitt 1 im ersten
+       Jahr, damit der Einstieg aus dem Menü stabil und vergleichbar bleibt. */
+    const fromScreen = !!trigger;
+    const atStart = !fromScreen || trigger.dataset.potPosition === 'start';
+    const row = potsYear(item, {first: !fromScreen});
+    const values = row ? (atStart ? (row.buckets ?? []) : (row.endBuckets ?? [])) : (item.result.bucketAllocation ?? []);
+    const total = row ? numeric(atStart ? row.free : row.end) : numeric(item.result.availableCapital);
+    const amounts = roundedParts(values, total), percents = roundedParts(values.map(value => total > 0 ? numeric(value) / total * 100 : 0), 100);
     /* Nur die Töpfe zeigen, in denen tatsächlich Vermögen liegt: bei einem einzigen Topf wäre
        eine Drei-Töpfe-Darstellung mit zwei leeren Zeilen irreführend. */
     const all = bucketConfig.map((bucket, index) => ({...bucket, value:numeric(values[index]), amount:amounts[index], percent:percents[index]}));
     const shown = all.filter(entry => entry.amount > 0 || entry.percent > 0);
     const lead = total <= 0
-      ? 'Für den Ruhestand ist aktuell kein Vermögen hinterlegt.'
+      ? 'Für dieses Jahr ist kein Vermögen mehr vorhanden.'
       : shown.length === 1
-        ? `Dein frei verfügbares Vermögen liegt aktuell vollständig in der ${shown[0].label}.`
+        ? `Dein frei verfügbares Vermögen liegt in diesem Jahr vollständig in der ${shown[0].label}.`
         : shown.length === 2
-          ? `Dein frei verfügbares Vermögen liegt in zwei von drei Töpfen: ${shown.map(entry => entry.label).join(' und ')}.`
-          : 'Dein frei verfügbares Vermögen ist auf drei Töpfe verteilt.';
+          ? `Dein frei verfügbares Vermögen liegt in diesem Jahr in zwei von drei Töpfen: ${shown.map(entry => entry.label).join(' und ')}.`
+          : 'Dein frei verfügbares Vermögen ist in diesem Jahr auf drei Töpfe verteilt.';
+    /* Das Planjahr wird im Dialog genannt: das Modell ist kein statischer Startzustand. */
+    const yearLine = row
+      ? `<p class="v4-pot-year">Alter ${numeric(row.age) + 1} · Jahr ${planCalendarYear(item.plan, row)} <span>Stand am ${atStart ? 'Anfang' : 'Ende'} dieses Jahres</span></p>`
+      : '';
     /* Zentrum hell und neutral, Text in Navy: Label «Frei verfügbares Vermögen», darunter der Betrag. */
     const chart = shown.length
       ? `<div class="v3-donut-wrap">${donutSvg(shown)}<div class="v3-donut-total"><span>Frei verfügbares Vermögen</span><strong>${money(total)}</strong></div></div>`
@@ -974,10 +1426,23 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     /* Genau drei kompakte Zeilen: Icon, Name, Betrag, Prozentanteil. Die Erklärung zu jedem
        Topf hängt als ⓘ an der Zeile – kein zweiter Erklärblock, keine Wiederholung. */
     const rows = shown.length
-      ? `<ul class="v3-donut-legend">${shown.map(entry => `<li class="pot-${entry.tone}"><span class="v3-pot-icon" aria-hidden="true">${Icons.icon(entry.icon, {size:20})}</span><span class="v3-pot-name">${entry.label}</span><strong>${money(entry.amount)}</strong><small>${entry.percent} %</small>${modalInfo({title:`Topf ${entry.label}`, aria:`${entry.label} erklären`, body:`<p><strong>${entry.label}</strong> – ${esc(entry.note)}</p><p>Der Topf enthält aktuell ${money(entry.amount)} (${entry.percent} % deines frei verfügbaren Vermögens). Die Aufteilung folgt deiner Anlagestrategie und verschiebt sich mit den Entnahmen über die Jahre.</p>`})}</li>`).join('')}</ul>`
+      ? `<ul class="v3-donut-legend">${shown.map(entry => `<li class="pot-${entry.tone}"><span class="v3-pot-icon" aria-hidden="true">${Icons.icon(entry.icon, {size:20})}</span><span class="v3-pot-name">${entry.label}</span><strong>${money(entry.amount)}</strong><small>${entry.percent} %</small>${modalInfo({title:`Topf ${entry.label}`, aria:`${entry.label} erklären`, body:`<p><strong>${entry.label}</strong> – ${esc(entry.note)}</p><p>${row ? `Am ${atStart ? 'Anfang' : 'Ende'} von Alter ${numeric(row.age) + 1} enthält dieser Topf ${money(entry.amount)} (${entry.percent} % deines frei verfügbaren Vermögens).` : `Der Topf enthält ${money(entry.amount)} (${entry.percent} % deines frei verfügbaren Vermögens).`} Die Beträge stammen aus der Jahresrechnung; sie verschieben sich mit Entnahmen, Rendite und Umbuchungen.</p>`})}</li>`).join('')}</ul>`
       : '';
-    const body = `<p class="v3-modal-lead">${lead}</p>${chart}${rows}${potsStrategy(item)}<button type="button" class="primary v3-modal-action" data-modal-close>Schliessen</button>`;
+    const body = `${yearLine}<p class="v3-modal-lead">${lead}</p>${chart}${rows}${potsStrategy(item)}<button type="button" class="primary v3-modal-action" data-modal-close>Schliessen</button>`;
     openModal({dataset:{modalTitle:'Das Töpfe-Modell', modalBody:body}, currentTarget:trigger});
+  }
+  /* Das im Jahresverlauf gewählte Planjahr; ohne Auswahl das erste Planjahr. Beides kommt aus
+     derselben Projektion wie die Jahresansicht – niemals eine zweite Wahrheit. */
+  function potsYear(item, {first = false} = {}) {
+    const rows = (item?.result?.yearlyProjection ?? []).filter(row => !row.terminal);
+    if (!rows.length) return null;
+    if (first) return rows[0];
+    return rows.find(row => row.age === yearState.age) ?? rows[0];
+  }
+  /* Kalenderjahr eines Planjahres: aus dem heutigen Jahr und dem Alter abgeleitet (der Plan
+     startet heute). Reine Einordnung im Dialog, keine Finanzrechnung. */
+  function planCalendarYear(plan, row) {
+    return new Date().getFullYear() + (numeric(row.age) + 1 - numeric(plan?.person?.currentAge));
   }
   /* Eine einzige kompakte Card zur Anlagestrategie: Profil und Satz dynamisch aus dem aktiven
      Profil (`risk-profiles.js`), dazu die Herkunft – «gewählt» nach «Strategie übernehmen»,
@@ -1025,6 +1490,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       const saved = V3State.decode(raw);
       state = saved.state; previewShare = null; lastSavedAt = saved.savedAt; storageBlocked = false; storageFailed = false;
       if (state.position === 'variants') renderVariants();
+      else if (state.position === 'comparison') renderCompare();
       else if (state.position === 'years') renderYear();
       else if (state.position === 'improve') renderImprove();
       else if (state.position === 'basics') renderBasics();
@@ -1040,6 +1506,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (event.target.closest('[data-modal-close]')) { closeModal(); return; }
     const back = event.target.closest('[data-v4-back]');
     if (back) { goBack(); return; }
+    if (event.target.closest('[data-v4-action="advisor"]')) { openAdvisorModal(); return; }
     const pots = event.target.closest('[data-v4-action="pots"]');
     if (pots) { openPotsModal(pots); return; }
     const next = event.target.closest('[data-v4-next]');
@@ -1051,6 +1518,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       if (target === 'years') renderYear();
       else if (target === 'improve') renderImprove();
       else if (target === 'variants') renderVariants();
+      else if (target === 'compare') renderCompare();
       else openDetail(target, parent);
       return;
     }
@@ -1067,7 +1535,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       else if (target === 'basics') renderBasics();
       else if (target === 'variants') renderVariants();
       else if (target === 'years') renderYear();
-      else if (target === 'pots') openPotsModal(null);   // dieselbe Komponente wie aus dem Jahresverlauf
+      else if (target === 'pots') openPotsModal(null);   // dieselbe Komponente: Jahresanfang des ersten Planjahres
       else openDetail(target, 'plan');
       return;
     }
@@ -1075,11 +1543,12 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     const action = event.target.closest('[data-menu-action]');
     if (action) {
       closeMenu();
-      if (action.dataset.menuAction === 'feedback') openFeedbackModal();
+      if (action.dataset.menuAction === 'report') openAdvisorModal();
       else if (action.dataset.menuAction === 'reset') openResetModal();
       return;
     }
-    if (event.target.closest('[data-feedback-send]')) { sendFeedback(); return; }
+    if (event.target.closest('[data-report-copy]')) { copyAdvisorReport(); return; }
+    if (event.target.closest('[data-report-save]')) { saveAdvisorReport(); return; }
     if (event.target.closest('[data-plan-reset]')) { resetPlan(); return; }
   });
   document.querySelector('.menu-button')?.addEventListener('click', () => {
@@ -1093,14 +1562,36 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     const input = event.target.closest('input[data-amount]');
     if (!input) return;
     const raw = input.value, caret = input.selectionStart ?? raw.length;
-    const next = formatAmount(raw);
+    /* Nur Ziffern, ein Dezimalkomma und ein Vorzeichen zulassen: Buchstaben und eingefügte
+       Währungstexte verschwinden sofort, statt im Feld stehen zu bleiben. */
+    const clean = text => text.replace(/[^\d,'\s\u00a0.-]/g, '');
+    const significant = text => clean(text).replace(/['\s\u00a0]/g, '').length;
+    const next = formatAmount(clean(raw));
     if (next === raw) return;
+    const target = significant(raw.slice(0, caret));
     input.value = next;
-    // Cursor hinter dieselbe Anzahl Ziffern setzen – funktioniert auch beim Tippen in der Mitte.
-    const digitsBefore = raw.slice(0, caret).replace(/\D/g, '').length;
+    // Cursor hinter dieselbe Anzahl signifikanter Zeichen setzen – auch beim Tippen in der Mitte.
     let index = 0, seen = 0;
-    while (index < next.length && seen < digitsBefore) { if (/\d/.test(next[index])) seen++; index++; }
+    while (index < next.length && seen < target) { if (/[\d,-]/.test(next[index])) seen++; index++; }
     try { input.setSelectionRange(index, index); } catch (error) { /* Feld ohne Auswahl */ }
+  });
+  /* Backspace hinter einem Trennzeichen («3'|000») soll die Ziffer davor löschen – sonst
+     passiert scheinbar nichts, weil die Formatierung den Apostroph sofort wieder einsetzt. */
+  app.addEventListener('keydown', event => {
+    if (event.key !== 'Backspace' || event.altKey || event.ctrlKey || event.metaKey) return;
+    const input = event.target.closest?.('input[data-amount]');
+    if (!input || input.selectionStart !== input.selectionEnd) return;
+    const caret = input.selectionStart ?? 0, before = input.value.slice(0, caret);
+    if (!before || /\d$/.test(before)) return;
+    const chars = [...before];
+    let index = chars.length - 1;
+    while (index >= 0 && !/\d/.test(chars[index])) index--;
+    if (index < 0) return;
+    event.preventDefault();
+    chars.splice(index, 1);
+    input.value = chars.join('') + input.value.slice(caret);
+    try { input.setSelectionRange(index, index); } catch (error) { /* Feld ohne Auswahl */ }
+    input.dispatchEvent(new Event('input', {bubbles:true}));
   });
   app.addEventListener('blur', event => { const input = event.target.closest?.('input[data-amount]'); if (input) input.value = formatAmount(input.value); }, true);
   window.addEventListener?.('pagehide', save);
@@ -1111,7 +1602,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
      Das Icon kommt aus der einen Icon-Quelle (`js/icons.js`), nie als eigenes SVG. */
   const modalCloseButton = document.querySelector('#v4Modal [data-modal-close]');
   if (modalCloseButton && !modalCloseButton.firstChild) modalCloseButton.innerHTML = Icons.icon('close', {size:22, stroke:1.7});
-  window.V4 = {save, load, planFor, evaluated, renderPlan, renderStart, renderVariants, precisionItems, profileComparison, needImpact};
+  window.V4 = {save, load, planFor, evaluated, renderPlan, renderStart, renderVariants, renderCompare, comparisonOf, precisionItems, profileComparison, needImpact};
   setStartDraft(); renderStart();
   load();
 
