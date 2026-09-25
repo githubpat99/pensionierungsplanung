@@ -463,7 +463,7 @@
       // Kompaktheitsregel: genau zwei Zeilen je Karte (Label + Feld), Erklärung im Feld.
       const info = meta.info ? modalInfo({title:meta.info.title, body:meta.info.body, aria:meta.info.title + ' erklären'}) : '';
       return `<section class="v4-start-card"><div class="v4-start-head"><span class="v4-detail-icon" aria-hidden="true">${Icons.icon(meta.icon, {size:16})}</span><label for="start-${field.key}">${meta.label}</label>${info}</div><div class="v4-entry"><input id="start-${field.key}" name="${field.key}" type="text" inputmode="${amount ? 'decimal' : 'numeric'}" autocomplete="off" placeholder="${esc(meta.short ?? '')}"${amount ? ' data-amount' : ''} value="${esc(formatAmount(draft[field.key] ?? ''))}"><span class="v4-entry-unit">${meta.unit}</span></div></section>`;
-    }).join('')}</div><p class="v4-assumptions">Wir rechnen mit sinnvollen Annahmen, bis du sie ersetzt. ${modalInfo({title:'Annahmen für den ersten Check', body:assumptionsBody(), aria:'Verwendete Annahmen anzeigen'})}</p><p id="v4Error" class="v3-error" role="alert"></p><button class="primary v4-cta" type="submit">Meinen ersten Plan anzeigen <span aria-hidden="true">→</span></button></form>`;
+    }).join('')}</div><p class="v4-assumptions">Wir rechnen mit sinnvollen Annahmen, bis du sie ersetzt. ${modalInfo({title:'Annahmen für den ersten Check', body:assumptionsBody(), aria:'Verwendete Annahmen anzeigen'})}</p><p id="v4Error" class="v3-error" role="alert"></p><button class="primary v4-cta" type="submit">Meinen ersten Plan anzeigen <span aria-hidden="true">→</span></button><button type="button" class="v4-chip v4-report-open" data-v4-action="report-import">Gespeicherte Angaben einlesen</button></form>`;
     window.CantonPicker?.enhanceAll(app);
     app.querySelectorAll('[data-situation]').forEach(button => button.addEventListener('click', () => {
       assignForm(); state = V3State.changeMode(state, button.dataset.situation); renderStart();
@@ -1416,9 +1416,13 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     return out.join('\n');
   }
   function openAdvisorModal() {
-    const body = `<p class="v3-modal-lead">Diese Zusammenfassung ist für dein Beratungsgespräch gedacht. Kopiere sie oder speichere sie als Datei – sie wird <strong>nicht</strong> automatisch verschickt.</p><label class="v4-report-label" for="v4Report">Deine Angaben</label><textarea id="v4Report" class="v4-report" rows="14" readonly spellcheck="false">${esc(advisorReport())}</textarea><p class="v4-info-source">Enthalten sind Person und Zeitraum, Einkommen, Bedarf, Vermögen, das Ergebnis sowie die verwendeten Annahmen – geschätzte Werte sind als solche bezeichnet. Du kannst den Text vor dem Kopieren bearbeiten.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-report-copy>Text kopieren</button><button type="button" class="v4-chip" data-report-save>Als Datei speichern</button></div><p class="v4-report-state" id="v4ReportState" role="status"></p>`;
+    const body = `<p class="v3-modal-lead">Diese Zusammenfassung ist für dein Beratungsgespräch gedacht. Kopiere sie oder speichere sie als Datei – sie wird <strong>nicht</strong> automatisch verschickt.</p><label class="v4-report-label" for="v4Report">Deine Angaben</label><textarea id="v4Report" class="v4-report" rows="14" readonly spellcheck="false">${esc(advisorReport())}</textarea><p class="v4-info-source">Enthalten sind Person und Zeitraum, Einkommen, Bedarf, Vermögen, das Ergebnis sowie die verwendeten Annahmen – geschätzte Werte sind als solche bezeichnet. Du kannst den Text vor dem Kopieren bearbeiten.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-report-copy>Text kopieren</button><button type="button" class="v4-chip" data-report-save>Als Datei speichern</button><button type="button" class="v4-chip" data-v4-action="report-import">Wieder einlesen</button></div><p class="v4-report-state" id="v4ReportState" role="status"></p>`;
     openModal({modalTitle:'Angaben für die Beratung', modalBody:body});
   }
+  /* Rückweg zur Sicherung: derselbe Text lässt sich wieder einlesen – erreichbar aus dem
+     Pilotbereich **und** aus dem Schnellstart (nach «Plan zurücksetzen» gibt es kein Menü). */
+  const reportImportForm = () => `<p class="v3-modal-lead">Füge den kopierten Text oder den Inhalt deiner gespeicherten .txt-Datei ein und tippe auf «Angaben übernehmen».</p><p class="v4-info-source"><strong>Dein aktueller Plan wird dadurch ersetzt.</strong> Übernommen werden deine Eingaben – Zeitraum, Wohnkanton, Einkommen, Bedarf, PK-Kapital, Säule 3a, Vermögenspositionen, Annahmen und Anlagestrategie. Startkapital, Töpfe und Ergebnis rechnet die App neu; fehlt eine Pflichtangabe, wird nichts geändert.</p><textarea id="v4ReportImport" class="v4-report" rows="10" spellcheck="false" placeholder="Bericht hier einfügen …"></textarea><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-report-apply>Angaben übernehmen</button></div><p class="v4-report-state" id="v4ReportImportState" role="status"></p>`;
+  function openReportImportModal() { openModal({modalTitle:'Gespeicherte Angaben einlesen', modalBody:reportImportForm()}); }
   async function copyAdvisorReport() {
     const field = document.getElementById('v4Report');
     const note = document.getElementById('v4ReportState');
@@ -1447,6 +1451,125 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       const note = document.getElementById('v4ReportState');
       if (note) note.textContent = 'Datei gespeichert.';
     } catch (error) { /* Download nicht möglich – der Text bleibt zum Kopieren */ }
+  }
+  /* ---------------- Bericht wieder einlesen (Rückweg zur Sicherung) ----------------
+     Der Bericht ist die einzige Sicherung, die die App selbst erzeugt («Text kopieren» / «Als
+     Datei speichern»). Er lässt sich hier wieder einlesen: gelesen werden die **erfassten
+     Eingaben** – Person und Zeitraum, Wohnkanton, Einkommensquellen, Bedarf, PK, Säule 3a,
+     Vermögenspositionen, Annahmen und Anlagestrategie. **Abgeleitete Werte** (Einkommen
+     brutto/netto, Steuern, PK-Kapital netto, Startkapital, Töpfe, Ergebnis) werden nicht
+     übernommen, sondern vom gemeinsamen Rechenkern neu berechnet – eine zweite Rechnung gibt es
+     nicht. Schlägt das Einlesen fehl, bleibt der bisherige Plan unverändert. */
+  const reportNumber = value => {
+    /* Schweizer Format: Apostroph gruppiert, Komma trennt Dezimalen – beides wird entfernt bzw.
+       umgesetzt, damit «CHF 1'271'380» als 1271380 und «4,5 %» als 4.5 gelesen wird. */
+    const cleaned = String(value ?? '').replace(/CHF|%/gi, '').replace(/[’'\u00a0\s]/g, '').replace(/−/g, '-');
+    const match = cleaned.match(/-?\d+(?:[.,]\d+)?/);
+    return match ? Number(match[0].replace(',', '.')) : null;
+  };
+  /* Liest die Zeilen «Bezeichnung: Wert» – tolerant gegenüber Leerzeilen und Zusatznotizen. */
+  function reportFields(text) {
+    const fields = new Map();
+    String(text ?? '').split(/\r?\n/).forEach(line => {
+      const match = String(line).match(/^\s*([^:]{2,40}?)\s*:\s*(.+?)\s*$/);
+      if (match) fields.set(match[1], match[2]);
+    });
+    return fields;
+  }
+  function importAdvisorReport(text) {
+    const fields = reportFields(text);
+    if (!fields.size) throw Error('Ich konnte im Text keine Angaben erkennen. Füge den Bericht vollständig ein.');
+    const used = new Set();
+    const read = label => { const raw = fields.get(label); if (raw !== undefined) used.add(label); return raw; };
+    const number = label => { const raw = read(label); return raw === undefined ? undefined : reportNumber(raw); };
+    /* Beträge: fehlende Zeile = unverändert, «noch nicht erfasst» = leer (nicht erfasst). */
+    const amount = label => { const raw = read(label); if (raw === undefined) return undefined; const value = reportNumber(raw); return value === null ? '' : value; };
+    const mode = (() => { const raw = read('Situation'); return raw === undefined ? state.mode : (/bereits pensioniert/i.test(raw) ? 'post' : 'pre'); })();
+    const age = number('Alter heute');
+    const retirement = mode === 'post' ? undefined : number('Pensionierung mit');
+    const need = number('Bedarf netto');
+    const canton = (read('Wohnkanton') ?? '').trim().toUpperCase();
+    const missing = [];
+    if (age === undefined || age === null) missing.push('Alter heute');
+    if (mode !== 'post' && (retirement === undefined || retirement === null)) missing.push('Pensionierung mit');
+    if (need === undefined || need === null) missing.push('Bedarf netto');
+    if (!/^[A-Z]{2}$/.test(canton)) missing.push('Wohnkanton');
+    if (missing.length) throw Error(`Im Text fehlen: ${missing.join(', ')}. Bitte den vollständigen Bericht einfügen.`);
+    /* Einkommensquellen: AHV und weitere Renten/Einnahmen sind Eingaben; die PK-Rente ist es nur
+       nach der Pensionierung (vorher wird sie aus dem PK-Guthaben gerechnet). Eine **geschätzte**
+       AHV-Pauschale wird nicht als Eingabe übernommen – sie bleibt eine Schätzung und wird
+       identisch neu gebildet. */
+    const ahvLine = fields.get('AHV');
+    const ahvSuggested = ahvLine !== undefined && /gesch/i.test(ahvLine);
+    const ahv = ahvLine === undefined || ahvSuggested ? undefined : reportNumber(ahvLine);
+    if (ahvLine !== undefined && !ahvSuggested) used.add('AHV');
+    const other = number('Weitere Renten'), additional = number('Weitere Einnahmen'), pkRent = number('PK-Rente');
+    const shareRaw = read('PK-Kapitalbezug');
+    const share = shareRaw === undefined ? undefined : reportNumber(shareRaw);
+    const variantMatch = String(shareRaw ?? '').match(/Varianten\s+([\d\s/]+)/);
+    const variants = variantMatch ? variantMatch[1].split('/').map(part => Number(part.trim())).filter(value => Number.isInteger(value) && value >= 0 && value <= 100) : null;
+    /* «Frei verfügbares Kapital» ist nur eine Eingabe, wenn es aus dem Schnellstart stammt;
+       sonst ist es die Summe der Positionen (abgeleitet) und wird nicht übernommen. */
+    const freeRaw = read('Frei verfügbares Kapital');
+    const free = freeRaw !== undefined && /Schnellstart/i.test(freeRaw) ? reportNumber(freeRaw) : undefined;
+    const strategyRaw = read('Anlagestrategie');
+    const strategy = strategyRaw === undefined ? undefined : Object.keys(profileLabels).find(key => new RegExp('^' + profileLabels[key], 'i').test(strategyRaw)) ?? null;
+    const assumptionDraft = {
+      inflation:number('Inflation'), pkInterest:number('PK-Verzinsung bis Pensionierung'),
+      p3Return:number('3a-Rendite bis Pensionierung'), targetAge:number('Planungshorizont bis')
+    };
+    const horizonRaw = read('Planungshorizont bis');
+    /* Aufbau über dieselben APIs wie die Editoren – keine zweite Zustandslogik. */
+    let next = State.fresh(mode);
+    next = State.apply(next, 'time', mode === 'post' ? {age} : {age, retirement});
+    next = State.apply(next, 'tax', {canton});
+    next = State.apply(next, 'income', {canton, ahv:ahv ?? 0, other:other ?? 0, additional:additional ?? 0});
+    next = State.apply(next, 'need', {need});
+    if (mode === 'post') next = State.apply(next, 'pension', {pkRent:pkRent ?? 0});
+    else next = State.apply(next, 'pension', {pk:amount('PK-Guthaben heute') ?? 0, pkContrib:amount('PK-Beiträge pro Jahr') ?? 0, pkShare:Number.isInteger(share) ? share : 50});
+    next = apply3a(next, {p3:amount('Säule 3a Guthaben'), p3Contrib:amount('Säule 3a Beiträge pro Jahr')});
+    /* Freies Kapital zuerst: es ist die Basis, aus der die Positionen aufgeteilt werden. */
+    if (free !== undefined) next = State.apply(next, 'free', {free});
+    const assetValues = {cash:amount('Bank / liquide Mittel'), securities:amount('Wertschriften'), otherAssets:amount('Weitere Positionen'), propertyValue:amount('Immobilienwert'), mortgage:amount('Hypotheken')};
+    const assetParts = [['cash', ['cash']], ['securities', ['securities']], ['otherAssets', ['otherAssets']], ['property', ['propertyValue', 'mortgage']]];
+    assetParts.forEach(([part, keys]) => {
+      const values = {};
+      keys.forEach(key => { if (assetValues[key] !== undefined) values[key] = assetValues[key] === '' ? '' : assetValues[key]; });
+      if (Object.keys(values).length) next = State.applyAsset(next, part, values, {keepOptional:true, allowEmpty:true});
+    });
+    const hasAssumptions = Object.values(assumptionDraft).some(value => value !== undefined);
+    if (hasAssumptions) {
+      const values = {...State.defaults, ...next.details.assumptions};
+      Object.entries(assumptionDraft).forEach(([key, value]) => { if (value !== undefined && value !== null) values[key] = value; });
+      if (horizonRaw !== undefined && /automatisch/i.test(horizonRaw)) values.targetAge = undefined;
+      next = State.apply(next, 'assumptions', {...values, reviewed:true});
+    }
+    if (strategy !== undefined && strategy !== null) { next.riskProfile = strategy; next.strategyChosen = /vom Nutzer gewählt/i.test(strategyRaw); }
+    if (variants && variants.length) next.v3Variants = variants;
+    /* Übernommene Angaben landen immer auf «Mein Plan»; `position` muss dafür eine gültige
+       V3-Position sein (nicht der Adapter-Platzhalter «time»). */
+    next.position = 'plan';
+    const validated = V3State.validate(V3State.normalize(next));
+    const recomputed = [...fields.keys()].filter(label => !used.has(label));
+    return {state:validated, read:used.size, recomputed};
+  }
+  function applyAdvisorReport() {
+    const field = document.getElementById('v4ReportImport');
+    const note = document.getElementById('v4ReportImportState');
+    if (!field) return;
+    try {
+      const result = importAdvisorReport(field.value);
+      /* Erst wenn alles gültig ist, wird der Plan ersetzt – sonst bleibt der alte Stand. */
+      state = result.state;
+      previewShare = null;
+      markDirty();
+      closeModal();
+      renderPlan();
+      notice(`Angaben übernommen (${result.read} Zeilen gelesen). Startkapital, Töpfe und Ergebnis rechnet die App wie immer selbst${result.recomputed.length ? `; nicht als Eingabe übernommen: ${result.recomputed.slice(0, 4).join(', ')}${result.recomputed.length > 4 ? ' …' : ''}` : ''}.`, {id:`report-import-${Date.now()}`});
+    } catch (error) {
+      globalThis.__v4LastError = error?.message ?? String(error);
+      if (note) note.textContent = error.message;
+    }
   }
   function openResetModal() {
     const body = `<p class="v3-modal-lead">Damit startest du wieder beim Schnellstart. Alle erfassten Angaben, Varianten und die Anlagestrategie werden aus diesem Browser entfernt.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-plan-reset>Plan zurücksetzen <span aria-hidden="true">→</span></button><button type="button" class="v4-chip" data-modal-close>Abbrechen</button></div>`;
@@ -1603,6 +1726,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     const back = event.target.closest('[data-v4-back]');
     if (back) { goBack(); return; }
     if (event.target.closest('[data-v4-action="advisor"]')) { openAdvisorModal(); return; }
+    if (event.target.closest('[data-v4-action="report-import"]')) { openReportImportModal(); return; }
     const pots = event.target.closest('[data-v4-action="pots"]');
     if (pots) { openPotsModal(pots); return; }
     const next = event.target.closest('[data-v4-next]');
@@ -1647,6 +1771,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (event.target.closest('[data-notice-close]')) { hideNotice(); return; }
     if (event.target.closest('[data-report-copy]')) { copyAdvisorReport(); return; }
     if (event.target.closest('[data-report-save]')) { saveAdvisorReport(); return; }
+    if (event.target.closest('[data-report-apply]')) { applyAdvisorReport(); return; }
     if (event.target.closest('[data-plan-reset]')) { resetPlan(); return; }
   });
   document.querySelector('.menu-button')?.addEventListener('click', () => {

@@ -604,6 +604,55 @@ async function startCapitalChecks(w, h) {
   f.remove();
 }
 
+/* ---------- Bericht wieder einlesen (Rückweg zur Sicherung) ----------
+   «Angaben für die Beratung» ist die einzige Sicherung, die die App selbst erzeugt: Der Text muss
+   sich wieder einlesen lassen und denselben Plan ergeben – erreichbar auch ohne Plan (Schnellstart). */
+async function reportImportChecks(w, h) {
+  const tag = w + 'px Bericht';
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow;
+  const rows = text => Object.fromEntries(String(text ?? '').split(/\r?\n/).map(line => line.match(/^([^:]{2,40}?)\s*:\s*(.+?)\s*$/)).filter(Boolean).map(match => [match[1], match[2]]));
+  const storedShare = () => { try { return JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? '{}')?.state?.details?.pension?.pkShare; } catch (error) { return null; } };
+  const report = async () => { d.querySelector('[data-menu-action="report"]')?.click(); await wait(400); const text = d.getElementById('v4Report')?.value ?? ''; d.querySelector('[data-modal-close]')?.click(); await wait(250); return text; };
+  win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
+  await wait(600);
+  const before = await report();
+  ok(/^Ruhestands-Check – Angaben für die Beratung/.test(before) && /Startkapital: CHF/.test(before), tag + ': Bericht enthält Kopf, Angaben und Startkapital (' + before.split('\n').length + ' Zeilen)');
+  d.querySelector('[data-menu-action="report"]')?.click();
+  await wait(400);
+  ok(!!d.querySelector('[data-v4-action="report-import"]'), tag + ': Rückweg «Wieder einlesen» ist im Berichtsdialog erreichbar');
+  d.querySelector('[data-v4-action="report-import"]')?.click();
+  await wait(400);
+  ok(!!d.getElementById('v4ReportImport') && !!d.querySelector('[data-report-apply]'), tag + ': Einlese-Dialog mit Feld und «Angaben übernehmen»');
+  d.getElementById('v4ReportImport').value = before;
+  d.querySelector('[data-report-apply]')?.click();
+  await wait(800);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && d.getElementById('v4Modal')?.open !== true, tag + ': Übernehmen schliesst den Dialog und führt auf «Mein Plan»');
+  ok(/Angaben übernommen \(\d+ Zeilen gelesen\)/.test(d.getElementById('v4Notice')?.textContent ?? ''), tag + ': Hinweis nennt die gelesenen Zeilen und die Neuberechnung (' + (d.getElementById('v4Notice')?.textContent.trim().slice(0, 48) ?? '–') + '…)');
+  const after = await report();
+  const keys = ['Alter heute','Pensionierung mit','Planungshorizont bis','Wohnkanton','Situation','AHV','Bedarf netto','PK-Guthaben heute','PK-Beiträge pro Jahr','PK-Kapitalbezug','Säule 3a Guthaben','Bank / liquide Mittel','Wertschriften','Anlagestrategie','Startkapital','Reicht bis'];
+  const a = rows(before), b = rows(after);
+  const diff = keys.filter(key => a[key] !== b[key]);
+  ok(diff.length === 0, tag + ': Rundlauf stellt dieselben Angaben wieder her (' + (diff.length ? diff.map(key => key + ': «' + a[key] + '» → «' + b[key] + '»').join(' | ') : keys.length + ' Zeilen identisch') + ')');
+  /* Fehlerfall: unbrauchbarer Text ändert nichts und nennt den Grund. */
+  const shareBefore = storedShare();
+  d.querySelector('[data-menu-action="report"]')?.click();
+  await wait(350);
+  d.querySelector('[data-v4-action="report-import"]')?.click();
+  await wait(350);
+  d.getElementById('v4ReportImport').value = 'Kein Bericht, nur Text.';
+  d.querySelector('[data-report-apply]')?.click();
+  await wait(500);
+  ok(/keine Angaben erkennen/.test(d.getElementById('v4ReportImportState')?.textContent ?? '') && storedShare() === shareBefore, tag + ': unbrauchbarer Text meldet den Grund und lässt den Plan unverändert (' + storedShare() + ' %)');
+  /* Ohne Plan erreichbar: nach dem Zurücksetzen aus dem Schnellstart. */
+  win.__v4SuspendSave = true;
+  win.localStorage.removeItem('retirement-v3-plan');
+  await new Promise(resolve => { f.onload = resolve; f.src = '/v4.html?leer=' + Date.now(); });
+  await wait(900);
+  const dl = f.contentDocument;
+  ok(!!dl.querySelector('[data-v4-action="report-import"]') && !dl.querySelector('.menu-button:not([hidden])'), tag + ': im Schnellstart (kein Plan) gibt es den Einstieg «Gespeicherte Angaben einlesen»');
+  f.remove();
+}
+
 /* ---------- Speicherversion, Migration und Invalidierung ----------
    Neue Deployments dürfen bei Testern nie ein manuelles Löschen verlangen: alte Stände werden
    migriert, defekte gesichert und geräumt, neuere nicht angefasst – und jeder Fall ist sichtbar. */
@@ -1958,6 +2007,10 @@ async function amountInputChecks(w) {
   flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await startCapitalChecks(w, h); } catch (e) { ok(false, w + ' Startkapital: ' + e.message); }
+  }
+  flush();
+  for (const [w, h] of [[390,844],[1000,900]]) {
+    try { await reportImportChecks(w, h); } catch (e) { ok(false, w + ' Bericht: ' + e.message); }
   }
   flush();
   try { await storageVersionChecks(); } catch (e) { ok(false, 'Speicherstand: ' + e.message); }

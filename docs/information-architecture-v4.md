@@ -256,6 +256,12 @@ Neustart bzw. das Aktualisieren:
 - **Neu laden** speichert den aktuellen Stand und lädt die Seite neu – **ohne** Datenverlust und
   ohne Cache-Löschen. Darunter steht die **App-Version** (aus `js/v4-version.js`): Tester können
   sie in einer Rückmeldung nennen, und die Zuordnung «welche Version, welcher Fehler» ist eindeutig.
+- **Gespeicherte Angaben einlesen (Rückweg):** Der Bericht ist die einzige Sicherung, die die App
+  selbst erzeugt – deshalb führt ein Weg zurück: «Wieder einlesen» im Berichtsdialog und der
+  dezente Textlink **«Gespeicherte Angaben einlesen»** im **Schnellstart** (erreichbar auch ohne
+  Plan, also nach «Plan zurücksetzen»). Eingelesen werden die erfassten Eingaben; abgeleitete Werte
+  rechnet der gemeinsame Rechenkern neu. Der Vorgang ersetzt den Plan atomar – bei fehlenden
+  Pflichtangaben oder unlesbarem Text bleibt alles unverändert.
 
 ## 7a. Update, Speicherstände und Service Worker
 

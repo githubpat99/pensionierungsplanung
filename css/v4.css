@@ -277,6 +277,10 @@ body{padding-bottom:18px}
 .v4-entry{margin-top:6px}
 .v4-assumptions{margin:8px 0 0}
 .v4-cta{margin-top:8px;min-height:46px}
+/* Der Rückweg zur Sicherung kostet auf dem Referenzbildschirm keine Höhe: kompakter Link. */
+.v4-report-open{margin-top:0}
+/* Reserve für kleine Geräte (360 × 780): Karten minimal dichter, damit nichts scrollt. */
+@media(max-width:430px){.v4-start-card{padding:9px}}
 
 /* Kompaktheitsregel für Eingaben (V4-Spec):
    genau zwei Zeilen je Karte (Label + Feld), kein Umbruch, gleiche Höhe und Rhythmik.
@@ -406,6 +410,11 @@ body{padding-bottom:18px}
 .v4-report-label{display:block;margin:0 0 4px;font:600 13px system-ui,sans-serif;color:var(--v3-ink)}
 .v4-report{width:100%;min-height:240px;padding:10px;border:1px solid var(--v3-line);border-radius:10px;background:var(--v3-surface);color:var(--v3-ink);font:12.5px/1.5 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;white-space:pre;overflow:auto;resize:vertical}
 .v4-report-state{margin:8px 0 0;font:13px system-ui,sans-serif;color:var(--v3-green)}
+/* Rückweg zur Sicherung: als dezenter Textlink, damit der Schnellstart ohne Scrollen bleibt. */
+.v4-report-open{display:block;margin:2px auto 0;padding:0 8px;min-height:0;width:auto;border:0;background:transparent;color:var(--v3-green);font:600 13px/1.3 system-ui,sans-serif;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
+.v4-report-open:hover,.v4-report-open:focus-visible{background:var(--v3-soft);border-radius:8px}
+.v4-report-import .v4-report{min-height:140px}
+.v4-report-import .v4-report-state{color:var(--v3-warn,#8a6d1f)}
 /* Info-Dialoge: Schliessen-Knopf als reines «✕» (IconX, 22 px, Strichstärke 1,7) in der
    dunkelgrünen Textfarbe – kein Kreis, kein Hintergrund, kein Rahmen, kein Schatten.
    Mindestens 40 × 40 px unsichtbare Touchfläche, sauber oben rechts im Kopf; erst Hover
