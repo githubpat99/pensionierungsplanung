@@ -549,6 +549,61 @@ async function modalCloseStyleChecks() {
   ok(/#v4Modal \.v3-modal-close\{[^}]*border:0/.test(css) && /#v4Modal \.v3-modal-close\{[^}]*box-shadow:none/.test(css), 'CSS: kein Rahmen, kein Schatten');
 }
 
+/* ---------- Startkapital: eine Zahl auf allen Screens ----------
+   Kachel «Mein Plan», ⓘ-Aufschlüsselung, Variantenkarten und Vergleichskarten müssen für denselben
+   Kapitalanteil denselben Betrag nennen – auch im Vorschauzustand (Regler bewegt, nicht gespeichert). */
+async function startCapitalChecks(w, h) {
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px Startkapital';
+  const digits = text => Number(String(text ?? '').replace(/[^\d]/g, ''));
+  const amount = value => Math.round(Number(value) || 0);
+  const tileValue = () => digits([...d.querySelectorAll('.v4-tile')].find(tile => /Startkapital/.test(tile.textContent))?.querySelector('strong')?.textContent);
+  const openStartInfo = async () => {
+    [...d.querySelectorAll('.v4-tile')].find(tile => /Startkapital/.test(tile.textContent))?.querySelector('[data-modal]')?.click();
+    await wait(300);
+    const body = d.getElementById('v4ModalBody');
+    const rows = [...(body?.querySelectorAll('.v3-info-list > div') ?? [])].map(row => ({label:row.querySelector('dt')?.textContent.replace(/\s+/g, ' ').trim() ?? '', value:digits(row.querySelector('dd')?.textContent)}));
+    const total = digits(body?.querySelector('.v4-info-amount')?.textContent);
+    d.querySelector('[data-modal-close]')?.click();
+    await wait(250);
+    return {rows, total};
+  };
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
+  await wait(600);
+  const share = Number(d.querySelector('.v4-lever-value')?.textContent.replace(/[^\d]/g, ''));
+  const item = win.V4.evaluated(share);
+  const core = win.RetirementCalculator.calculateAvailableCapital(item.plan, share);
+  const planTile = tileValue();
+  ok(amount(item.result.availableCapital) === planTile, tag + ': Kachel entspricht dem Rechenkern (' + planTile + ')');
+  const info = await openStartInfo();
+  const pk = info.rows.find(row => /^PK-Kapital netto/.test(row.label))?.value;
+  const further = info.rows.find(row => /^Weiteres Kapital/.test(row.label))?.value;
+  ok(info.total === planTile && Number(pk) + Number(further) === info.total, tag + ': ⓘ-Aufschlüsselung addiert sich zur Kachel (PK ' + pk + ' + Weiteres ' + further + ' = ' + info.total + ')');
+  ok(pk === Math.round(core.netPkCapitalWithdrawal), tag + ': PK-Kapital netto stammt aus dem Rechenkern (' + pk + ')');
+  /* Variantenkarten: derselbe Wert für denselben Anteil. */
+  d.querySelector('[data-v4-next="variants"]')?.click();
+  await wait(600);
+  const cardValue = value => {
+    const card = [...d.querySelectorAll('.v4-variant')].find(node => new RegExp('^' + value + ' % Kapitalbezug').test(node.querySelector('strong')?.textContent.trim() ?? ''));
+    const row = [...(card?.querySelectorAll('dl > div') ?? [])].find(entry => /^Startkapital$/.test(entry.querySelector('dt')?.textContent.trim() ?? ''));
+    return digits(row?.querySelector('dd')?.textContent);
+  };
+  ok(cardValue(share) === planTile, tag + ': Variantenkarte nennt dasselbe Startkapital wie die Kachel (' + cardValue(share) + ' vs. ' + planTile + ')');
+  /* Vorschauzustand: Regler bewegen, ohne zu speichern – Aufschlüsselung folgt der Vorschau. */
+  win.DevFixture.write(win.DevFixture.scenarios['optimiert']()); win.V4.load();
+  await wait(600);
+  const slider = d.getElementById('shareRange');
+  slider.value = '100';
+  slider.dispatchEvent(new win.Event('input', {bubbles:true}));
+  await wait(600);
+  const preview = win.V4.evaluated(100);
+  const previewCore = win.RetirementCalculator.calculateAvailableCapital(preview.plan, 100);
+  const previewTile = tileValue();
+  const previewInfo = await openStartInfo();
+  ok(previewInfo.total === amount(preview.result.availableCapital) && previewInfo.total === previewTile, tag + ': Vorschau zeigt in Kachel und ⓘ dasselbe Startkapital (' + previewTile + ' / ' + previewInfo.total + ')');
+  ok(previewInfo.rows.find(row => /^PK-Kapital netto/.test(row.label))?.value === Math.round(previewCore.netPkCapitalWithdrawal), tag + ': ⓘ folgt im Vorschauzustand dem Vorschauanteil (' + previewInfo.rows.find(row => /^PK-Kapital netto/.test(row.label))?.value + ' statt 0)');
+  f.remove();
+}
+
 /* ---------- Speicherversion, Migration und Invalidierung ----------
    Neue Deployments dürfen bei Testern nie ein manuelles Löschen verlangen: alte Stände werden
    migriert, defekte gesichert und geräumt, neuere nicht angefasst – und jeder Fall ist sichtbar. */
@@ -1612,6 +1667,19 @@ async function comparisonChecks(w, h) {
     ok(unexpected.length === 0, tag + ' die ' + (tone === 'current' ? 'grüne' : 'blaue') + ' Linie trägt nur Start, Vergleichszeitpunkt und ihr Ende (' + labelledAges(tone).join(' · ') + ')');
   });
   ok(labelledAges('current').includes(startAge) && labelledAges('second').includes(startAge), tag + ' Startalter auf beiden Linien beschriftet (' + startAge + ')');
+  /* «Startkapital» ist eine Zahl: Karte und erster Grafikpunkt zeigen denselben Wert. Die Grafik
+     beginnt mit dem Startkapital am Pensionierungsalter, nicht mit dem Ende des ersten Planjahres. */
+  const cardsForStart = cardsOf();
+  ['current', 'second'].forEach((tone, index) => {
+    const cardStart = digits(cardsForStart[index]?.querySelectorAll('.v4-cmp-values dd')[0]?.textContent);
+    const own = dotsByTone[tone] ?? [];
+    const leftDot = own.reduce((best, dot) => dot.x < best.x ? dot : best, own[0] ?? {x:0});
+    const leftAge = tickAgeAt(leftDot.x);
+    const pill = pillSvg.filter(entry => entry.tone === tone)
+      .map(entry => ({entry, age:tickAgeAt(nearestDot(tone, entry.x + entry.w / 2).x)}))
+      .find(item => item.age !== null && item.age === leftAge);
+    ok(!!pill && digits(pill.entry.text) === cardStart, tag + ': Grafik startet mit dem Startkapital der ' + (tone === 'current' ? 'grünen' : 'blauen') + ' Karte (' + (pill?.entry.text ?? 'kein Startlabel') + ' vs. CHF ' + cardStart + ')');
+  });
   const reaches = tone => dotAges(tone).some(age => age === midAge);
   /* Referenzbreiten sind 390–440 px; auf 320 px kann eine Marke aus Platzgründen entfallen. */
   if (w >= 390) ok(labelledAges('current').includes(midAge) && labelledAges('second').includes(midAge), tag + ' gemeinsamer Vergleichszeitpunkt auf beiden Linien beschriftet (' + midAge + ')');
@@ -1887,6 +1955,10 @@ async function amountInputChecks(w) {
     try { await yearDetailChecks(w, h); } catch (e) { ok(false, w + ' Jahresansicht: ' + e.message); }
   }
   try { await modalCloseStyleChecks(); } catch (e) { ok(false, 'Modal-Schliessen (CSS): ' + e.message); }
+  flush();
+  for (const [w, h] of [[390,844],[1000,900]]) {
+    try { await startCapitalChecks(w, h); } catch (e) { ok(false, w + ' Startkapital: ' + e.message); }
+  }
   flush();
   try { await storageVersionChecks(); } catch (e) { ok(false, 'Speicherstand: ' + e.message); }
   flush();

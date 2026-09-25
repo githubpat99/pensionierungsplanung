@@ -142,7 +142,7 @@
   }
   function evaluated(share, source = state) {
     const plan = planFor(share, source);
-    return plan ? {plan, result:Calculator.evaluatePlan(plan), pension:Calculator.calculatePension(plan)} : null;
+    return plan ? {plan, result:Calculator.evaluatePlan(plan), pension:Calculator.calculatePension(plan), share} : null;
   }
   const hasCanton = () => !!State.canton(state);
 
@@ -1048,12 +1048,29 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       assetsLastUntilAge:exhaustAge,
       postDepletionNetIncomeMonthly:numeric(afterRow?.rent) / 12,
       retirementAge:retirement, targetAge:numeric(plan.retirement.targetAge),
+      /* Erstes Planjahr (Label) – Bezugspunkt für den gemeinsamen Vergleichszeitpunkt in der Grafik. */
+      firstYearAge:phase.length ? phase[0].age + 1 : null,
       /* Eine Linie je Ansicht: Vermögen am Jahresende bzw. monatlich verfügbares Einkommen
          (Nettoeinkommen + Kapitalentnahme, solange Vermögen vorhanden ist). */
       /* Monatlich verfügbares Einkommen: Nettoeinkommen plus der tatsächlich entnommene
          Kapitalbetrag (`takes`). Nach dem Aufbrauch des Vermögens fällt die Entnahme weg – dann
          bleibt genau das lebenslange Einkommen sichtbar. */
-      series:phase.map(row => ({age:row.age + 1, assets:numeric(row.end), income:(numeric(row.rent) + (row.takes ?? []).reduce((sum, value) => sum + numeric(value), 0)) / 12}))};
+      series:compareSeries(phase, result, plan)};
+  }
+  /* Eine Serie für den Vergleich – **mit Startpunkt**:
+       Punkt 0 = das Startkapital **am Pensionierungsalter** (dieselbe Zahl wie «Startkapital netto»
+                 in der Karte, also `result.availableCapital`),
+       danach  = die Jahresendwerte der Planjahre (der letzte Punkt ist damit der Horizontwert).
+     Ohne diesen Startpunkt begann die Grafik mit dem **Ende** des ersten Planjahres und zeigte
+     deshalb einen um eine Jahresentnahme tieferen Wert als die Karte – zwei «Startzahlen», die
+     nicht übereinstimmten. Alle Punkte kommen weiterhin aus derselben Projektion. */
+  function compareSeries(phase, result, plan) {
+    const years = phase.map(row => ({age:row.age + 1, assets:numeric(row.end), income:(numeric(row.rent) + (row.takes ?? []).reduce((sum, value) => sum + numeric(value), 0)) / 12}));
+    if (!years.length) return years;
+    const retirement = numeric(plan?.retirement?.age);
+    const startAge = phase[0]?.age;
+    if (!Number.isFinite(retirement) || !Number.isFinite(startAge) || retirement >= years[0].age) return years;
+    return [{age:retirement, assets:numeric(result.availableCapital), income:years[0].income, start:true}, ...years];
   }
   function compareReach(comparison) {
     if (!comparison) return '–';
@@ -1074,8 +1091,8 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     return ['Die Varianten unterscheiden sich vor allem bei verfügbarem Startkapital und lebenslanger PK-Rente.'];
   }
   /* Grafik: zwei Linien in voller Kartenbreite, bewusst ohne CHF-Y-Achse. Beschriftet werden
-     Start, Mitte, Alter 85 und der Punkt «Kapital aufgebraucht» – direkt am Punkt, grün über der
-     Linie des aktuellen Plans, blau unter der Vergleichslinie. */
+     Start (das Startkapital am Pensionierungsalter – dieselbe Zahl wie die Karte), der gemeinsame
+     Vergleichszeitpunkt und der Aufbrauch bzw. das Planende – direkt am Punkt. */
   function compareChartSvg(width, a, b, view) {
     const W = Math.max(240, Math.round(width)), H = 126, padTop = 30, padBottom = 24, padX = 12;
     const all = [...(a?.series ?? []), ...(b?.series ?? [])];
@@ -1097,11 +1114,15 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
        Punkte dazwischen bleiben als Marker sichtbar, tragen aber keine Zahl – so konkurrenzieren
        die Labels nicht mehr. Das Ende ist `assetsLastUntilAge` aus derselben Projektion wie die
        Summary («Vermögen reicht bis»), damit beide dieselbe Zahl zeigen. */
+    /* Der Vergleichszeitpunkt liegt in der Mitte der **Planjahre** (nicht der Achse): die Achse
+       beginnt neu mit dem Startkapital am Pensionierungsalter, das erste Planjahr ist ein Jahr
+       später. So bleibt der gemeinsame Zeitpunkt derselbe wie vor dem Startpunkt. */
+    const midTarget = ((a?.firstYearAge ?? b?.firstYearAge ?? minAge) + maxAge) / 2;
     const markersFor = (series, endAge) => {
       const change = view === 'income' ? series.find((point, index) => index > 0 && Math.abs(point.income - series[index - 1].income) > 1)?.age : undefined;
       const stop = view === 'income' ? (change ?? maxAge) : (endAge ?? maxAge);
       /* Nach dem Aufbrauch bleibt die Linie auf 0 – dort braucht es keine weitere Marke. */
-      const wanted = (view === 'income' ? [minAge, stop] : [minAge, (minAge + maxAge) / 2, stop])
+      const wanted = (view === 'income' ? [minAge, stop] : [minAge, midTarget, stop])
         .filter(age => view === 'income' || endAge === null || endAge === undefined || age <= endAge);
       const picked = [];
       wanted.forEach(target => {

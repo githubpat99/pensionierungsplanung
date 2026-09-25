@@ -175,10 +175,12 @@ gespeicherte Varianten und erklärt den Unterschied zwischen mehr Kapital und le
   waagerecht zentriert über seinem Datenpunkt** (`labelX = pointX`), weicht bei Überdeckung nur
   **vertikal** aus und rutscht erst am Chartrand innerhalb der Kante (≤ 2 px), wo es eine
   **Leader-Line** zum Punkt bekommt; findet es keinen Platz, entfällt es. Start und
-  Vergleichszeitpunkt tragen beide Linien. **Keine Linie läuft durch ein Label** und kein Label
+  Vergleichszeitpunkt tragen beide Linien. **Der Startpunkt ist das Startkapital am
+  Pensionierungsalter – dieselbe Zahl wie «Startkapital netto» in der Karte** (vorher begann die
+  Linie mit dem Ende des ersten Planjahres und wich dadurch um eine Jahresentnahme ab). **Keine Linie läuft durch ein Label** und kein Label
   berührt die **X-Achse**, die genau die beschrifteten Zeitpunkte zeigt (ohne Beschriftung «Alter»,
-  mit Abstand unter der Zeichenfläche und unter **jedem** Punkt, keine zusätzlichen
-  Zehnjahreswerte – Beispiel «optimiert»: 66 · 78 · 90). Fällt das freie Vermögen auf 0, steht die Marke **«0 mit {Alter}»** direkt an der
+  mit Abstand unter der Zeichenfläche und unter **jedem** Punkt, links das Pensionierungsalter,
+  keine zusätzlichen Zehnjahreswerte – Beispiel «optimiert»: 65 · 78 · 90). Fällt das freie Vermögen auf 0, steht die Marke **«0 mit {Alter}»** direkt an der
   Linie (nie «Plan endet» oder «Geld reicht nur bis») – **dieselbe Zahl wie «Vermögen reicht bis»
   in Karte und Statusbox** (`exhaustionAge()`). Unter der Grafik: «Wichtig: Wenn das
   freie Vermögen aufgebraucht ist, laufen AHV und PK-Rente weiter.» Die Einkommensansicht zeigt
