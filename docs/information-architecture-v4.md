@@ -46,8 +46,10 @@ MEIN PLAN (Home)
 │   ├── Plan präzisieren / Plan optimieren   (ein Screen, zwei Zustände)
 │   ├── Meine Varianten                      (max. 3, aktueller Plan zuerst und offen;
 │   │     └── Action-Card «Rente oder Kapital?» → Variantenvergleich   nur vor der Pensionierung)
-│   └── Rente oder Kapital?                  (Vergleich; Action-Card unter dem PK-Regler,
+│   ├── Rente oder Kapital?                  (Vergleich; Action-Card unter dem PK-Regler,
 │         kein Menüpunkt · CTA → Beratungsflow · «Übernehmen» gibt es hier nicht)
+│   └── Dossier                              (Druck-/PDF-Vorlage; Zeile auf «Mein Plan»,
+│         kein Menüpunkt · A4-Seiten, Browser-Druck)
 │
 └── PLAN VERSTEHEN   DETAILS
     ├── Jahresverlauf               («Jahr für Jahr.»)
@@ -180,7 +182,14 @@ gespeicherte Varianten und erklärt den Unterschied zwischen mehr Kapital und le
   Linie mit dem Ende des ersten Planjahres und wich dadurch um eine Jahresentnahme ab). **Keine Linie läuft durch ein Label** und kein Label
   berührt die **X-Achse**, die genau die beschrifteten Zeitpunkte zeigt (ohne Beschriftung «Alter»,
   mit Abstand unter der Zeichenfläche und unter **jedem** Punkt, links das Pensionierungsalter,
-  keine zusätzlichen Zehnjahreswerte – Beispiel «optimiert»: 65 · 78 · 90). Fällt das freie Vermögen auf 0, steht die Marke **«0 mit {Alter}»** direkt an der
+  keine zusätzlichen Zehnjahreswerte – Beispiel «optimiert»: 65 · 78 · 90).
+- **Dossier** (`Dossier.` / `Dein Ruhestandsplan für die Beratung`): gedruckte A4-Vorlage für das
+  Beratungsgespräch, erreichbar über die Zeile «Dossier · Druckvorlage für die Beratung» auf
+  «Mein Plan» – **kein** Menüpunkt, bestehender Rückweg «‹ Mein Plan». Acht Seiten (Titel/Summary ·
+  Einkommen · Vermögen · Töpfe · Verlauf · PK-Varianten · Annahmen · nächste Entscheidungen) mit
+  `Background.png` als Brandingelement, Kennzahlen einzeilig, «Noch nicht erfasst» statt «CHF 0»,
+  Druck über den Browser («Drucken / PDF erstellen»). Details: `docs/PRODUCT_RULES.md` §26 und
+  `docs/MASTER_SPEC.md` §24.12. Fällt das freie Vermögen auf 0, steht die Marke **«0 mit {Alter}»** direkt an der
   Linie (nie «Plan endet» oder «Geld reicht nur bis») – **dieselbe Zahl wie «Vermögen reicht bis»
   in Karte und Statusbox** (`exhaustionAge()`). Unter der Grafik: «Wichtig: Wenn das
   freie Vermögen aufgebraucht ist, laufen AHV und PK-Rente weiter.» Die Einkommensansicht zeigt

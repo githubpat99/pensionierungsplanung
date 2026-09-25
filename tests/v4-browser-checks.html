@@ -96,7 +96,10 @@ async function planStructure(w, h) {
   await wait(100);
   const heroImg = d.querySelector('#v4Hero img');
   ok((heroImg?.currentSrc ?? '').endsWith(w >= 700 ? 'public/images/Background_Desktop.png' : 'public/images/Background.png'), tag + ' Hero-Asset nach Breite (' + (heroImg?.currentSrc ?? '').split('/').pop() + ')');
-  ok(app.querySelectorAll('.v4-rows .v4-row').length === 2, tag + ' genau zwei sekundäre Zeilen');
+  /* Bewusste, dokumentierte Abweichung: seit dem Beratungsdossier sind es drei sekundäre Zeilen
+     (Jahresverlauf · Meine Varianten · Dossier). */
+  ok(app.querySelectorAll('.v4-rows .v4-row').length === 3, tag + ' drei sekundäre Zeilen (inkl. Dossier)');
+  ok(/^Dossier · Druckvorlage für die Beratung$/.test([...app.querySelectorAll('.v4-rows .v4-row')].at(-1)?.textContent.trim() ?? ''), tag + ' Dossier-Zeile als Druck-/PDF-Einstieg');
   ok(app.querySelectorAll('.v4-verdict button').length === 0, tag + ' keine Aktion in der Status-Card');
   /* Action-Card «Rente oder Kapital?» direkt unter dem PK-Regler – kein Textlink, kein
      «Aktueller Plan»-Hinweis mehr; visuell zwischen den sekundären Zeilen und «Plan optimieren». */
@@ -604,6 +607,84 @@ async function startCapitalChecks(w, h) {
   f.remove();
 }
 
+/* ---------- Beratungsdossier (A4/PDF) ----------
+   Prüft die Abnahmekriterien: Background.png base-path-sicher, keine zweite Rechnung, einzeilige
+   Kennzahlen, A4-Seiten mit Print-Regeln, korrekte aktuelle Variante, «Noch nicht erfasst» statt
+   «CHF 0» und kein Beschnitt über die Seitengrenze. */
+async function dossierChecks(w, h) {
+  const tag = w + 'px Dossier';
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow;
+  const digits = text => Number(String(text ?? '').replace(/[^\d]/g, ''));
+  win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
+  await wait(600);
+  const entry = [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Dossier/.test(row.textContent));
+  ok(!!entry, tag + ': Einstieg «Dossier» auf «Mein Plan» (' + (entry?.textContent.replace(/\s+/g, ' ').trim() ?? 'fehlt') + ')');
+  entry?.click();
+  await wait(800);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Dossier.', tag + ': eigener Screen «Dossier.»');
+  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Mein Plan', tag + ': bestehender Rückweg «‹ Mein Plan» (keine neue Navigation)');
+  ok(!!d.querySelector('[data-dossier-print]'), tag + ': Aktion «Drucken / PDF erstellen» vorhanden');
+  const pages = [...d.querySelectorAll('.v4-dossier-page')];
+  ok(pages.length === 8, tag + ': acht Seiten (1 Titel/Summary · 2 Einkommen · 3 Vermögen · 4 Töpfe · 5 Verlauf · 6 Varianten · 7 Annahmen · 8 Entscheidungen) – ' + pages.length);
+  const hero = d.querySelector('.v4-dossier-hero img');
+  const heroSrc = hero?.getAttribute('src') ?? '';
+  ok(heroSrc === 'public/images/Background.png' && !heroSrc.startsWith('/') && !/^https?:/.test(heroSrc), tag + ': verbindliches Background.png, base-path-sicher referenziert («' + heroSrc + '»)');
+  ok(!!hero?.complete && hero.naturalWidth > 0, tag + ': Hintergrundbild ist geladen (' + (hero?.naturalWidth ?? 0) + ' × ' + (hero?.naturalHeight ?? 0) + ')');
+  ok(!/Background_Desktop|\.jpg|unsplash/i.test(d.innerHTML), tag + ': keine alternative Landschaft im Dossier');
+  /* Kennzahlen: alle auf einer Zeile, keine Umbrüche wie «CHF 1.26 / Mio.» */
+  const tileAmounts = [...d.querySelectorAll('.v4-dossier-metric .v4-dossier-amount')];
+  ok(tileAmounts.length === 4 && tileAmounts.every(node => node.getClientRects().length === 1), tag + ': vier Kennzahlen, jede einzeilig (' + tileAmounts.map(node => node.textContent.trim()).join(' | ') + ')');
+  ok(tileAmounts.every(node => node.getBoundingClientRect().height <= 26), tag + ': Kennzahlen ohne Umbruchhöhe (' + tileAmounts.map(node => Math.round(node.getBoundingClientRect().height)).join('/') + ' px)');
+  const resultAmount = d.querySelector('.v4-dossier-amount.is-result');
+  ok(!!resultAmount && resultAmount.getClientRects().length === 1, tag + ': Ergebniskennzahl einzeilig (' + (resultAmount?.textContent.trim() ?? '–') + ')');
+  /* Werte stammen aus dem Rechenkern */
+  const share = Number(JSON.parse(win.localStorage.getItem('retirement-v3-plan')).state.details.pension.pkShare);
+  const item = win.V4.evaluated(share);
+  const coreStart = Math.round(item.result.availableCapital);
+  const coreNet = Math.round(item.result.monthlyIncomeNet);
+  const coreNeed = Math.round(item.result.monthlyNeed);
+  const tileValue = label => digits([...d.querySelectorAll('.v4-dossier-metric')].find(node => new RegExp(label).test(node.textContent))?.querySelector('.v4-dossier-amount')?.textContent);
+  ok(tileValue('Bedarf netto') === coreNeed && tileValue('Einkommen netto') === coreNet && tileValue('Startkapital') === coreStart, tag + ': Kennzahlen = Rechenkern (Bedarf ' + coreNeed + ' · Einkommen ' + coreNet + ' · Startkapital ' + coreStart + ')');
+  const potShares = [...pages[3].querySelectorAll('.v4-dossier-pot-share')].map(node => digits(node.textContent));
+  ok(potShares.reduce((sum, value) => sum + value, 0) === 100 && potShares.length === 3, tag + ': Topf-Anteile aus den Beträgen berechnet (Summe ' + potShares.reduce((sum, value) => sum + value, 0) + ' %)');
+  const availableRows = [...pages[2].querySelectorAll('.v4-dossier-card.is-accent .v4-dossier-row')].map(row => ({label:row.querySelector('dt span')?.textContent.trim() ?? '', value:digits(row.querySelector('dd')?.textContent)}));
+  const sum = availableRows.filter(row => !/^Startkapital/.test(row.label)).reduce((total, row) => total + row.value, 0);
+  ok(sum === (availableRows.find(row => /^Startkapital/.test(row.label))?.value ?? -1), tag + ': Vermögenszeilen addieren sich zum Startkapital (' + sum + ')');
+  /* Verlauf: dieselbe Projektion, Startpunkt = Startkapital */
+  const chart = pages[4].querySelector('.v4-dossier-chart svg');
+  ok(!!chart && pages[4].querySelectorAll('.v4-dossier-chart path').length >= 4, tag + ': Verlaufsgrafik aus der Jahresprojektion (' + pages[4].querySelectorAll('.v4-dossier-chart path').length + ' Pfade)');
+  ok(/Pensionierung \d+/.test(chart?.textContent ?? '') && /Planungshorizont \d+/.test(chart?.textContent ?? ''), tag + ': Marker für Pensionierungsstart und Planungshorizont (' + (chart?.textContent.replace(/\s+/g, ' ').trim().slice(0, 60) ?? '–') + ')');
+  /* Varianten: alle gespeicherten, aktuelle markiert, ohne Sieger */
+  const variantColumns = [...pages[5].querySelectorAll('.v4-dossier-variant')];
+  const variantShares = win.CheckV3State.variants(JSON.parse(win.localStorage.getItem('retirement-v3-plan')).state);
+  ok(variantColumns.length === variantShares.length, tag + ': alle gespeicherten Varianten (' + variantColumns.length + ')');
+  ok(variantColumns.filter(column => column.classList.contains('is-current')).length === 1 && new RegExp('^' + share + ' % Kapitalbezug$').test(variantColumns.find(column => column.classList.contains('is-current'))?.querySelector('.v4-dossier-variant-head')?.textContent.trim() ?? ''), tag + ': aktuelle Variante korrekt erkannt und markiert (' + share + ' %)');
+  ok(!/beste|besser|empfoh|Sieger|optimal/i.test(pages[5].textContent), tag + ': keine Sieger-/Empfehlungsdarstellung in den Varianten');
+  /* A4 und Druck: die exakten Seitenmasse gelten in der Druck-/Desktop-Ansicht; auf schmalen
+     Bildschirmen (< 820 px) werden die Seiten bewusst fliessend dargestellt. */
+  const mm = px => px * 25.4 / 96;
+  if (w >= 820) {
+    ok(pages.every(page => Math.abs(mm(page.getBoundingClientRect().width) - 210) <= 0.6), tag + ': Seitenbreite 210 mm (' + Math.round(mm(pages[0].getBoundingClientRect().width) * 10) / 10 + ' mm)');
+    ok(pages.every(page => mm(page.getBoundingClientRect().height) <= 297.5), tag + ': keine Seite überschreitet A4-Höhe (max ' + Math.round(Math.max(...pages.map(page => mm(page.getBoundingClientRect().height)))) + ' mm)');
+  } else {
+    out.push('      ' + tag + ': schmale Ansicht – Seiten fliessend (' + Math.round(mm(pages[0].getBoundingClientRect().width)) + ' mm breit), A4-Masse gelten im Druck');
+  }
+  const css = (await (await fetch('/css/v4-dossier.css')).text()).replace(/\s+/g, ' ');
+  ok(/@page\s*\{\s*size:\s*A4 portrait;\s*margin:\s*0;?\s*\}/.test(css), tag + ': Print-Regel @page A4 portrait, margin 0');
+  ok(/print-color-adjust:\s*exact/.test(css), tag + ': Hintergrundgrafik bleibt im PDF (print-color-adjust exact)');
+  ok(/break-inside:\s*avoid/.test(css) && /break-after:\s*page/.test(css), tag + ': keine getrennten Cards, jede Seite ein Seitenumbruch');
+  ok(/\.masthead,\s*#v4Menu/.test(css) && /v4-dossier-toolbar/.test(css), tag + ': Druck blendet Navigation und Bedienelemente aus');
+  /* Fehlende Angaben dürfen nicht als CHF 0 erscheinen – direkt am Dossier-Objekt geprüft:
+     ein Zustand ohne jede Kapitalangabe (kein Planobjekt) ergibt «Noch nicht erfasst». */
+  const emptyState = {mode:'pre', values:{age:60, retirement:65, need:7000}, details:{}, confirmed:{}, position:'plan', targetAge:90, horizonMode:'manual', riskProfile:'balanced'};
+  const model = win.V4Dossier.build({state:emptyState, item:null, variantItems:[], money:value => `CHF ${Math.round(value || 0)}`, compactMoney:value => `CHF ${Math.round(value || 0)}`, percent:value => String(value)});
+  ok(model.summary.tiles.some(tile => tile.text === 'Noch nicht erfasst'), tag + ': fehlende Kapitalangabe wird «Noch nicht erfasst» (' + model.summary.tiles.map(tile => tile.label + ': ' + tile.text).join(' · ') + ')');
+  ok(!model.summary.tiles.some(tile => tile.text === 'CHF 0' && tile.label === 'Startkapital'), tag + ': kein «CHF 0» für nicht erfasste Angaben');
+  ok(model.assets.available.entered === false && model.pots.total === 0, tag + ': Aufteilung und Verfügbares bleiben ohne Angaben leer');
+  ok(model.decisions.every(entry => ['Säule 3a','Hypothek'].indexOf(entry.title) === -1), tag + ': keine erfundenen Entscheidungen ohne Datengrundlage (' + model.decisions.map(entry => entry.title).join(', ') + ')');
+  f.remove();
+}
+
 /* ---------- Bericht wieder einlesen (Rückweg zur Sicherung) ----------
    «Angaben für die Beratung» ist die einzige Sicherung, die die App selbst erzeugt: Der Text muss
    sich wieder einlesen lassen und denselben Plan ergeben – erreichbar auch ohne Plan (Schnellstart). */
@@ -693,9 +774,9 @@ async function storageVersionChecks() {
   const broken = await fresh(JSON.stringify({version:2, savedAt:new Date().toISOString(), state:{mode:'pre'}}));
   const notice = broken.d.getElementById('v4Notice');
   ok(notice && notice.hidden === false && /gesichert/.test(notice.textContent), tag + ': defekter Stand wird sichtbar gemeldet («' + (notice?.textContent.trim().slice(0, 60) ?? '') + '…»)');
-  const backups = Object.keys(broken.win.localStorage).filter(key => key.startsWith(backupPrefix));
+  const backups = Object.keys(broken.win.localStorage).filter(key => key.startsWith(backupPrefix)).sort();
   ok(backups.length === Math.min(2, beforeBackups + 1), tag + ': defekter Stand wird gesichert (' + backups.length + ' Sicherung(en), höchstens zwei)');
-  const backupRaw = backups.length ? broken.win.localStorage.getItem(backups[0]) : null;
+  const backupRaw = backups.length ? broken.win.localStorage.getItem(backups[backups.length - 1]) : null;
   const mainRaw = broken.win.localStorage.getItem('retirement-v3-plan');
   const mainParsed = (() => { try { return JSON.parse(mainRaw ?? 'null'); } catch (error) { return null; } })();
   ok(!!backupRaw && /"mode":"pre"/.test(backupRaw) && !/v3Variants/.test(backupRaw), tag + ': die Sicherung enthält den unveränderten Altstand');
@@ -851,6 +932,10 @@ async function improveChecks(w, h) {
   ok(/CHF [\d'’]+/.test(precisionOf('pension')) && /Beitrag CHF/.test(precisionOf('pension')), tag + ' Hebel 1: PK-Zeile nennt Guthaben und Beiträge («' + precisionOf('pension') + '»)');
   /* Datenqualität und Optimierung sind getrennte Konzepte. */
   ok(!d.querySelector('#app .v4-strategy') && !d.querySelector('#app .v4-need-amount'), tag + ' keine Optimierungshebel im Zustand «Plan präzisieren»');
+  /* Führung: Solange Angaben offen sind, heisst der Einstieg «Plan präzisieren» – Texte, die die
+     Strategie verorten, dürfen deshalb nicht pauschal auf «Plan optimieren» verweisen. Geprüft wird
+     der Screen selbst; die Annahmen-Zeile prüft `assumptionsChecks`. */
+  ok(!/unter «Plan optimieren»/.test(d.getElementById('app').textContent), tag + ' kein Verweis auf einen Einstieg, den es in diesem Zustand nicht gibt');
   ok(!/Anlagestrategie|Bedarf netto/.test(d.getElementById('app').textContent), tag + ' kein Strategie-/Bedarf-Block im Screen');
   ok(!d.querySelector('.v4-head-close'), tag + ' kein «✕» auf dem Screen');
   f.remove();
@@ -1223,6 +1308,9 @@ async function assumptionsChecks(w, h) {
   ok(!!readonly, tag + ' Expertenbereich zeigt die Renditeherkunft');
   const readText = readonly?.textContent.replace(/\s+/g, ' ').trim() ?? '';
   ok(/Anlagestrategie/.test(readText) && /einzige Renditequelle im Ruhestand/.test(readText), tag + ' Strategie als einzige Renditequelle ausgewiesen');
+  /* Führung: Der Einstieg heisst je nach Datenlage «Plan präzisieren» oder «Plan optimieren» –
+     der Hinweis darf deshalb nur den Ort nennen, nicht einen bestimmten Zustand. */
+  ok(/wählbar auf «Mein Plan»/.test(readText) && !/wählbar unter «Plan optimieren»/.test(readText), tag + ' Strategie-Hinweis nennt den Ort «Mein Plan» statt eines Zustands («' + (readText.match(/einzige Renditequelle im Ruhestand[^A-Z]*/) ?? [''])[0].slice(0, 60) + '…»)');
   ok(/Wertschriftenrendite bis Pensionierung/.test(readText) && /16 %/.test(readText), tag + ' interner Satz mit Wert sichtbar («' + readText.slice(0, 60) + '…»)');
   const warning = d.querySelector('.v4-warning');
   ok(!!warning && /16 %/.test(warning.textContent) && /zu prüfen/.test(warning.textContent), tag + ' 16 % als verdächtig markiert');
@@ -1556,7 +1644,7 @@ async function variantChecks(w, h) {
   await wait(600);
   const postRows = [...dl.querySelectorAll('#app .v4-rows .v4-row')].map(row => row.textContent.trim());
   ok(dl.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && !dl.querySelector('.v4-lever'), tag + ' «Bereits pensioniert»: kein Bezugsregler');
-  ok(postRows.length === 1 && /^Jahresverlauf$/.test(postRows[0]), tag + ' ohne Kapitalbezug keine Variantenzeile (' + (postRows.join(' | ') || '–') + ')');
+  ok(!postRows.some(row => /Varianten/.test(row)) && postRows.length === 2 && postRows.includes('Jahresverlauf'), tag + ' ohne Kapitalbezug keine Variantenzeile (' + (postRows.join(' | ') || '–') + ')');
   ok(dl.querySelector('#v4Menu [data-menu-page="variants"]')?.hidden === true, tag + ' ohne Kapitalbezug kein Menüpunkt «Meine Varianten»');
   ok(!dl.querySelector('[data-v4-next="compare"]'), tag + ' ohne Kapitalbezug kein Vergleichseinstieg');
   wl.V4.renderVariants();
@@ -2011,6 +2099,10 @@ async function amountInputChecks(w) {
   flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await reportImportChecks(w, h); } catch (e) { ok(false, w + ' Bericht: ' + e.message); }
+  }
+  flush();
+  for (const [w, h] of [[1000,900],[390,844]]) {
+    try { await dossierChecks(w, h); } catch (e) { ok(false, w + ' Dossier: ' + e.message); }
   }
   flush();
   try { await storageVersionChecks(); } catch (e) { ok(false, 'Speicherstand: ' + e.message); }

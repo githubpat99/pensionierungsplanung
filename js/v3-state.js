@@ -2,7 +2,7 @@
 (function(root) {
   const base = typeof module !== 'undefined' ? require('./v2-state.js') : root.CheckV2State;
   const copy = value => structuredClone(value);
-  const routes = ['rents','need','plan','personal','ahv','pension','pension3a','extra','assets','assumptions','compare','years','improve','variants','basics'];
+  const routes = ['rents','need','plan','personal','ahv','pension','pension3a','extra','assets','assumptions','compare','years','improve','variants','basics','dossier'];
   /* Drei Variantenplätze sind der Standard. Bestehende Werte bleiben auf ihren Plätzen
      erhalten und werden nur dann mit den Standardwerten aufgefüllt, wenn Plätze fehlen. */
   const defaultVariants = [0, 50, 100];

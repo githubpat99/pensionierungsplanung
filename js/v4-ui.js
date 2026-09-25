@@ -23,6 +23,15 @@
 
   /* ---------------- Darstellung ---------------- */
   const money = value => `CHF ${Math.round(value || 0).toLocaleString('de-CH').replace(/’/g, "'")}`;
+  /* Kompakte Schreibweise für grosse Beträge auf engen Karten: «CHF 1,26 Mio.» – Schweizer
+     Dezimalkomma wie bei `percent`, einzeilig. Unter einer Million bleibt es beim exakten Betrag. */
+  const compactMoney = value => {
+    const amount = Math.abs(Number(value) || 0);
+    if (amount < 1e6) return money(value);
+    const millions = amount / 1e6;
+    const digits = millions >= 100 ? 0 : millions >= 10 ? 1 : 2;
+    return `${Number(value) < 0 ? '− ' : ''}CHF ${millions.toLocaleString('de-DE', {minimumFractionDigits:digits, maximumFractionDigits:digits})} Mio.`;
+  };
   const plain = value => Math.round(value || 0).toLocaleString('de-CH').replace(/’/g, "'");
   const percent = value => Number(value || 0).toLocaleString('de-DE', {maximumFractionDigits:2});
   const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
@@ -268,7 +277,11 @@
     /* Nach der Pensionierung gibt es keinen Kapitalbezug mehr (TC-02.01: «Post-Ansichten ohne
        Bezugsregler») – dann entfällt auch der Varianteneinstieg, statt auf einen toten Screen zu führen. */
     const variants = state.mode === 'pre' ? row(`Meine Varianten · ${count} gespeichert`, 'variants') : '';
-    return `<ul class="v4-rows">${row('Jahresverlauf', 'years')}${variants}</ul>`;
+    /* Dritter Einstieg: das gedruckte Beratungsdossier. Bewusste Abweichung von der früheren
+       Zwei-Zeilen-Regel (dokumentiert in PRODUCT_RULES §24.3): Der Dossier-Weg ist kein Inhalt,
+       sondern die Druck-/PDF-Ausgabe des Plans und gehört deshalb sichtbar auf «Mein Plan». */
+    const dossier = row('Dossier · Druckvorlage für die Beratung', 'dossier');
+    return `<ul class="v4-rows">${row('Jahresverlauf', 'years')}${variants}${dossier}</ul>`;
   }
   function dataKnown() {
     const pre = state.mode === 'pre', a = state.details.assets ?? null;
@@ -376,6 +389,17 @@
     return {items, open: items.filter(entry => !entry.done)};
   }
 
+  /* Wo die Anlagestrategie gewählt wird: Der Einstieg auf «Mein Plan» heisst je nach Datenlage
+     «Plan präzisieren» (Angaben fehlen oder sind geschätzt) oder «Plan optimieren» – und **nur im
+     zweiten Zustand** ist die Strategie auch zu sehen. Texte, die pauschal «unter Plan optimieren»
+     behaupten, führen deshalb in die Irre, sobald offene Angaben bestehen: dann gibt es diesen
+     Eintrag nicht. Diese eine Formulierung nennt den zutreffenden Weg. */
+  function strategyWhereText() {
+    const precise = precisionItems().open.length > 0;
+    return precise
+      ? 'Sie gehört zu den Optimierungshebeln: Sobald deine Angaben vollständig sind, wählst du sie auf «Mein Plan» unter «Plan optimieren».'
+      : 'Du wählst sie auf «Mein Plan» unter «Plan optimieren».';
+  }
   /* ---------------- Schnellstart ---------------- */
   const startQuestions = {
     age: {label:'Wie alt bist du?', unit:'Jahre', icon:'calendarStats', short:'z. B. 60'},
@@ -787,7 +811,7 @@
        Profil (risk-profiles.js), nie hardcodiert. */
     const activeProfile = globalThis.RiskProfiles?.getRiskProfile(item.plan.riskProfile ?? state.riskProfile);
     const strategyLine = activeProfile
-      ? `<p class="v4-year-strategy">${esc(activeProfile.label)} · Annahme ${percent(numeric(activeProfile.expectedRealReturn) * 100)} % pro Jahr ${modalInfo({title:'Anlagestrategie dieser Projektion', aria:'Anlagestrategie erklären', body:`<p>Dein Plan rechnet im Ruhestand mit der Modellrendite der Anlagestrategie <strong>${esc(activeProfile.label)} (${percent(numeric(activeProfile.expectedRealReturn) * 100)} % pro Jahr, real)</strong>. Du wählst sie unter «Plan optimieren».</p><p>Die Zeile «Rendite dieses Jahres» zeigt dagegen das effektiv gerechnete Jahresergebnis deiner Töpfe – nicht die Annahme.</p>`})}</p>`
+      ? `<p class="v4-year-strategy">${esc(activeProfile.label)} · Annahme ${percent(numeric(activeProfile.expectedRealReturn) * 100)} % pro Jahr ${modalInfo({title:'Anlagestrategie dieser Projektion', aria:'Anlagestrategie erklären', body:`<p>Dein Plan rechnet im Ruhestand mit der Modellrendite der Anlagestrategie <strong>${esc(activeProfile.label)} (${percent(numeric(activeProfile.expectedRealReturn) * 100)} % pro Jahr, real)</strong>. ${esc(strategyWhereText())}</p><p>Die Zeile «Rendite dieses Jahres» zeigt dagegen das effektiv gerechnete Jahresergebnis deiner Töpfe – nicht die Annahme.</p>`})}</p>`
       : '';
     /* Keine Überleitungszeile mehr: in der realen Sicht schliesst das Vorjahresende exakt an die
        Eröffnung des Folgejahres an. */
@@ -917,7 +941,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     const warning = suspect
       ? `<p class="v4-warning" role="status">Die hinterlegte Wertschriftenrendite von ${percent(rate)} % ist fachlich zu prüfen${suspect === 'decimal' ? ' – möglicher Dezimalfehler (0.16 statt 16 %)' : ''}. Sie wirkt nur bis zur Pensionierung; im Ruhestand rechnet der Plan mit der Anlagestrategie.</p><button type="button" class="v4-chip" data-reset-sec-return>Wertschriftenrendite auf ${percent(State.defaults.secReturn)} % zurücksetzen</button>`
       : '';
-    return `<section class="v4-formed-note"><dl class="v4-readonly">${row('Anlagestrategie', `${strategyLabels[profile?.key] ?? profile?.key ?? '–'} · ${(numeric(profile?.expectedRealReturn) * 100).toLocaleString('de-DE', {maximumFractionDigits:1})} % pro Jahr`, 'einzige Renditequelle im Ruhestand – wählbar unter «Plan optimieren»')}${row('Wertschriftenrendite bis Pensionierung', `${percent(rate)} %`, 'interner Produktsatz, nicht Teil der Strategie')}</dl>${warning}</section>`;
+    return `<section class="v4-formed-note"><dl class="v4-readonly">${row('Anlagestrategie', `${strategyLabels[profile?.key] ?? profile?.key ?? '–'} · ${(numeric(profile?.expectedRealReturn) * 100).toLocaleString('de-DE', {maximumFractionDigits:1})} % pro Jahr`, 'einzige Renditequelle im Ruhestand – wählbar auf «Mein Plan»')}${row('Wertschriftenrendite bis Pensionierung', `${percent(rate)} %`, 'interner Produktsatz, nicht Teil der Strategie')}</dl>${warning}</section>`;
   }
 
   /* Säule 3a: Guthaben und Beiträge gehören zusammen (Modellregel). Ein leeres Beitragsfeld
@@ -1326,6 +1350,56 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
   /* ---------------- Pilot: Feedback und Zurücksetzen (dezent unten im Menü) ----------------
      Beide Einträge sind bewusst keine Navigationsziele der App, sondern Werkzeuge für das
      Pilottesting: Rückmeldung geben und wieder bei null starten. */
+  /* ---------------- Beratungsdossier (A4/PDF) ----------------
+     Ein Screen, der den bestehenden Plan als druckbares Dossier zeigt. Er **rechnet nichts**: das
+     Dossier-Objekt entsteht in `js/v4-dossier.js` ausschliesslich aus Werten, die der gemeinsame
+     Rechenkern hier bereits geliefert hat (`evaluated`, `calculateAvailableCapital`,
+     `incomeSourcesAtStart`, `exhaustionAge`, `horizonValue`). Der Renderer liest keine DOM-Texte. */
+  function dossierContext(item) {
+    const share = item.share ?? chosenShare();
+    const capitalParts = Calculator.calculateAvailableCapital(item.plan, share);
+    const assets = state.details.assets ?? {};
+    const positions = ['cash','securities','otherAssets'].reduce((sum, key) => sum + (entered(assets[key]) ? numeric(assets[key]) : 0), 0);
+    const p3Net = numeric(capitalParts.p3?.netAtStart);
+    /* Nicht aufgeteilter Rest: nur so addieren sich die Vermögenszeilen auf das Startkapital. */
+    const freeRest = Math.max(0, numeric(capitalParts.existingFreeCapital) - p3Net - positions);
+    const profile = globalThis.RiskProfiles?.getRiskProfile(state.riskProfile);
+    const variantItems = variantShares().map(variantShare => {
+      const variant = evaluated(variantShare);
+      const sources = variant ? Calculator.incomeSourcesAtStart(variant.plan) : [];
+      return {
+        share:variantShare, item:variant,
+        pkPensionMonthly:numeric(sources.find(source => source.id === 'pk')?.annualIncome) / 12,
+        exhaustionAge:exhaustionAge(variant?.result),
+        horizonValue:variant ? horizonValue(variant).value : null
+      };
+    });
+    return {
+      state, item, variantItems, money, compactMoney, percent,
+      incomeSources:Calculator.incomeSourcesAtStart(item.plan),
+      capitalParts,
+      freeCapital:freeRest > 0.5 ? freeRest : null,
+      exhaustionAge:exhaustionAge(item.result),
+      horizonValue:horizonValue(item).value,
+      variantCount:variantShares().length,
+      ahvEstimated:globalThis.Estimates ? Estimates.ahvOf(state).origin !== 'user' : false,
+      strategy:profile ? {key:profile.key, label:profile.label, rateText:`${percent(numeric(profile.expectedRealReturn) * 100)} % p.a.`, chosen:state.strategyChosen === true} : null,
+      canton:State.canton(state) || '',
+      taxModelName:globalThis.TaxModel?.config?.taxModel?.version ? `Version ${globalThis.TaxModel.config.taxModel.version}` : null,
+      appVersion:globalThis.V4Version?.APP_VERSION ?? null,
+      heroAsset:globalThis.RetirementHero?.asset ?? 'public/images/Background.png'
+    };
+  }
+  function renderDossier() {
+    closeMenu(); route = 'dossier'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
+    window.scrollTo(0, 0);
+    const item = evaluated(previewShare ?? chosenShare());
+    if (!item) { returnToPlan(); return; }
+    const dossier = globalThis.V4Dossier;
+    if (!dossier) { message('Die Dossier-Ansicht ist nicht verfügbar.'); returnToPlan(); return; }
+    app.innerHTML = `${title('Dossier.', 'Dein Ruhestandsplan für die Beratung', detailHead)}<div class="v4-dossier-toolbar"><button type="button" class="primary" data-dossier-print>Drucken / PDF erstellen</button></div>${dossier.render(dossier.build(dossierContext(item)))}`;
+  }
+
   /* ---------------- Pilot: Angaben für die Beratung, Plan zurücksetzen ----------------
      Zwei Werkzeuge unten im Menü. «Angaben für die Beratung» bereitet den Plan als Klartext
      auf, den der Nutzer kopieren oder als Datei speichern und selbst verschicken kann –
@@ -1651,7 +1725,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (!profile) return '';
     const rate = percent(numeric(profile.expectedRealReturn) * 100);
     const source = state.strategyChosen === true ? 'gewählt' : 'Annahme';
-    const info = modalInfo({title:'Anlagestrategie', aria:'Anlagestrategie erklären', body:`<p>Die Anlagestrategie ist die einzige Quelle für die erwartete Rendite im Ruhestand. Sie bestimmt, mit welcher <strong>Rendite und welchen Schwankungen</strong> dein Vermögen gerechnet wird – nicht die Aufteilung auf die drei Töpfe.</p><p>Du wählst sie unter «Plan optimieren»; bis dahin rechnen wir mit der Modellannahme <strong>${esc(profile.label)} (${rate} % pro Jahr)</strong>.</p>`});
+    const info = modalInfo({title:'Anlagestrategie', aria:'Anlagestrategie erklären', body:`<p>Die Anlagestrategie ist die einzige Quelle für die erwartete Rendite im Ruhestand. Sie bestimmt, mit welcher <strong>Rendite und welchen Schwankungen</strong> dein Vermögen gerechnet wird – nicht die Aufteilung auf die drei Töpfe.</p><p>${esc(strategyWhereText())}</p><p>Diese Ansicht rechnet mit <strong>${esc(profile.label)} (${rate} % pro Jahr)</strong>.</p>`});
     /* Zwei Zeilen statt eines umbrechenden Satzes: Profil, darunter die Annahme pro Jahr. */
     return `<section class="v4-pot-strategy"><span class="v4-pot-strategy-icon" aria-hidden="true">${Icons.icon('target', {size:22})}</span><div class="v4-pot-strategy-copy"><div class="v4-pot-strategy-head"><span>Anlagestrategie</span><span class="v4-badge-tone done">${source}</span></div><strong>${esc(profile.label)}</strong><span class="v4-pot-strategy-rate">${rate} % pro Jahr</span><small>Bestimmt die erwartete Rendite deiner Anlage, nicht die Aufteilung. ${info}</small></div></section>`;
   }
@@ -1710,6 +1784,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (result.migrated) globalThis.__v4StorageMigrated = true;
     if (state.position === 'variants') renderVariants();
     else if (state.position === 'comparison') renderCompare();
+    else if (state.position === 'dossier') renderDossier();
     else if (state.position === 'years') renderYear();
     else if (state.position === 'improve') renderImprove();
     else if (state.position === 'basics') renderBasics();
@@ -1739,6 +1814,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       else if (target === 'improve') renderImprove();
       else if (target === 'variants') renderVariants();
       else if (target === 'compare') renderCompare();
+      else if (target === 'dossier') renderDossier();
       else openDetail(target, parent);
       return;
     }
@@ -1772,6 +1848,9 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (event.target.closest('[data-report-copy]')) { copyAdvisorReport(); return; }
     if (event.target.closest('[data-report-save]')) { saveAdvisorReport(); return; }
     if (event.target.closest('[data-report-apply]')) { applyAdvisorReport(); return; }
+    /* Dossier: der Druck läuft über den Browser («Drucken / Als PDF speichern»); die
+       Druckansicht blendet Navigation, Buttons und Schatten aus (siehe css/v4-dossier.css). */
+    if (event.target.closest('[data-dossier-print]')) { window.print(); return; }
     if (event.target.closest('[data-plan-reset]')) { resetPlan(); return; }
   });
   document.querySelector('.menu-button')?.addEventListener('click', () => {

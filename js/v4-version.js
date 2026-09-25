@@ -11,7 +11,7 @@
  * nur durchgereicht, damit UI und Tests dieselbe Zahl lesen.
  */
 (function(root) {
-  const APP_VERSION = '2026-09-25.3';
+  const APP_VERSION = '2026-09-25.5';
   const api = {
     APP_VERSION,
     get STORAGE_VERSION() { return root.CheckV3State?.STORAGE_VERSION ?? null; },
