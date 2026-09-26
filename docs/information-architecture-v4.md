@@ -274,9 +274,15 @@ Neustart bzw. das Aktualisieren:
 
 ## 7a. Update, Speicherstände und Service Worker
 
+- **Produktiver Einstieg (auch als installierte App):** `/pensionierungsplanung/` bzw. `index.html`
+  ist die **dauerhafte** Startadresse und lädt die aktuelle Produktivversion (`PRODUCTION_ENTRY`,
+  heute `v4.html`); das Manifest hat `start_url: "./index.html"`, `scope`/`id`: `"./"` und zeigt nie
+  auf `v2.html`/`v3.html`/`v4.html`. Die Direktaufrufe der Versionsdateien bleiben möglich.
 - **Kein manuelles Löschen:** Ein neues Deployment muss bei jedem Tester ankommen. Der
-  **Service Worker** (`sw.js`, registriert über `js/v4-sw.js`) liefert HTML und Code **netz-zuerst
-  ohne HTTP-Cache**, räumt bei der Aktivierung alle alten Caches, übernimmt sofort die Kontrolle
+  **Service Worker** (`sw.js`, registriert über `js/pwa-register.js` in allen Einstiegen) liefert HTML und Code **netz-zuerst
+  ohne HTTP-Cache**, räumt bei der Aktivierung **jeden** anderen Cache (auch alte V2/V3-Caches), lädt
+  die Hülle vor (`./`, `./index.html`, Produktivversion) und nutzt sie als Offline-Fallback,
+  übernimmt sofort die Kontrolle
   (`skipWaiting`/`claim`) und lässt die Seite bei einem echten Update **einmal** neu laden. Nur
   Medien laufen stale-while-revalidate; `/tests/` und `?dev=1` bleiben unberührt.
 - **Speicherstände:** Jeder Stand trägt `version` (Datenschema 2) und `storageVersion`

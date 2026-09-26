@@ -4,10 +4,29 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Ruhestands-Check</title>
-  <meta http-equiv="refresh" content="0;url=v3.html">
-  <script>location.replace("v3.html" + location.search + location.hash);</script>
+  <!-- Installierte App (PWA): Einstieg ist immer dieses Verzeichnis – nie eine versionsgebundene
+       Datei wie v3.html oder v4.html. Deshalb zeigt `start_url` im Manifest auf "./". -->
+  <link rel="manifest" href="site.webmanifest">
+  <meta name="theme-color" content="#0f2242">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Ruhestands-Check">
+  <link rel="icon" type="image/png" sizes="192x192" href="public/icons/RC_Icon-192.png">
+  <link rel="apple-touch-icon" href="public/icons/RC_Icon-apple-180.png">
+  <!-- Ohne JavaScript geht es per Meta-Weiterleitung weiter (mit JavaScript übernimmt das Skript,
+       damit Suchparameter und Sprungmarke erhalten bleiben). -->
+  <noscript><meta http-equiv="refresh" content="0;url=v4.html"></noscript>
+  <script>
+    /* Produktiver Einstieg: /pensionierungsplanung/ bzw. index.html bleibt dauerhaft die
+       Startadresse; **genau hier** steht, welche Version produktiv ist. Diese eine Zeile wird bei
+       einer neuen Produktivversion angepasst – Manifest, Installation und Verlauf bleiben gleich. */
+    var PRODUCTION_ENTRY = 'v4.html';
+    location.replace(PRODUCTION_ENTRY + location.search + location.hash);
+  </script>
 </head>
 <body>
-  <p><a href="v3.html">Ruhestands-Check öffnen</a></p>
+  <p><a href="v4.html">Ruhestands-Check öffnen</a></p>
+  <script src="js/pwa-register.js?v=1"></script>
 </body>
 </html>

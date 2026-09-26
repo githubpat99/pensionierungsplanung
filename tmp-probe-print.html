@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+<meta charset="utf-8">
+<title>Dossier Probe</title>
+<link rel="stylesheet" href="css/v2-ui.css">
+<link rel="stylesheet" href="css/v3.css?v=3">
+<link rel="stylesheet" href="css/v3-reference.css?v=2">
+<link rel="stylesheet" href="css/v3-plan-reference.css?v=61">
+<link rel="stylesheet" href="css/v3-chart-reference.css?v=5">
+<link rel="stylesheet" href="css/v4.css?v=59">
+<link rel="stylesheet" href="css/v4-dossier.css?v=2">
+<style>html,body{margin:0;background:#fff}#probe{position:absolute;left:-9999px;top:0;width:1400px;height:1200px}</style>
+</head>
+<body>
+<main id="app" class="shell"></main>
+<iframe id="probe" src="/v4.html"></iframe>
+<script>
+const wait = ms => new Promise(r => setTimeout(r, ms));
+const params = new URLSearchParams(location.search);
+const fixture = params.get('fixture') ?? 'vollstaendig';
+(async () => {
+  const frame = document.getElementById('probe');
+  await new Promise(r => { frame.onload = r; });
+  await wait(1300);
+  const w = frame.contentWindow, d = frame.contentDocument;
+  w.DevFixture.write(w.DevFixture.scenarios[fixture]()); w.V4.load();
+  await wait(800);
+  [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Dossier/.test(row.textContent))?.click();
+  await wait(900);
+  const dossier = d.querySelector('.v4-dossier');
+  if (!dossier) { document.title = 'FEHLER: kein Dossier'; return; }
+  const only = (params.get('pages') ?? '').split(',').filter(Boolean).map(Number);
+  if (only.length) {
+    [...dossier.querySelectorAll('.v4-dossier-page')].forEach((section, index) => { if (!only.includes(index + 1)) section.remove(); });
+    dossier.dataset.pages = String(only.length);
+  }
+  document.getElementById('app').append(dossier);
+  const pages = [...dossier.querySelectorAll('.v4-dossier-page')];
+  const overflow = pages.filter(page => page.scrollWidth > page.clientWidth + 1).length;
+  const p = document.createElement('p');
+  p.id = 'status';
+  p.textContent = 'Seiten ' + (dossier.dataset.pages ?? pages.length) + ' · Überlauf: ' + overflow;
+  document.body.append(p);
+})();
+</script>
+</body></html>

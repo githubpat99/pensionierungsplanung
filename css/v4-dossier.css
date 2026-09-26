@@ -164,15 +164,25 @@
   .v4-dossier-toolbar{width:100%}
   .v4-dossier-page{width:100%;min-height:auto;padding:18px 16px;border-radius:12px}
   .v4-dossier-cover{padding:0}
-  .v4-dossier-cover .v4-dossier-body{padding:0 16px 18px}
-  .v4-dossier-hero{height:150px}
-  .v4-dossier-cover-body{min-height:0;padding:18px 16px 0;background:linear-gradient(180deg,rgba(247,246,242,.94) 0,rgba(247,246,242,.72) 70%,rgba(247,246,242,.35) 100%)}
-  .v4-dossier-title{font-size:26px}
+  .v4-dossier-cover .v4-dossier-body{padding:16px 16px 18px}
+  /* Die Landschaft bleibt das Brandingelement: fester Bildband über dem Titel, Verlauf nur so
+     stark, dass der Text lesbar bleibt. */
+  .v4-dossier-hero{height:min(56vw,240px)}
+  .v4-dossier-hero img{object-position:center 34%}
+  .v4-dossier-cover-body{min-height:0;padding:18px 16px 0;background:linear-gradient(180deg,rgba(247,246,242,.92) 0,rgba(247,246,242,.62) 52%,rgba(247,246,242,.16) 82%,rgba(247,246,242,0) 100%)}
+  .v4-dossier-title{font-size:26px;white-space:normal}
   .v4-dossier-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .v4-dossier-columns,.v4-dossier-variants,.v4-dossier-decisions{grid-template-columns:1fr}
-  .v4-dossier-pots{grid-template-columns:1fr}
+  .v4-dossier-columns,.v4-dossier-variants,.v4-dossier-decisions,.v4-dossier-pots{grid-template-columns:1fr}
   .v4-dossier-metric-label{min-height:0}
+  /* Ergebnis-Card stapelt: links Aussage, darunter der Betrag – nichts läuft aus der Karte. */
+  .v4-dossier-result{grid-template-columns:minmax(0,1fr);gap:10px;padding:14px}
+  .v4-dossier-result>div,.v4-dossier-result-value{min-width:0}
+  .v4-dossier-result-value{text-align:left}
+  .v4-dossier-result-headline{font-size:22px;white-space:normal}
+  .v4-dossier-amount.is-result{font-size:clamp(22px,8vw,30px)}
   .v4-dossier-foot{margin-top:16px}
+  .v4-dossier-pills{gap:6px}
+  .v4-dossier-section-title{margin-top:4px}
 }
 @media screen and (max-width:420px){
   .v4-dossier-tiles{grid-template-columns:1fr}

@@ -1,10 +1,12 @@
 # Ruhestands-Check
 
-Lokale Browseranwendung zur Planung von Einkommen, Bedarf und verfügbarem Kapital im Ruhestand. Der Einstieg ist `index.html` und führt auf `v3.html`. V2 ist abgelöst: die Dateien bleiben als Historie im Repo, sind aber nicht mehr verlinkt.
+Lokale Browseranwendung zur Planung von Einkommen, Bedarf und verfügbarem Kapital im Ruhestand. Der produktive Einstieg ist `index.html` (bzw. `/pensionierungsplanung/`) und lädt die aktuelle Produktivversion **V4** (`v4.html`); die Zeile `PRODUCTION_ENTRY` in `index.html` ist die einzige Stelle, die bei einem Versionswechsel angepasst wird. `v2.html` und `v3.html` bleiben als Historie direkt aufrufbar, sind aber nicht mehr verlinkt.
 
 ## Start
 
-`index.html` im Browser öffnen. Für die Cypress-Tests einen lokalen Server an der Projektwurzel auf Port 8000 starten.
+`index.html` im Browser öffnen (bzw. das Verzeichnis der App aufrufen). Für die Cypress-Tests einen lokalen Server an der Projektwurzel auf Port 8000 starten.
+
+Als **installierbare App (PWA)** startet derselbe Einstieg: `site.webmanifest` verweist mit `start_url: "./index.html"` und `scope: "./"` nie auf eine Versionsdatei; Icons (192/512/maskable, aus `RC_Icon.png` abgeleitet) liegen in `public/icons/`. Der Service Worker `sw.js` (registriert über `js/pwa-register.js` in allen Einstiegen) lädt die Hülle vor, räumt beim Aktivieren jeden anderen Cache (auch alte V2/V3-Caches) und liefert Offline die Hülle `index.html`.
 
 Die App speichert den Plan im Browser auf diesem Gerät (`retirement-v3-plan`). Ein allfälliger V2-Stand unter `retirement-v2-plan` wird nicht mehr gelesen oder verändert. Die historische Datei `Rentenberechnung.xlsx` ist keine Eingabe der aktuellen Oberfläche.
 

@@ -1,20 +1,37 @@
 {
-  "name": "Dein Ruhestands-Check",
-  "short_name": "Ruhestands-Check",
-  "lang": "de-CH",
   "id": "./",
-  "start_url": "./",
+  "name": "Ruhestands-Check",
+  "short_name": "Ruhestands-Check",
+  "description": "Dein Ruhestandsplan: Einkommen, Vermögen und Töpfe in heutiger Kaufkraft. Modellrechnung, keine Steuer- oder Anlageberatung.",
+  "lang": "de-CH",
+  "dir": "ltr",
+  "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#f5f7fb",
-  "theme_color": "#2563eb",
+  "background_color": "#f7f6f2",
+  "theme_color": "#0f2242",
+  "categories": ["finance", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
-      "src": "./app-icon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "src": "./public/icons/RC_Icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./public/icons/RC_Icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./public/icons/RC_Icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ]
 }

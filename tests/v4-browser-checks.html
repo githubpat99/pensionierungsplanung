@@ -607,6 +607,73 @@ async function startCapitalChecks(w, h) {
   f.remove();
 }
 
+/* ---------- PWA-Konfiguration ----------
+   Die installierte App muss über die Verzeichnisadresse starten (nicht über v3.html/v4.html),
+   das Manifest sauber sein, die Icons aus RC_Icon.png in deklarierter Grösse vorliegen und der
+   Service Worker alte Caches zuverlässig entfernen. */
+async function pwaChecks() {
+  const tag = 'PWA';
+  const manifestText = await (await fetch('/site.webmanifest')).text();
+  const manifest = JSON.parse(manifestText);
+  /* Relativ zum **Manifest**, nicht zur Prüfseite auflösen. */
+  const start = new URL(manifest.start_url, new URL('/site.webmanifest', location.origin));
+  ok(manifest.start_url === './index.html' && /\/index\.html$/.test(start.pathname), tag + ': start_url ist die dauerhafte Hülle («' + manifest.start_url + '» → ' + start.pathname + ')');
+  ok(!/v2\.html|v3\.html|v4\.html/.test(manifest.start_url), tag + ': start_url ist keine versionsgebundene Datei');
+  ok(manifest.scope === './' && manifest.id === './', tag + ': scope und id bleiben stabil («./»)');
+  ok(manifest.display === 'standalone' && manifest.orientation === 'portrait', tag + ': display standalone, Ausrichtung portrait');
+  ok(manifest.theme_color === '#0f2242' && manifest.background_color === '#f7f6f2', tag + ': Theme-/Hintergrundfarbe der App (Navy ' + manifest.theme_color + ' · Creme ' + manifest.background_color + ')');
+  ok(!/v2\.html|v3\.html|v4\.html/.test(manifestText), tag + ': keine versionsgebundene Startdatei im Manifest');
+  const icons = manifest.icons ?? [];
+  ok(icons.length === 3 && icons.some(icon => icon.sizes === '192x192') && icons.some(icon => icon.sizes === '512x512' && icon.purpose === 'any') && icons.some(icon => icon.purpose === 'maskable'), tag + ': Icons 192 · 512 · maskable (' + icons.map(icon => icon.src.split('/').pop()).join(' · ') + ')');
+  ok(icons.every(icon => /RC_Icon/.test(icon.src) && icon.type === 'image/png' && !/^https?:|^\//.test(icon.src)), tag + ': alle Icons sind PNG aus RC_Icon.png, relativ referenziert');
+  for (const icon of icons) {
+    /* Manifest-URLs sind relativ zum Manifest, nicht zur Prüfseite. */
+    const response = await fetch(new URL(icon.src, new URL('/site.webmanifest', location.origin)));
+    const bytes = new Uint8Array(await response.arrayBuffer());
+    const isPng = bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47;
+    const width = ((bytes[16] << 24) | (bytes[17] << 16) | (bytes[18] << 8) | bytes[19]) >>> 0;
+    const height = ((bytes[20] << 24) | (bytes[21] << 16) | (bytes[22] << 8) | bytes[23]) >>> 0;
+    ok(response.ok && isPng && icon.sizes === width + 'x' + height, tag + ': ' + icon.src.split('/').pop() + ' ist PNG in deklarierter Grösse (' + width + '×' + height + ', ' + Math.round(bytes.length / 1024) + ' kB)');
+  }
+  /* Einstiege: index.html nennt die Produktivversion an genau einer Stelle. */
+  const index = await (await fetch('/index.html')).text();
+  const entry = (index.match(/PRODUCTION_ENTRY\s*=\s*'([^']+)'/) ?? [])[1];
+  ok(!!entry && /v4\.html/.test(entry), tag + ': index.html nennt die Produktivversion an einer Stelle (' + (entry ?? 'fehlt') + ')');
+  ok(!/location\.replace\(['"]v3\.html/.test(index) && !/content="0;url=v3\.html"/.test(index), tag + ': index.html leitet nicht mehr auf v3.html um');
+  const entryHtml = await (await fetch('/' + entry)).text();
+  ok(entryHtml.length > 1000, tag + ': Produktivversion ' + entry + ' ist erreichbar (' + entryHtml.length + ' Zeichen)');
+  for (const file of ['index.html', 'v2.html', 'v3.html', 'v4.html']) {
+    const html = await (await fetch('/' + file)).text();
+    ok(/rel="manifest" href="site\.webmanifest"/.test(html) && /name="theme-color"/.test(html) && /apple-touch-icon/.test(html), tag + ': ' + file + ' verweist auf Manifest, Theme-Farbe und Apple-Icon');
+    ok(/js\/pwa-register\.js/.test(html), tag + ': ' + file + ' registriert den Service Worker');
+  }
+  /* Service Worker: neue Generation, Vorladen der Hülle, Räumung alter Caches, Fallback. */
+  const worker = await (await fetch('/sw.js')).text();
+  ok(/const CACHE = 'ruhestands-check-prod-1'/.test(worker) && /skipWaiting/.test(worker) && /clients\.claim/.test(worker), tag + ': neue Cache-Generation (ruhestands-check-prod-1), skipWaiting und claim');
+  ok(/name !== CACHE/.test(worker) && /caches\.delete/.test(worker), tag + ': activate löscht jeden anderen Cache – auch alte V2/V3-Caches');
+  ok(/shellUrls/.test(worker) && /PRODUCTION_ENTRY/.test(worker) && /'\.\/index\.html'/.test(worker), tag + ': Vorladen liest die Produktivversion aus index.html');
+  ok(/offlineShell/.test(worker) && /for \(const url of \['\.\/index\.html', '\.\/', request\]\)/.test(worker), tag + ': Offline-Fallback ist die Hülle (index.html), nicht eine Versionsdatei');
+  ok(/cache:'no-store'/.test(worker) && /request\.mode === 'navigate'/.test(worker), tag + ': HTML kommt netz-zuerst am HTTP-Cache vorbei');
+  const register = await (await fetch('/js/pwa-register.js')).text();
+  ok(/updateViaCache:'none'/.test(register) && /registration\.update\(\)/.test(register), tag + ': Registrierung prüft den Worker bei jedem Start am Netz');
+  ok(/new URL\('\.\.\/sw\.js', script\.src\)/.test(register) && /new URL\('\.', workerUrl\)/.test(register), tag + ': Worker und Scope werden relativ zum Skript aufgelöst (GitHub-Pages-tauglich)');
+  ok(/controllerchange/.test(register) && /hadController/.test(register), tag + ': echtes Update lädt die Seite genau einmal neu');
+  const f = await frame(390, 844), win = f.contentWindow;
+  await wait(1400);
+  ok(!win.__v4SwError, tag + ': Registrierung ohne Fehler (' + (win.__v4SwError ?? 'ok') + ')');
+  if ('serviceWorker' in win.navigator) {
+    const registrations = await win.navigator.serviceWorker.getRegistrations().catch(() => []);
+    const scopePath = new URL(registrations[0]?.scope ?? location.href).pathname;
+    ok(registrations.length >= 1 && /\/$/.test(scopePath), tag + ': Worker mit Verzeichnis-Scope registriert (' + (registrations[0]?.scope ?? 'keine') + ')');
+    if (win.navigator.serviceWorker.controller) {
+      const keys = await win.caches.keys();
+      const mine = keys.filter(name => name === 'ruhestands-check-prod-1');
+      ok(mine.length === 1 && keys.every(name => name === 'ruhestands-check-prod-1'), tag + ': nur der aktuelle Cache existiert (' + keys.join(', ') + ')');
+    } else out.push('      ' + tag + ': Worker noch nicht aktiv (headless) – Cache-Räumung nur im Code geprüft');
+  }
+  f.remove();
+}
+
 /* ---------- Beratungsdossier (A4/PDF) ----------
    Prüft die Abnahmekriterien: Background.png base-path-sicher, keine zweite Rechnung, einzeilige
    Kennzahlen, A4-Seiten mit Print-Regeln, korrekte aktuelle Variante, «Noch nicht erfasst» statt
@@ -815,9 +882,7 @@ async function serviceWorkerChecks() {
   ok(/MEDIA/.test(source) && /staleWhileRevalidate/.test(source), tag + ': Bilder laufen stale-while-revalidate');
   ok(/pathname\.startsWith\('\/tests\/'\)/.test(source) && /searchParams\.has\('dev'\)/.test(source), tag + ': Prüfungen und Debug-Aufrufe werden nicht gecacht');
   ok(/caches\.keys\(\)/.test(source) && /caches\.delete/.test(source), tag + ': alte Caches werden beim Aktivieren gelöscht');
-  const registration = await (await fetch('/js/v4-sw.js')).text();
-  ok(/updateViaCache:'none'/.test(registration) && /registration\.update\(\)/.test(registration), tag + ': Registrierung prüft den Worker bei jedem Start am Netz');
-  ok(/controllerchange/.test(registration) && /hadController/.test(registration), tag + ': echtes Update lädt die Seite genau einmal neu (Erstinstallation nicht)');
+  /* Registrierung, Manifest und Icons prüft `pwaChecks()` – hier bleibt nur der Worker selbst. */
   const f = await frame(390, 844), win = f.contentWindow;
   await wait(900);
   ok(!win.__v4SwError, tag + ': Registrierung wirft keinen Fehler (' + (win.__v4SwError ?? 'ok') + ')');
@@ -2108,6 +2173,8 @@ async function amountInputChecks(w) {
   try { await storageVersionChecks(); } catch (e) { ok(false, 'Speicherstand: ' + e.message); }
   flush();
   try { await serviceWorkerChecks(); } catch (e) { ok(false, 'Service Worker: ' + e.message); }
+  flush();
+  try { await pwaChecks(); } catch (e) { ok(false, 'PWA: ' + e.message); }
   const fails = out.filter(l => l.startsWith('FAIL')).length;
   document.getElementById('report').textContent = out.join('\n') + '\n---\n' + (fails ? fails + ' FAIL' : 'ALLE CHECKS PASS');
 })();
