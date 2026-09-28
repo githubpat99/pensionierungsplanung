@@ -28,6 +28,35 @@
     const parsed = number(value);
     return parsed === null ? null : Math.round(parsed);
   };
+  /* Prozentanteile, die sich **exakt auf 100 %** addieren (Rest auf den grössten Posten).
+     Ohne diesen Ausgleich ergäben drei gerundete Werte je nach Datenlage 99 % oder 101 %. */
+  const sharesOf = values => {
+    const total = values.reduce((sum, value) => sum + Math.max(0, number(value) ?? 0), 0);
+    if (!total) return values.map(() => null);
+    const shares = values.map(value => Math.floor(Math.max(0, number(value) ?? 0) / total * 100));
+    let rest = 100 - shares.reduce((sum, value) => sum + value, 0);
+    const order = values.map((value, index) => index).sort((a, b) => Math.max(0, number(values[b]) ?? 0) - Math.max(0, number(values[a]) ?? 0));
+    for (let step = 0; rest > 0; step++) { shares[order[step % order.length]] += 1; rest -= 1; }
+    return shares;
+  };
+
+  /* Topfbeträge, die sich **exakt** zum ausgewiesenen Zeitpunktwert addieren. Der Rechenkern
+     rundet Töpfe und Summe unabhängig; ohne diesen Ausgleich zeigte die Karte «drei Töpfe, die
+     zusammen einen Franken mehr ergeben als der Zeitpunktwert». */
+  const partsSummingTo = (values, target) => {
+    const parts = values.map(value => Math.max(0, Math.round(number(value) ?? 0)));
+    if (!parts.length) return parts;
+    const sum = parts.reduce((total, value) => total + value, 0);
+    let diff = (number(target) ?? sum) - sum;
+    for (let guard = 0; diff !== 0 && guard < 2000; guard++) {
+      const index = parts.indexOf(Math.max(...parts));
+      const step = diff > 0 ? 1 : -1;
+      if (index < 0 || parts[index] + step < 0) break;
+      parts[index] += step;
+      diff -= step;
+    }
+    return parts;
+  };
 
   /* Ein Budget aus einer Kennzahlenliste – Betrag fehlt = «Noch nicht erfasst». */
   const metric = (label, value, options = {}) => {
@@ -53,6 +82,11 @@
     const last = rows[rows.length - 1] ?? null;
     const share = item?.share ?? null;
     const sources = (item?.plan ? context.incomeSources ?? [] : []);
+    /* «Bereits pensioniert» (Post-Modus) kennt keinen Kapitalbezug und keine Aufbauphase:
+       Es gibt keinen Bezugsentscheid, kein PK-Kapital und kein 3a-Guthaben in der Planung und
+       keine Renditen/Verzinsung «bis Pensionierung». Das Dossier lässt diese Themen deshalb
+       weg, statt sie mit «Noch nicht erfasst» oder mit Nullvarianten zu zeigen. */
+    const retired = state.mode !== 'pre';
     const p3 = state.details.pension3a ?? {};
     const assets = state.details.assets ?? {};
     const pension = state.details.pension ?? {};
@@ -69,6 +103,7 @@
     const meetingMatch = meetingOn.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     const person = {
       mode: state.mode,
+      retired,
       situation: state.mode === 'pre' ? 'Vor der Pensionierung' : 'Bereits pensioniert',
       age: amountOrNull(state.values.age),
       retirementAge: state.mode === 'pre' ? amountOrNull(state.values.retirement) : null,
@@ -146,9 +181,14 @@
 
     /* --- Vermögen ------------------------------------------------------------------------- */
     const capital = context.capitalParts ?? {};   // aus calculateAvailableCapital()
+    /* Im Post-Modus besteht das Vermögen ausschliesslich aus dem heute verfügbaren Kapital:
+       PK-Guthaben und Säule 3a sind nicht Teil der Planung (der Rechenkern liefert dort 0),
+       ihre Zeilen würden nur «Noch nicht erfasst» oder «CHF 0» anzeigen. */
     const availableRows = [
-      metric('PK-Kapital netto', entered(pension.pk) ? capital.netPkCapitalWithdrawal : null, {formatter:money, note:'nach Steuern'}),
-      metric('Säule 3a', entered(p3.p3) ? capital.p3?.netAtStart : null, {formatter:money, note:'netto zum Start'}),
+      ...(retired ? [] : [
+        metric('PK-Kapital netto', entered(pension.pk) ? capital.netPkCapitalWithdrawal : null, {formatter:money, note:'nach Steuern'}),
+        metric('Säule 3a', entered(p3.p3) ? capital.p3?.netAtStart : null, {formatter:money, note:'netto zum Start'})
+      ]),
       metric('Bank / liquide Mittel', amountOrNull(assets.cash), {formatter:money}),
       metric('Wertschriften', amountOrNull(assets.securities), {formatter:money}),
       metric('Weitere Positionen', amountOrNull(assets.otherAssets), {formatter:money}),
@@ -182,30 +222,117 @@
         ...pot,
         amount: allocation[index] ?? 0,
         text: money(allocation[index] ?? 0),
-        share: allocationTotal ? Math.round((allocation[index] ?? 0) / allocationTotal * 100) : null
+        share: allocationTotal ? sharesOf(allocation)[index] : null
       })),
       total: allocationTotal,
       totalText: money(allocationTotal)
     };
 
     /* --- Verlauf (dieselbe Jahresprojektion wie in der App) -------------------------------
-       Der erste Punkt ist das **Startkapital am Pensionierungsalter** – dieselbe Zahl wie die
-       Kachel «Startkapital» und wie im Variantenvergleich; danach folgen die Jahresendwerte. */
-    const points = rows.map(row => ({
-      age: row.age + 1,
-      total: Math.max(0, rounded(row.end) ?? 0),
-      pots: (row.endBuckets ?? []).map(value => Math.max(0, rounded(value) ?? 0))
-    }));
-    if (person.retirementAge !== null && points.length && person.retirementAge < points[0].age) {
-      points.unshift({age:person.retirementAge, total:startCapital ?? Math.max(0, rounded(result?.availableCapital) ?? 0), pots:allocation});
-    }
+       Gezeigt werden **Jahresanfangswerte der Planjahre**: dann sind alle drei Töpfe gefüllt und
+       die Zusammensetzung ist aussagekräftig. Das erste Planjahr ist das der Pensionierung
+       **folgende** (Pension 65 → Startjahr 66); sein Jahresanfangswert ist das Startkapital. */
+    const points = rows.map(row => {
+      const total = Math.max(0, rounded(row.free) ?? 0);
+      const parts = (row.buckets ?? []).map(value => Math.max(0, rounded(value) ?? 0));
+      return {age: row.age + 1, total, pots: partsSummingTo(parts, total)};
+    });
+    /* Drei beschriftete Zeitpunkte wie in der Vorlage: Start · Mitte · Ende. Die Mitte liegt
+       möglichst auf einer Fünfjahreslinie (65…97 → 80), sonst auf dem nächstgelegenen Planjahr –
+       aber **nur im Mitteldrittel der Grafik**: die Beschriftungen von Start und Ende belegen je
+       ein Fünftel der Breite (`css/v4-dossier.css`), dazwischen muss die Mitte Platz haben.
+       Findet sich dort kein Planjahr mit Vermögen (sehr kurze Reichweite), bleiben Start und
+       Ende – zwei lesbare Angaben sind besser als drei übereinander. */
+    const from = points.length ? points[0].age : null;
+    const to = points.length ? points[points.length - 1].age : null;
+    /* Der dritte Zeitpunkt ist das letzte Planjahr **mit Vermögen** – der Planungshorizont,
+       solange dieser Wert trägt, sonst das Jahr, in dem das Vermögen aufgebraucht wird (dasselbe
+       Alter wie in der Zustandskarte). Ein Nulljahr ergäbe eine Karte mit «CHF 0» und ohne
+       Aussage; die Erklärung unter der Legende verspricht gefüllte Töpfe. */
+    const startPoint = points.length ? points[0] : null;
+    const filledPoints = points.filter(entry => entry.total > 0);
+    const endPoint = filledPoints.length ? filledPoints[filledPoints.length - 1] : (points.length ? points[points.length - 1] : null);
+    const labelEnd = endPoint ? endPoint.age : to;
+    const pointAt = age => points.find(entry => entry.age === age) ?? null;
+    const midAge = (() => {
+      if (from === null || labelEnd === null || to === null || to === from) return null;
+      const position = age => (age - from) / (to - from) * 100;
+      const inside = points.filter(entry => entry.age > from && entry.age < labelEnd && position(entry.age) >= 30 && position(entry.age) <= 70);
+      if (!inside.length) return null;
+      const mid = (from + labelEnd) / 2;
+      const grid = [Math.floor(mid / 5) * 5, Math.ceil(mid / 5) * 5]
+        .filter(age => inside.some(entry => entry.age === age))
+        .sort((a, b) => Math.abs(a - mid) - Math.abs(b - mid) || b - a)[0];
+      if (grid !== undefined) return grid;
+      return inside.reduce((best, entry) => Math.abs(entry.age - mid) < Math.abs(best.age - mid) ? entry : best, inside[0]).age;
+    })();
+    const milestone = (age, kicker) => {
+      const point = pointAt(age);
+      if (!point) return null;
+      /* Nur Töpfe **mit Vermögen** – dieselbe Regel wie im Töpfe-Dialog und in der Jahresansicht
+         (keine «CHF 0»-Zeile). Bleibt kein Topf übrig, entfällt die Karte. */
+      const filled = potDefinitions
+        .map((pot, index) => ({pot, value:Math.max(0, number(point.pots[index]) ?? 0)}))
+        .filter(entry => entry.value > 0);
+      if (!filled.length) return null;
+      const shares = sharesOf(filled.map(entry => entry.value));
+      return {
+        age, kicker,
+        totalText: money(point.total),
+        rows: filled.map((entry, position) => ({
+          key:entry.pot.key, label:entry.pot.label,
+          text:money(entry.value),
+          share:shares[position]
+        }))
+      };
+    };
+    /* Beschriftungen an der Grafik: **immer** Startjahr, Mitte und Endejahr – kurz gehalten,
+       damit alle drei Angaben auf einer Linie liegen. */
+    const projectionLabels = [
+      startPoint ? {age:startPoint.age, kicker:`Start mit ${startPoint.age}`, text:money(startPoint.total), place:'start'} : null,
+      midAge !== null ? {age:midAge, kicker:`mit ${midAge}`, text:money(pointAt(midAge)?.total ?? 0), place:'mid'} : null,
+      endPoint && (!startPoint || endPoint.age !== startPoint.age) ? {age:endPoint.age, kicker:`mit ${endPoint.age}`, text:money(endPoint.total), place:'end'} : null
+    ].filter(Boolean);
+    const projectionCards = [
+      startPoint ? milestone(startPoint.age, `Startvermögen mit ${startPoint.age}`) : null,
+      midAge !== null ? milestone(midAge, `Vermögen mit ${midAge}`) : null,
+      endPoint && (!startPoint || endPoint.age !== startPoint.age) ? milestone(endPoint.age, `Vermögen mit ${endPoint.age}`) : null
+    ].filter(Boolean);
+    /* Achse: Fünfjahresschritte zwischen Start- und Endejahr. Ein Rasterschritt, der nur ein oder
+       zwei Jahre vom Start- oder Endejahr entfernt liegt, entfällt – sonst stünden dort zwei
+       Zahlen direkt nebeneinander (Beispiel 66…96: 95 wird weggelassen, 96 bleibt). */
+    const axisAges = (() => {
+      if (from === null || to === null) return [];
+      const ages = [from];
+      for (let age = Math.ceil(from / 5) * 5; age < to; age += 5) {
+        if (age <= from + 2 || age >= to - 2) continue;
+        ages.push(age);
+      }
+      if (to > from) ages.push(to);
+      return [...new Set(ages)].sort((a, b) => a - b);
+    })();
     const projection = {
-      from: points.length ? points[0].age : null,
-      to: points.length ? points[points.length - 1].age : null,
-      points,
+      from, to, points,
       pots: potDefinitions,
+      labels: projectionLabels,
+      cards: projectionCards,
+      axis: axisAges,
       rest: {label:`Restvermögen mit ${person.targetAge ?? '–'}`, text: reach ? NOT_CAPTURED : year(restValue)},
-      exhaustionAge: reach
+      exhaustionAge: reach,
+      /* Zustand der Seite: gedeckt (grüner Haken) oder aufgebraucht (Hinweis). */
+      status: reach
+        ? {
+            tone:'gap',
+            title:`Dein Vermögen ist voraussichtlich mit ${reach} aufgebraucht.`,
+            text:'Danach laufen AHV- und PK-Rente weiter – frei verfügbares Vermögen ist keines mehr vorhanden.'
+          }
+        : {
+            tone:'covered',
+            title:'Dein Vermögen reicht bis zum Planungshorizont.',
+            text: person.targetAge !== null && restValue !== null
+              ? `Mit ${person.targetAge} bleiben voraussichtlich ${money(restValue)} (in heutiger Kaufkraft).`
+              : 'Alle Werte in heutiger Kaufkraft.'
+          }
     };
 
     /* --- PK-Varianten --------------------------------------------------------------------- */
@@ -232,13 +359,18 @@
     };
 
     /* --- Annahmen -------------------------------------------------------------------------- */
+    /* Die Renditen und die Verzinsung der Aufbauphase («bis Pensionierung») existieren nur vor
+       der Pensionierung: im Post-Modus sind sie weder erfasst noch wirksam und würden das
+       Dossier irreführend mit Werten füllen, die für den Plan keine Rolle spielen. */
     const assumptionsRows = [
       {label:'Anlagestrategie', text: strategy?.label ?? NOT_CAPTURED, note: strategy?.chosen ? 'gewählt' : 'Modellannahme'},
       {label:'Rendite', text: strategy?.rateText ?? NOT_CAPTURED, note:'real, pro Jahr'},
       {label:'Inflation', text: entered(assumptions.inflation) ? `${percent(Number(assumptions.inflation))} % p.a.` : NOT_CAPTURED, note:'Modellannahme'},
-      {label:'PK-Verzinsung bis Pensionierung', text: entered(assumptions.pkInterest) ? `${percent(Number(assumptions.pkInterest))} %` : NOT_CAPTURED, note:''},
-      {label:'3a-Rendite bis Pensionierung', text: entered(assumptions.p3Return) ? `${percent(Number(assumptions.p3Return))} %` : NOT_CAPTURED, note:''},
-      {label:'Wertschriftenrendite bis Pensionierung', text: entered(assumptions.secReturn) ? `${percent(Number(assumptions.secReturn))} %` : NOT_CAPTURED, note:'interner Produktsatz'},
+      ...(retired ? [] : [
+        {label:'PK-Verzinsung bis Pensionierung', text: entered(assumptions.pkInterest) ? `${percent(Number(assumptions.pkInterest))} %` : NOT_CAPTURED, note:''},
+        {label:'3a-Rendite bis Pensionierung', text: entered(assumptions.p3Return) ? `${percent(Number(assumptions.p3Return))} %` : NOT_CAPTURED, note:''},
+        {label:'Wertschriftenrendite bis Pensionierung', text: entered(assumptions.secReturn) ? `${percent(Number(assumptions.secReturn))} %` : NOT_CAPTURED, note:'interner Produktsatz'}
+      ]),
       {label:'Wohnkanton', text: person.canton ?? NOT_CAPTURED, note: taxModelName ? `Steuermodell ${taxModelName}` : ''}
     ];
 
@@ -247,7 +379,7 @@
     if (state.mode === 'pre' && (entered(pension.pk) || context.variantCount > 1)) {
       decisions.push({title:'PK-Bezug', text:'Kapitalbezug 0 / 50 / 100 % prüfen und die Variante festlegen, die zu Rente und Bedarf passt.'});
     }
-    if (entered(p3.p3) || entered(p3.p3Contrib)) {
+    if (!retired && (entered(p3.p3) || entered(p3.p3Contrib))) {
       decisions.push({title:'Säule 3a', text:'Bezugsplanung festlegen: Guthaben, Bezugsjahr und Wirkung auf die Steuern.'});
     }
     if (assetsSection.hasBound) {
@@ -297,44 +429,89 @@
   const page = (number, title, subtitle, body) => `<section class="v4-dossier-page" aria-label="Seite ${number}: ${escapeText(title)}">${head(title, subtitle)}<div class="v4-dossier-body">${body}</div>${foot(number)}</section>`;
   const missingBlock = text => `<p class="v4-dossier-missing">${escapeText(text)}</p>`;
 
-  /* Verlauf: eine ruhige Fläche mit Linie (Gesamtvermögen) und drei dünnen Topf-Linien.
-     Alle Punkte stammen aus der Jahresprojektion des Rechenkerns (`points`). */
+  /* Verlauf nach der Vorlage: gestapelte Flächen der drei Töpfe (Geldmarkt oben, darunter
+     Obligationen, unten Wertschöpfung), darüber die Linie «Gesamtvermögen» mit Punkten an den
+     drei beschrifteten Zeitpunkten, Fünfjahresachse mit «Alter» und Legende.
+     Alle Werte stammen aus der Jahresprojektion des Rechenkerns (`points`); die Beschriftungen
+     stehen als HTML über der Grafik, damit sie auf jedem Format lesbar bleiben. */
   function projectionChart(data) {
-    const points = data.projection.points;
-    if (points.length < 2) return missingBlock('Für den Verlauf fehlen noch Angaben.');
-    const W = 1000, H = 430, padTop = 30, padBottom = 46, padX = 14;
-    const from = data.projection.from, to = data.projection.to;
+    const projection = data.projection;
+    const points = projection.points;
+    if (!projection.from || !projection.to || points.length < 2) return missingBlock('Für den Verlauf fehlen noch Angaben.');
+    const W = 1000, H = 360, padTop = 28, padBottom = 8, padX = 12;
+    const from = projection.from, to = projection.to;
     const max = Math.max(1, ...points.map(point => point.total));
     const x = age => padX + (age - from) / Math.max(1, to - from) * (W - padX * 2);
     const y = value => padTop + (1 - value / max) * (H - padTop - padBottom);
-    const line = values => values.map((value, index) => `${index ? 'L' : 'M'}${x(points[index].age).toFixed(1)} ${y(value).toFixed(1)}`).join(' ');
+    const percent = age => x(age) / W * 100;
+    /* Gestapelt wird von unten nach oben: Wertschöpfung, Obligationen, Geldmarkt. */
+    const stack = projection.pots.map((pot, index) => ({pot, index})).reverse();
+    let lower = points.map(() => 0);
+    const bands = stack.map(({pot, index}) => {
+      const upper = points.map((point, position) => lower[position] + Math.max(0, number(point.pots[index]) ?? 0));
+      const topEdge = points.map((point, position) => `${position ? 'L' : 'M'}${x(point.age).toFixed(1)} ${y(upper[position]).toFixed(1)}`).join(' ');
+      const bottomEdge = points.map((point, position) => ({point, position})).reverse()
+        .map(({point, position}) => `L${x(point.age).toFixed(1)} ${y(lower[position]).toFixed(1)}`).join(' ');
+      lower = upper;
+      return `<path class="band pot-${pot.key}" d="${topEdge} ${bottomEdge} Z"/>`;
+    }).join('');
     const totals = points.map(point => point.total);
-    const area = `${line(totals)} L${x(to).toFixed(1)} ${y(0).toFixed(1)} L${x(from).toFixed(1)} ${y(0).toFixed(1)} Z`;
-    const potLines = data.projection.pots.map((pot, index) => `<path class="pot-${pot.key}" d="${line(points.map(point => point.pots[index] ?? 0))}"/>`).join('');
+    const totalLine = points.map((point, index) => `${index ? 'L' : 'M'}${x(point.age).toFixed(1)} ${y(totals[index]).toFixed(1)}`).join(' ');
+    const markers = projection.labels.map(label => `<circle class="marker-dot" cx="${x(label.age).toFixed(1)}" cy="${y(pointAt(points, label.age)?.total ?? totals[totals.length - 1]).toFixed(1)}" r="6"/>`).join('');
+    const guides = projection.labels.map(label => `<line class="guide" x1="${x(label.age).toFixed(1)}" x2="${x(label.age).toFixed(1)}" y1="${padTop}" y2="${y(0).toFixed(1)}"/>`).join('');
     const grid = [0.25, 0.5, 0.75, 1].map(share => `<line class="grid" x1="${padX}" x2="${W - padX}" y1="${(padTop + (1 - share) * (H - padTop - padBottom)).toFixed(1)}" y2="${(padTop + (1 - share) * (H - padTop - padBottom)).toFixed(1)}"/>`).join('');
-    /* Achsenzahlen nur für die Mitte und einen allfälligen Aufbrauchpunkt – die Ränder sind als
-       «Pensionierung» und «Planungshorizont» beschriftet, damit keine Zahl doppelt erscheint. */
-    const midAge = Math.round((from + to) / 2);
-    const marks = [...new Set([data.projection.exhaustionAge, midAge].filter(age => age !== null && age > from && age < to))].sort((a, b) => a - b);
-    const ticks = marks.map(age => `<text class="tick" x="${x(age).toFixed(1)}" y="${H - 14}" text-anchor="middle">${age}</text>`).join('');
-    const exhaustion = data.projection.exhaustionAge && data.projection.exhaustionAge >= from && data.projection.exhaustionAge <= to
-      ? `<line class="marker" x1="${x(data.projection.exhaustionAge).toFixed(1)}" x2="${x(data.projection.exhaustionAge).toFixed(1)}" y1="${padTop}" y2="${y(0).toFixed(1)}"/><text class="marker-label" x="${x(data.projection.exhaustionAge).toFixed(1)}" y="${padTop - 10}" text-anchor="middle">aufgebraucht mit ${data.projection.exhaustionAge}</text>`
-      : '';
-    const legend = data.projection.pots.map(pot => `<li><span class="dot pot-${pot.key}" aria-hidden="true"></span>${escapeText(pot.label)}</li>`).join('');
-    return `<figure class="v4-dossier-chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vermögensverlauf von Alter ${from} bis ${to}">`
-      + grid + exhaustion
-      + `<path class="area" d="${area}"/>`
-      + potLines
-      + `<path class="line-total" d="${line(totals)}"/>`
-      + ticks
-      + `<text class="edge-label" x="${padX}" y="${H - 14}" text-anchor="start">Pensionierung ${from}</text>`
-      + `<text class="edge-label" x="${W - padX}" y="${H - 14}" text-anchor="end">Planungshorizont ${to}</text>`
-      + `</svg><figcaption><ul class="v4-dossier-legend"><li><span class="dot total" aria-hidden="true"></span>Gesamtvermögen</li>${legend}</ul>`
-      + `<p class="v4-dossier-chart-note">Frei verfügbares Vermögen am Jahresende; gebundenes Vermögen (Immobilien) ist nicht enthalten.</p></figcaption></figure>`;
+    /* Beschriftungen: Start linksbündig, Mitte zentriert, Ende rechtsbündig – jedes Feld höchstens
+       ein Drittel breit, damit sich die Angaben nie überlagern (auf schmalen Screens stehen sie
+       untereinander, siehe `css/v4-dossier.css`). */
+    const labels = projection.labels.map(label => {
+      const style = label.place === 'start' ? 'left:0' : label.place === 'end' ? 'right:0' : `left:${percent(label.age).toFixed(2)}%;transform:translateX(-50%)`;
+      return `<p class="v4-dossier-chart-label is-${label.place}" style="${style}"><span class="v4-dossier-chart-kicker">${escapeText(label.kicker)}</span>${label.text ? `<strong>${escapeText(label.text)}</strong>` : ''}</p>`;
+    }).join('');
+    const axis = projection.axis.map(age => `<span class="v4-dossier-axis-tick" style="left:${percent(age).toFixed(2)}%">${age}</span>`).join('')
+      + '<span class="v4-dossier-axis-caption">Alter</span>';
+    const legend = `<li><span class="dot total" aria-hidden="true"></span>Gesamtvermögen</li>`
+      + projection.pots.map(pot => `<li><span class="dot pot-${pot.key}" aria-hidden="true"></span>${escapeText(pot.label)}${pot.key === 'growth' ? ' (Aktien)' : ''}</li>`).join('');
+    return `<figure class="v4-dossier-chart">`
+      + `<div class="v4-dossier-chart-canvas"><div class="v4-dossier-chart-labels">${labels}</div><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Vermögensverlauf (Jahresanfang) von Alter ${from} bis ${to}">`
+      + grid + guides + bands
+      + `<path class="line-total" d="${totalLine}"/>${markers}`
+      + `</svg><div class="v4-dossier-axis">${axis}</div></div>`
+      + `<figcaption><ul class="v4-dossier-legend">${legend}</ul>`
+      + `<p class="v4-dossier-chart-note">Jahresanfangswerte, in denen alle drei Töpfe gefüllt sind – ohne gebundenes Vermögen (Immobilien).</p></figcaption></figure>`;
+  }
+  /* Wert eines Punktes zu einem Alter (der Aufbrauchpunkt kann zwischen zwei Planjahren liegen). */
+  function pointAt(points, age) {
+    return points.find(point => point.age === age) ?? null;
+  }
+  /* Die drei Karten unter der Grafik: Zusammensetzung an Start, Mitte und Horizont. */
+  function projectionCards(data) {
+    const cards = data.projection.cards;
+    if (!cards.length) return '';
+    return `<div class="v4-dossier-milestones">${cards.map(card => `<div class="v4-dossier-milestone">`
+      + `<p class="v4-dossier-milestone-kicker">${escapeText(card.kicker)}</p>`
+      + `<p class="v4-dossier-milestone-amount">${escapeText(card.totalText)}</p>`
+      + `<dl class="v4-dossier-milestone-rows">${card.rows.map(row => `<div class="v4-dossier-milestone-row">`
+        + `<dt><span class="dot pot-${row.key}" aria-hidden="true"></span>${escapeText(row.label)}</dt>`
+        + `<dd><span class="v4-dossier-milestone-value">${escapeText(row.text)}</span>${row.share !== null ? `<span class="v4-dossier-milestone-share">${row.share} %</span>` : ''}</dd>`
+        + `</div>`).join('')}</dl>`
+      + `</div>`).join('')}</div>`;
+  }
+  /* Zustandskarte über der Grafik (grüner Haken oder Hinweis auf den Aufbrauch). */
+  function projectionStatus(data) {
+    const status = data.projection.status;
+    if (!status || data.projection.points.length < 2) return '';
+    return `<div class="v4-dossier-status is-${status.tone}">`
+      + `<span class="v4-dossier-status-icon" aria-hidden="true">${icon(status.tone === 'covered' ? 'circleCheck' : 'infoCircle', 30)}</span>`
+      + `<div><p class="v4-dossier-status-title">${escapeText(status.title)}</p><p class="v4-dossier-status-text">${escapeText(status.text)}</p></div></div>`;
   }
 
   function render(data) {
     const pages = [];
+    const retired = data.person.retired === true;
+    /* Seitenzahlen werden fortlaufend vergeben: entfällt eine Seite (Varianten im Post-Modus,
+       weil es dort keinen Kapitalbezug gibt), bleiben sie lückenlos. */
+    let pageNumber = 1;
+    const nextPage = (title, subtitle, body) => pages.push(page(++pageNumber, title, subtitle, body));
     const pills = [
       data.person.retirementAge !== null ? `Pensionierung mit ${data.person.retirementAge}` : null,
       data.person.targetAge !== null ? `Planung bis ${data.person.targetAge}` : null,
@@ -367,16 +544,18 @@
           + `<div class="v4-dossier-ratio-bar"><span class="income" style="width:${data.need.incomeShare}%"></span><span class="wealth" style="width:${data.need.withdrawalShare}%"></span></div>`
           + `<ul class="v4-dossier-ratio-labels"><li><span class="dot income" aria-hidden="true"></span>${data.need.incomeShare} % Einkommen</li><li><span class="dot wealth" aria-hidden="true"></span>${data.need.withdrawalShare} % Vermögensentnahme</li></ul></div>`
         : missingBlock('Für die Aufteilung fehlen noch Angaben.');
-    pages.push(page(2, 'So finanzierst du deinen Ruhestand', 'Einkommen, Steuern und die notwendige Entnahme aus deinem Vermögen.',
-      `<div class="v4-dossier-columns"><div class="v4-dossier-card"><p class="v4-dossier-card-title">Einkommen im ersten Planjahr</p>`
+    nextPage('So finanzierst du deinen Ruhestand', 'Einkommen, Steuern und die notwendige Entnahme aus deinem Vermögen.',
+      `<div class="v4-dossier-columns"><div class="v4-dossier-card"><p class="v4-dossier-card-title">${retired ? 'Dein Einkommen heute' : 'Einkommen im ersten Planjahr'}</p>`
       + `<dl class="v4-dossier-rows">${data.income.sources.map(source => valueRow({label:source.label, text:source.text, amount:source.amount})).join('')}${data.income.rows.map(row => valueRow(row)).join('')}</dl>`
       + `${data.income.estimateNote ? `<p class="v4-dossier-note">${escapeText(data.income.estimateNote)}</p>` : ''}</div>`
       + `<div class="v4-dossier-card"><p class="v4-dossier-card-title">Bedarf und Deckung</p>`
       + `<dl class="v4-dossier-rows">${valueRow(data.need.net, {strong:true})}${valueRow(data.need.fromIncome)}${valueRow(data.need.fromWealth)}</dl>`
-      + ratio + `</div></div>`));
+      + ratio + `</div></div>`);
 
-    /* Seite 3 – Vermögen */
-    pages.push(page(3, 'Dein Vermögen zum Start der Pensionierung', 'Was für die Planung verfügbar ist – und was gebunden bleibt.',
+    /* Seite 3 – Vermögen. Im Post-Modus steht hier das **heute** verfügbare Vermögen; die
+       Formulierung «zum Start der Pensionierung» wäre falsch, weil die Pensionierung zurückliegt. */
+    nextPage(retired ? 'Dein Vermögen heute' : 'Dein Vermögen zum Start der Pensionierung',
+      retired ? 'Was dir heute für die Planung zur Verfügung steht – und was gebunden bleibt.' : 'Was für die Planung verfügbar ist – und was gebunden bleibt.',
       `<div class="v4-dossier-columns">`
       + `<div class="v4-dossier-card is-accent"><p class="v4-dossier-card-title">Für die Planung verfügbar</p>`
       + (data.assets.available.entered
@@ -388,10 +567,9 @@
           + `<dl class="v4-dossier-rows">${data.assets.bound.rows.map(row => valueRow(row)).join('')}</dl>`
           + `<p class="v4-dossier-note">Gebundenes Vermögen steht für den laufenden Bedarf nicht zur Verfügung und wird nicht verbraucht.</p></div>`
         : `<div class="v4-dossier-card is-muted"><p class="v4-dossier-card-title">Gebundenes Vermögen</p>${missingBlock('Kein gebundenes Vermögen erfasst.')}</div>`)
-      + `</div>`));
-
+      + `</div>`);
     /* Seite 4 – Töpfe */
-    pages.push(page(4, 'So ist dein Kapital aufgeteilt', `Drei Töpfe mit unterschiedlichen Aufgaben${data.pots.yearLabel ? ` – Stand ${data.pots.yearLabel}` : ''}.`,
+    nextPage('So ist dein Kapital aufgeteilt', `Drei Töpfe mit unterschiedlichen Aufgaben${data.pots.yearLabel ? ` – Stand ${data.pots.yearLabel}` : ''}.`,
       data.pots.total > 0
         ? `<div class="v4-dossier-pots">${data.pots.rows.map(row => `<div class="v4-dossier-pot pot-${row.key}">`
           + `<p class="v4-dossier-pot-label">${escapeText(row.label)}</p>`
@@ -399,25 +577,27 @@
           + `<p class="v4-dossier-pot-share">${row.share === null ? '–' : `${row.share} % des Startkapitals`}</p>`
           + `<p class="v4-dossier-pot-note">${escapeText(row.note)}</p></div>`).join('')}</div>`
           + `<p class="v4-dossier-note is-strong">Die Aufteilung wird im Zeitverlauf anhand des Kapitalbedarfs und der gewählten Strategie jährlich neu berechnet.</p>`
-        : missingBlock('Solange kein verfügbares Kapital erfasst ist, gibt es keine Aufteilung auf die Töpfe.')));
+        : missingBlock('Solange kein verfügbares Kapital erfasst ist, gibt es keine Aufteilung auf die Töpfe.'));
 
-    /* Seite 5 – Verlauf */
-    pages.push(page(5, 'So entwickelt sich dein Vermögen', `Jahresprojektion von Alter ${data.projection.from ?? '–'} bis ${data.projection.to ?? '–'}.`,
-      projectionChart(data)
-      + `<div class="v4-dossier-highlight"><p class="v4-dossier-kicker">${escapeText(data.projection.rest.label)}</p>${amount(data.projection.rest.text, {strong:true, size:'result'})}</div>`));
+    /* Seite 5 – Verlauf: Zustand, gestapelte Flächen mit drei beschrifteten Zeitpunkten,
+       Zusammensetzung an Start, Mitte und Ende (Vorlage «So entwickelt sich dein Vermögen»). */
+    nextPage('So entwickelt sich dein Vermögen', `Jahresprojektion von Alter ${data.projection.from ?? '–'} bis ${data.projection.to ?? '–'} – in heutiger Kaufkraft.`,
+      projectionStatus(data) + projectionChart(data) + projectionCards(data));
 
-    /* Seite 6 – PK-Varianten */
+    /* Seite 6 – PK-Varianten: **nur vor der Pensionierung.** Im Post-Modus gibt es keinen
+       Kapitalbezug; die Variantenseite entfällt (dieselbe Regel wie in der App, wo ohne
+       Kapitalbezug kein Variantenbereich existiert). */
     const variantColumns = data.variants.rows.map(variant => `<div class="v4-dossier-variant${variant.current ? ' is-current' : ''}">`
       + `<p class="v4-dossier-variant-head">${variant.share} % Kapitalbezug</p>`
       + (variant.current ? `<p class="v4-dossier-variant-badge">Dein aktueller Plan</p>` : `<p class="v4-dossier-variant-badge is-empty">&nbsp;</p>`)
       + `<dl class="v4-dossier-rows">${variant.rows.map(row => valueRow(row)).join('')}</dl></div>`).join('');
-    pages.push(page(6, 'Deine PK-Varianten', 'Kapitalbezug, Rente und Reichweite im Vergleich – ohne Wertung.',
-      data.variants.rows.length ? `<div class="v4-dossier-variants">${variantColumns}</div>` : missingBlock('Es ist erst eine Variante gespeichert.')));
+    if (!retired) nextPage('Deine PK-Varianten', 'Kapitalbezug, Rente und Reichweite im Vergleich – ohne Wertung.',
+      data.variants.rows.length ? `<div class="v4-dossier-variants">${variantColumns}</div>` : missingBlock('Es ist erst eine Variante gespeichert.'));
 
     /* Seite 7 – Annahmen */
-    pages.push(page(7, 'Annahmen deiner Planung', 'Alle Werte stammen aus deinen Angaben und den hinterlegten Modellannahmen.',
+    nextPage('Annahmen deiner Planung', 'Alle Werte stammen aus deinen Angaben und den hinterlegten Modellannahmen.',
       `<div class="v4-dossier-card"><dl class="v4-dossier-rows">${data.assumptions.rows.map(row => valueRow(row)).join('')}</dl></div>`
-      + `<p class="v4-dossier-disclaimer">${escapeText(data.disclaimer)}</p>`));
+      + `<p class="v4-dossier-disclaimer">${escapeText(data.disclaimer)}</p>`);
 
     /* Seite 8 – Nächste Entscheidungen und Notizen (nur wenn Themen im Plan vorkommen) */
     const notes = data.preparation?.notes ?? null;
@@ -425,11 +605,11 @@
       const notesCard = notes
         ? `<div class="v4-dossier-card is-muted"><p class="v4-dossier-card-title">Notizen aus der Vorbereitung</p><p class="v4-dossier-notes">${escapeText(notes)}</p></div>`
         : '';
-      pages.push(page(8, data.decisions.length ? 'Deine nächsten Entscheidungen' : 'Notizen aus der Vorbereitung',
+      nextPage(data.decisions.length ? 'Deine nächsten Entscheidungen' : 'Notizen aus der Vorbereitung',
         data.decisions.length ? 'Themen, die in deiner Planung tatsächlich vorkommen.' : 'Festgehalten für das Beratungsgespräch.',
         (data.decisions.length ? `<div class="v4-dossier-decisions">${data.decisions.map(entry => `<div class="v4-dossier-decision">`
           + `<p class="v4-dossier-decision-title">${escapeText(entry.title)}</p><p class="v4-dossier-decision-text">${escapeText(entry.text)}</p></div>`).join('')}</div>` : '')
-        + notesCard));
+        + notesCard);
     }
 
     return `<div class="v4-dossier" data-pages="${pages.length}">${pages.join('')}</div>`;

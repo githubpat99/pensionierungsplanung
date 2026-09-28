@@ -110,15 +110,58 @@
 .v4-dossier-chart{margin:0;display:flex;flex-direction:column;gap:10px}
 .v4-dossier-chart svg{width:100%;height:auto;display:block;background:#fbfaf7;border:1px solid var(--dossier-line);border-radius:14px;padding:6px;box-sizing:border-box}
 .v4-dossier-chart .grid{stroke:#e6e4dd;stroke-width:1}
+/* Gestapelte Topf-Flächen (Geldmarkt oben, darunter Obligationen, unten Wertschöpfung) mit der
+   dunkelgrünen Linie «Gesamtvermögen» darüber – Vorlage «So entwickelt sich dein Vermögen». */
+.v4-dossier-chart .band{stroke:none}
+.v4-dossier-chart .band.pot-cash{fill:var(--v3-pot-cash);fill-opacity:.75}
+.v4-dossier-chart .band.pot-bonds{fill:var(--v3-pot-bonds);fill-opacity:.75}
+.v4-dossier-chart .band.pot-growth{fill:var(--v3-pot-growth);fill-opacity:.75}
+.v4-dossier-chart .line-total{fill:none;stroke:var(--v3-green);stroke-width:2.6;stroke-linejoin:round;stroke-linecap:round}
+.v4-dossier-chart .marker-dot{fill:var(--v3-green);stroke:#fff;stroke-width:2}
+.v4-dossier-chart .guide{stroke:#c9cfc9;stroke-width:1;stroke-dasharray:4 4}
 .v4-dossier-chart .area{fill:rgba(31,98,85,.10);stroke:none}
-.v4-dossier-chart .line-total{fill:none;stroke:var(--v3-green);stroke-width:2.4;stroke-linejoin:round;stroke-linecap:round}
-.v4-dossier-chart path.pot-cash{fill:none;stroke:var(--v3-pot-cash);stroke-width:1.2;opacity:.65}
-.v4-dossier-chart path.pot-bonds{fill:none;stroke:var(--v3-pot-bonds);stroke-width:1.2;opacity:.65}
-.v4-dossier-chart path.pot-growth{fill:none;stroke:var(--v3-pot-growth);stroke-width:1.2;opacity:.65}
 .v4-dossier-chart .marker{stroke:#b08a3e;stroke-width:1;stroke-dasharray:3 3}
 .v4-dossier-chart .marker-label{font:600 11px system-ui,sans-serif;fill:#8a6d1f}
 .v4-dossier-chart .tick{font:600 11px system-ui,sans-serif;fill:var(--dossier-muted)}
 .v4-dossier-chart .edge-label{font:600 10.5px system-ui,sans-serif;fill:var(--dossier-muted)}
+/* Beschriftungen über der Grafik: als HTML, damit sie in jedem Format lesbar bleiben. Start und
+   Ende belegen je **ein Fünftel** der Breite links bzw. rechts; die Mitte liegt deshalb nur im
+   Mitteldrittel (`js/v4-dossier.js` wählt den Zeitpunkt entsprechend) – so können sich die drei
+   Angaben nie überlagern. */
+.v4-dossier-chart-canvas{position:relative;padding-top:50px}
+.v4-dossier-chart-canvas svg{width:100%;height:auto;display:block}
+.v4-dossier-chart-labels{position:absolute;top:0;left:0;right:0;height:46px}
+.v4-dossier-chart-label{position:absolute;top:0;margin:0;width:20%;text-align:center}
+.v4-dossier-chart-label.is-start{text-align:left}
+.v4-dossier-chart-label.is-end{text-align:right}
+/* Zwei Zeilen für die Beschriftung reserviert: so liegen die drei Beträge auf einer Linie,
+   auch wenn eine Bezeichnung umbricht. */
+.v4-dossier-chart-kicker{display:block;min-height:30px;font:11.5px/1.3 system-ui,sans-serif;color:var(--dossier-muted)}
+.v4-dossier-chart-label strong{display:block;font:600 19px/1.2 Georgia,"Times New Roman",serif;color:var(--v3-brand);white-space:nowrap}
+/* Achse: Jahreszahlen auf einer Zeile, «Alter» darunter rechts – so kollidiert die Beschriftung
+   nie mit der letzten Jahreszahl. */
+.v4-dossier-axis{position:relative;height:34px;margin-top:2px}
+.v4-dossier-axis-tick{position:absolute;top:0;transform:translateX(-50%);font:600 11.5px/1.3 system-ui,sans-serif;color:var(--dossier-muted)}
+.v4-dossier-axis-caption{position:absolute;top:17px;right:0;font:600 11.5px/1.3 system-ui,sans-serif;color:var(--dossier-muted)}
+/* Zustandskarte über der Grafik */
+.v4-dossier-status{display:flex;align-items:center;gap:14px;padding:14px 18px;border:1px solid rgba(31,98,85,.22);border-radius:16px;background:linear-gradient(180deg,#f2f6f1,#e9f0ea)}
+.v4-dossier-status.is-gap{border-color:rgba(138,109,31,.28);background:linear-gradient(180deg,#faf6ec,#f6efdd)}
+.v4-dossier-status-icon{display:inline-flex;flex:none;color:var(--v3-green)}
+.v4-dossier-status.is-gap .v4-dossier-status-icon{color:#8a6d1f}
+.v4-dossier-status-title{margin:0;font:600 16px/1.3 Georgia,"Times New Roman",serif;color:var(--v3-brand)}
+.v4-dossier-status-text{margin:3px 0 0;font:12.5px/1.45 system-ui,sans-serif;color:var(--dossier-muted)}
+/* Zusammensetzung an Start, Mitte und Horizont */
+.v4-dossier-milestones{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.v4-dossier-milestone{padding:13px 15px;border:1px solid var(--dossier-line);border-radius:14px;background:#fbfaf7;break-inside:avoid;min-width:0}
+.v4-dossier-milestone-kicker{margin:0;font:600 10.5px/1.3 system-ui,sans-serif;letter-spacing:.05em;text-transform:uppercase;color:var(--dossier-muted)}
+.v4-dossier-milestone-amount{margin:2px 0 8px;font:600 22px/1.15 Georgia,"Times New Roman",serif;color:var(--v3-brand);white-space:nowrap}
+.v4-dossier-milestone-rows{margin:0;display:flex;flex-direction:column;gap:7px}
+/* Je Topf zwei Zeilen (Bezeichnung, darunter Betrag und Anteil): auf A4 bleibt so der volle
+   Topfname stehen, statt abgeschnitten zu werden. */
+.v4-dossier-milestone-row{display:flex;flex-direction:column;gap:1px;min-width:0}
+.v4-dossier-milestone-row dt{display:flex;align-items:center;gap:7px;min-width:0;font:12px/1.3 system-ui,sans-serif;color:var(--dossier-muted)}
+.v4-dossier-milestone-row dd{margin:0;display:flex;align-items:baseline;gap:8px;padding-left:16px;font:600 13px/1.3 system-ui,sans-serif;color:var(--v3-ink);white-space:nowrap}
+.v4-dossier-milestone-share{font:600 11.5px/1.3 system-ui,sans-serif;color:var(--dossier-muted)}
 .v4-dossier-legend{display:flex;flex-wrap:wrap;gap:14px;margin:0;padding:0;list-style:none;font:11.5px/1.3 system-ui,sans-serif;color:var(--dossier-muted)}
 .v4-dossier-legend .dot.pot-cash{background:var(--v3-pot-cash)}
 .v4-dossier-legend .dot.pot-bonds{background:var(--v3-pot-bonds)}
@@ -177,7 +220,7 @@
   .v4-dossier-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
   /* Eine Spalte und echte Schrumpfgrenze (`minmax(0,1fr)`): `1fr` allein behält die
      Min-Content-Breite der Karten und schöbe den Inhalt seitlich aus der Seite. */
-  .v4-dossier-columns,.v4-dossier-variants,.v4-dossier-decisions,.v4-dossier-pots{grid-template-columns:minmax(0,1fr)}
+  .v4-dossier-columns,.v4-dossier-variants,.v4-dossier-decisions,.v4-dossier-pots,.v4-dossier-milestones{grid-template-columns:minmax(0,1fr)}
   .v4-dossier-card,.v4-dossier-card-title,.v4-dossier-rows,.v4-dossier-variant,.v4-dossier-pot,.v4-dossier-decision{min-width:0}
   /* Bezeichnungen dürfen auf schmalen Screens umbrechen – die Zahl bleibt einzeilig rechts.
      Die kleine Herkunftsnotiz («nach Steuern», «nicht aufgeteilt») rutscht in eine eigene Zeile,
@@ -187,6 +230,13 @@
   .v4-dossier-row dt small{flex-basis:100%}
   .v4-dossier-row dd{flex:none}
   .v4-dossier-metric-label{min-height:0}
+  /* Schmale Screens: die drei Zeitpunkte stehen als Spalten **über** der Grafik statt frei
+     darüber – so überlagern sich die Beträge nie (im Druck bleibt die Vorlage-Lage erhalten). */
+  .v4-dossier-chart-canvas{padding-top:0}
+  .v4-dossier-chart-labels{position:static;height:auto;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:10px}
+  .v4-dossier-chart-label{position:static;width:auto;max-width:none;transform:none!important;text-align:left}
+  .v4-dossier-chart-label strong{font-size:14.5px;white-space:normal}
+  .v4-dossier-chart-kicker{font-size:10.5px}
   /* Ergebnis-Card stapelt: links Aussage, darunter der Betrag – nichts läuft aus der Karte. */
   .v4-dossier-result{grid-template-columns:minmax(0,1fr);gap:10px;padding:14px}
   .v4-dossier-result>div,.v4-dossier-result-value{min-width:0}

@@ -824,9 +824,66 @@ async function dossierChecks(w, h) {
   const sum = availableRows.filter(row => !/^Startkapital/.test(row.label)).reduce((total, row) => total + row.value, 0);
   ok(sum === (availableRows.find(row => /^Startkapital/.test(row.label))?.value ?? -1), tag + ': Vermögenszeilen addieren sich zum Startkapital (' + sum + ')');
   /* Verlauf: dieselbe Projektion, Startpunkt = Startkapital */
+  /* Verlauf nach der Vorlage: gestapelte Topf-Flächen, Gesamtlinie, drei beschriftete
+     Zeitpunkte (Start · Mitte · Horizont), Fünfjahresachse und Zusammensetzung je Zeitpunkt. */
   const chart = pages[4].querySelector('.v4-dossier-chart svg');
-  ok(!!chart && pages[4].querySelectorAll('.v4-dossier-chart path').length >= 4, tag + ': Verlaufsgrafik aus der Jahresprojektion (' + pages[4].querySelectorAll('.v4-dossier-chart path').length + ' Pfade)');
-  ok(/Pensionierung \d+/.test(chart?.textContent ?? '') && /Planungshorizont \d+/.test(chart?.textContent ?? ''), tag + ': Marker für Pensionierungsstart und Planungshorizont (' + (chart?.textContent.replace(/\s+/g, ' ').trim().slice(0, 60) ?? '–') + ')');
+  const bands = [...pages[4].querySelectorAll('.v4-dossier-chart path.band')];
+  const axisAges = [...pages[4].querySelectorAll('.v4-dossier-axis-tick')].map(node => Number(node.textContent));
+  const fromAge = axisAges[0], toAge = axisAges[axisAges.length - 1];
+  const reachAge = item.result?.capitalExhaustionAge ? Number(item.result.capitalExhaustionAge) + 1 : null;
+  ok(!!chart && bands.length === 3 && !!pages[4].querySelector('.v4-dossier-chart path.line-total'), tag + ': gestapelte Topf-Flächen mit Gesamtlinie (' + bands.map(band => band.getAttribute('class').replace('band ', '')).join(' → ') + ')');
+  ok(bands.map(band => band.getAttribute('class')).join(' ').includes('pot-growth') && bands.map(band => band.getAttribute('class')).join(' ').includes('pot-cash'), tag + ': alle drei Töpfe als Fläche vorhanden');
+  const chartLabels = [...pages[4].querySelectorAll('.v4-dossier-chart-label')].map(node => ({
+    kicker: node.querySelector('.v4-dossier-chart-kicker')?.textContent.trim() ?? '',
+    amount: node.querySelector('strong') ? digits(node.querySelector('strong').textContent) : null
+  }));
+  const startCapitalCore = Math.round(Number(item.result.availableCapital));
+  const midAge = Number((chartLabels[1]?.kicker.match(/mit (\d+)/) ?? [])[1]);
+  const rowsOfPlan = (item.result.yearlyProjection ?? []).filter(row => !row.terminal);
+  const midPoint = rowsOfPlan.find(row => row.age + 1 === midAge) ?? null;
+  const lastPoint = rowsOfPlan[rowsOfPlan.length - 1] ?? null;
+  const retirementAge = Number(item.plan.retirement.age);
+  ok(chartLabels.length === 3 && /^Start mit \d+$/.test(chartLabels[0]?.kicker ?? '') && /^mit \d+$/.test(chartLabels[1]?.kicker ?? '') && /^mit \d+$/.test(chartLabels[2]?.kicker ?? ''), tag + ': immer drei Angaben – Startjahr, Mitte, Endejahr (' + chartLabels.map(label => label.kicker + ' ' + (label.amount ?? '')).join(' | ').trim() + ')');
+  ok(fromAge === retirementAge + 1, tag + ': Startjahr ist das der Pensionierung folgende Jahr (' + fromAge + ' nach Pension mit ' + retirementAge + ')');
+  ok(midAge % 5 === 0 && Math.abs(midAge - (fromAge + toAge) / 2) <= 3, tag + ': Mitte liegt auf der Fünfjahreslinie (' + midAge + ' zwischen ' + fromAge + ' und ' + toAge + ')');
+  /* Alle drei Angaben sind **Jahresanfangswerte** der Planjahre (alle Töpfe gefüllt). */
+  ok(chartLabels[0]?.amount === startCapitalCore && !!midPoint && chartLabels[1]?.amount === Math.round(Number(midPoint.free)) && chartLabels[2]?.amount === Math.round(Number(lastPoint?.free ?? 0)), tag + ': Jahresanfangswerte aus der Projektion (Start ' + chartLabels[0]?.amount + ' = Startkapital, Mitte ' + chartLabels[1]?.amount + ', Ende ' + chartLabels[2]?.amount + ')');
+  ok(chartLabels.every((label, index) => index === 0 || (label.amount ?? 0) > 0), tag + ': jedes der drei Planjahre hat noch Vermögen (' + chartLabels.map(label => label.amount).join(' · ') + ')');
+  /* Lesbarkeit: die drei Angaben liegen auf einer Linie, überlagern sich nie und bleiben in der
+     Grafikfläche; die Achse lässt Rasterzahlen weg, die zu nahe am Start- oder Endejahr liegen. */
+  const labelBoxes = [...pages[4].querySelectorAll('.v4-dossier-chart-label')].map(node => node.getBoundingClientRect());
+  const amountTops = [...pages[4].querySelectorAll('.v4-dossier-chart-label strong')].map(node => Math.round(node.getBoundingClientRect().top));
+  const overlap = labelBoxes.some((box, index) => labelBoxes.slice(index + 1).some(other => box.left < other.right - 0.5 && other.left < box.right - 0.5 && box.top < other.bottom - 0.5 && other.top < box.bottom - 0.5));
+  const canvas = pages[4].querySelector('.v4-dossier-chart-canvas')?.getBoundingClientRect();
+  const outside = labelBoxes.filter(box => canvas && (box.left < canvas.left - 1 || box.right > canvas.right + 1));
+  ok(new Set(amountTops).size === 1, tag + ': die drei Beträge liegen auf einer Linie (' + amountTops.join(' / ') + ' px)');
+  ok(!overlap, tag + ': die drei Angaben überlagern sich nicht (' + labelBoxes.map(box => Math.round(box.left) + '→' + Math.round(box.right)).join(' | ') + ')');
+  ok(outside.length === 0, tag + ': alle Angaben liegen in der Grafikfläche' + (outside.length ? ' (' + outside.length + ' ausserhalb)' : ''));
+  ok(axisAges.slice(1, -1).every(age => age > fromAge + 2 && age < toAge - 2), tag + ': keine Rasterzahl weniger als drei Jahre neben Start/Ende (' + axisAges.join(' · ') + ')');
+  const axisStepsOk = axisAges.every((age, index) => {
+    if (index === 0 || index === axisAges.length - 1) return true;   // Startjahr und Endejahr
+    return index === 1 ? age % 5 === 0 : age - axisAges[index - 1] === 5;
+  });
+  ok(axisAges.length >= 3 && axisAges[0] === fromAge && axisAges[axisAges.length - 1] === toAge && axisStepsOk, tag + ': Achse in Fünfjahresschritten bis zum Endejahr (' + axisAges.join(' · ') + ')');
+  ok(pages[4].querySelector('.v4-dossier-axis-caption')?.textContent.trim() === 'Alter', tag + ': Achse ist als «Alter» bezeichnet');
+  ok(pages[4].querySelectorAll('.v4-dossier-legend li').length === 4, tag + ': Legende mit Gesamtvermögen und drei Töpfen');
+  /* Die Karten unter der Grafik: Zusammensetzung an Start, Mitte und Horizont. */
+  const milestoneCards = [...pages[4].querySelectorAll('.v4-dossier-milestone')];
+  const milestoneData = milestoneCards.map(card => ({
+    kicker: card.querySelector('.v4-dossier-milestone-kicker')?.textContent.trim() ?? '',
+    total: digits(card.querySelector('.v4-dossier-milestone-amount')?.textContent),
+    rows: [...card.querySelectorAll('.v4-dossier-milestone-row')].map(row => ({label:row.querySelector('dt')?.textContent.trim() ?? '', value:digits(row.querySelector('.v4-dossier-milestone-value')?.textContent), share:digits(row.querySelector('.v4-dossier-milestone-share')?.textContent)}))
+  }));
+  ok(milestoneCards.length === 3 && /^Startvermögen mit \d+$/.test(milestoneData[0]?.kicker ?? '') && /^Vermögen mit \d+$/.test(milestoneData[2]?.kicker ?? ''), tag + ': drei Karten «Startvermögen · Vermögen · Vermögen» (' + milestoneData.map(card => card.kicker).join(' | ') + ')');
+  ok(/Jahresanfangswerte, in denen alle drei Töpfe gefüllt sind/.test(pages[4].querySelector('.v4-dossier-chart-note')?.textContent ?? ''), tag + ': Erklärung unter der Legende ist kurz und nennt Jahresanfang und Immobilien («' + (pages[4].querySelector('.v4-dossier-chart-note')?.textContent.trim() ?? '') + '»)');
+  ok(milestoneData.every(card => card.rows.length === 3) && milestoneData.every(card => card.rows.reduce((sum, row) => sum + row.value, 0) === card.total), tag + ': je Zeitpunkt drei Töpfe, deren Beträge den Zeitpunktwert ergeben (' + milestoneData.map(card => card.total).join(' · ') + ')');
+  ok(milestoneData[0]?.total === startCapitalCore && milestoneData.every(card => card.rows.reduce((sum, row) => sum + row.share, 0) === 100), tag + ': Startkarte = Startkapital und Anteile je Karte exakt 100 % (' + milestoneData.map(card => card.rows.map(row => row.share).join('/')).join(' · ') + ')');
+  /* Zustandskarte über der Grafik nennt dasselbe Ergebnis wie die Statusbox. */
+  const statusCard = pages[4].querySelector('.v4-dossier-status');
+  ok(!!statusCard && statusCard.classList.contains(reachAge ? 'is-gap' : 'is-covered'), tag + ': Zustandskarte über der Grafik (' + (statusCard?.className ?? 'fehlt') + ')');
+  ok(reachAge
+    ? new RegExp('^Dein Vermögen ist voraussichtlich mit ' + reachAge + ' aufgebraucht\\.$').test(statusCard.querySelector('.v4-dossier-status-title')?.textContent.trim() ?? '')
+    : /^Dein Vermögen reicht bis zum Planungshorizont\.$/.test(statusCard.querySelector('.v4-dossier-status-title')?.textContent.trim() ?? '') && /bleiben voraussichtlich CHF/.test(statusCard.querySelector('.v4-dossier-status-text')?.textContent ?? ''), tag + ': Zustandstext passt zum Ergebnis («' + (statusCard.querySelector('.v4-dossier-status-title')?.textContent.trim() ?? '') + '»)');
   /* Varianten: alle gespeicherten, aktuelle markiert, ohne Sieger */
   const variantColumns = [...pages[5].querySelectorAll('.v4-dossier-variant')];
   const variantShares = win.CheckV3State.variants(JSON.parse(win.localStorage.getItem('retirement-v3-plan')).state);
@@ -907,6 +964,34 @@ async function dossierChecks(w, h) {
   ok(/print-color-adjust:\s*exact/.test(css), tag + ': Hintergrundgrafik bleibt im PDF (print-color-adjust exact)');
   ok(/break-inside:\s*avoid/.test(css) && /break-after:\s*page/.test(css), tag + ': keine getrennten Cards, jede Seite ein Seitenumbruch');
   ok(/\.masthead,\s*#v4Menu/.test(css) && /v4-dossier-toolbar/.test(css), tag + ': Druck blendet Navigation und Bedienelemente aus');
+  /* Der gemeldete Fall mit Planungshorizont 96: die Fünfjahresachse endet auf 96 **ohne** die
+     zu nahe Rasterzahl 95, und die drei Angaben bleiben «Start mit 66 · mit 80 · mit 96».
+     Verwendet wird ein Plan, der bis 96 Vermögen hält – so sind alle drei Zeitpunkte gefüllt. */
+  const longState = win.CheckV2State.apply(win.DevFixture.scenarios['geht-auf'](), 'assumptions', {...win.CheckV2State.defaults, targetAge:96});
+  win.DevFixture.write(longState); win.V4.load();
+  await wait(600);
+  [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Beratung vorbereiten/.test(row.textContent))?.click();
+  await wait(700);
+  d.querySelector('[data-v4-next="dossier"]')?.click();
+  await wait(900);
+  const longPage = d.querySelectorAll('.v4-dossier-page')[4] ?? null;
+  const longAxis = [...(longPage?.querySelectorAll('.v4-dossier-axis-tick') ?? [])].map(node => Number(node.textContent));
+  const longLabels = [...(longPage?.querySelectorAll('.v4-dossier-chart-label') ?? [])].map(node => ({
+    kicker:node.querySelector('.v4-dossier-chart-kicker')?.textContent.trim() ?? '',
+    amount:digits(node.querySelector('strong')?.textContent)
+  }));
+  const longTops = [...(longPage?.querySelectorAll('.v4-dossier-chart-label strong') ?? [])].map(node => Math.round(node.getBoundingClientRect().top));
+  const longCards = [...(longPage?.querySelectorAll('.v4-dossier-milestone') ?? [])].map(card => ({
+    total:digits(card.querySelector('.v4-dossier-milestone-amount')?.textContent),
+    rows:[...card.querySelectorAll('.v4-dossier-milestone-row')].map(row => ({value:digits(row.querySelector('.v4-dossier-milestone-value')?.textContent), share:digits(row.querySelector('.v4-dossier-milestone-share')?.textContent)}))
+  }));
+  ok(longLabels.map(label => label.kicker).join(' | ') === 'Start mit 66 | mit 80 | mit 96', tag + ': Horizont 96 – drei Angaben «Start mit 66 · mit 80 · mit 96» (' + longLabels.map(label => label.kicker + ' ' + label.amount).join(' | ') + ')');
+  ok(longLabels.every(label => label.amount > 0), tag + ': Horizont 96 – jeder der drei Zeitpunkte hat noch Vermögen (' + longLabels.map(label => label.amount).join(' · ') + ')');
+  ok(longAxis[0] === 66 && longAxis[longAxis.length - 1] === 96 && longAxis.indexOf(95) === -1, tag + ': Horizont 96 – Achse endet auf 96 ohne die Rasterzahl 95 (' + longAxis.join(' · ') + ')');
+  ok(longAxis.slice(1, -1).every(age => age > 68 && age < 94), tag + ': Horizont 96 – keine Rasterzahl weniger als drei Jahre neben Start/Ende (' + longAxis.join(' · ') + ')');
+  ok(new Set(longTops).size === 1, tag + ': Horizont 96 – die drei Beträge liegen auf einer Linie (' + longTops.join(' / ') + ' px)');
+  ok(longCards.length === 3 && longCards.every(card => card.rows.length >= 1 && card.rows.length <= 3 && card.rows.every(row => row.value > 0) && card.rows.reduce((sum, row) => sum + row.value, 0) === card.total && card.rows.reduce((sum, row) => sum + row.share, 0) === 100), tag + ': Horizont 96 – je Zeitpunkt nur Töpfe mit Vermögen, Anteile exakt 100 % (' + longCards.map(card => card.total).join(' · ') + ')');
+  win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']());
   /* Fehlende Angaben dürfen nicht als CHF 0 erscheinen – direkt am Dossier-Objekt geprüft:
      ein Zustand ohne jede Kapitalangabe (kein Planobjekt) ergibt «Noch nicht erfasst». */
   const emptyState = {mode:'pre', values:{age:60, retirement:65, need:7000}, details:{}, confirmed:{}, position:'plan', targetAge:90, horizonMode:'manual', riskProfile:'balanced'};
@@ -915,6 +1000,62 @@ async function dossierChecks(w, h) {
   ok(!model.summary.tiles.some(tile => tile.text === 'CHF 0' && tile.label === 'Startkapital'), tag + ': kein «CHF 0» für nicht erfasste Angaben');
   ok(model.assets.available.entered === false && model.pots.total === 0, tag + ': Aufteilung und Verfügbares bleiben ohne Angaben leer');
   ok(model.decisions.every(entry => ['Säule 3a','Hypothek'].indexOf(entry.title) === -1), tag + ': keine erfundenen Entscheidungen ohne Datengrundlage (' + model.decisions.map(entry => entry.title).join(', ') + ')');
+  /* Bereits pensioniert: kein Kapitalbezug und keine Aufbauphase. Das Dossier lässt deshalb die
+     Variantenseite weg, nennt auf Seite 3 das Vermögen **heute** (statt «zum Start der
+     Pensionierung»), führt dort weder PK-Kapital noch Säule 3a und zeigt keine Renditen oder
+     Verzinsungen «bis Pensionierung». Der dritte Zeitpunkt der Verlaufsseite ist das letzte
+     Planjahr mit Vermögen – dasselbe Alter, das die Zustandskarte nennt. */
+  let postState = win.DevFixture.scenarios['pensioniert']();
+  postState = win.CheckV2State.apply(postState, 'pension', {pkRent:2400});
+  win.DevFixture.write(postState); win.V4.load();
+  await wait(600);
+  [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Beratung vorbereiten/.test(row.textContent))?.click();
+  await wait(700);
+  d.querySelector('[data-v4-next="dossier"]')?.click();
+  await wait(900);
+  const postPages = [...d.querySelectorAll('.v4-dossier-page')];
+  ok(postPages.length === 7, tag + ': «Bereits pensioniert» – sieben Seiten ohne Variantenseite (' + postPages.length + ')');
+  ok(!/Kapitalbezug/.test(d.querySelector('.v4-dossier')?.textContent ?? ''), tag + ': «Bereits pensioniert» – kein «Kapitalbezug» im Dossier');
+  const postAssets = postPages[2];
+  ok(postAssets?.querySelector('h2')?.textContent.trim() === 'Dein Vermögen heute', tag + ': «Bereits pensioniert» – Seite 3 heisst «Dein Vermögen heute» («' + (postAssets?.querySelector('h2')?.textContent.trim() ?? '–') + '»)');
+  const postAssetLabels = [...(postAssets?.querySelectorAll('.v4-dossier-row dt span') ?? [])].map(node => node.textContent.trim());
+  ok(!postAssetLabels.some(label => /PK-Kapital|Säule 3a/.test(label)), tag + ': «Bereits pensioniert» – keine Zeilen für PK-Kapital und Säule 3a (' + postAssetLabels.join(' · ') + ')');
+  const postAssumptionLabels = [...(postPages[5]?.querySelectorAll('.v4-dossier-row dt span') ?? [])].map(node => node.textContent.trim());
+  ok(postAssumptionLabels.join(' | ') === 'Anlagestrategie | Rendite | Inflation | Wohnkanton', tag + ': «Bereits pensioniert» – keine Renditen «bis Pensionierung» (' + postAssumptionLabels.join(' | ') + ')');
+  const postChart = postPages[4];
+  const postLabels = [...(postChart?.querySelectorAll('.v4-dossier-chart-label') ?? [])].map(node => ({
+    kicker: node.querySelector('.v4-dossier-chart-kicker')?.textContent.trim() ?? '',
+    amount: digits(node.querySelector('strong')?.textContent)
+  }));
+  const postReach = /mit (\d+) aufgebraucht/.exec(postChart?.querySelector('.v4-dossier-status-title')?.textContent ?? '');
+  ok(postLabels.length === 3 && postLabels.every(label => label.amount > 0), tag + ': «Bereits pensioniert» – alle drei Zeitpunkte haben Vermögen (' + postLabels.map(label => label.kicker + ' ' + label.amount).join(' | ') + ')');
+  ok(!!postReach && postLabels[2]?.kicker === `mit ${postReach[1]}`, tag + ': «Bereits pensioniert» – dritter Zeitpunkt = Aufbrauchjahr der Zustandskarte (' + (postLabels[2]?.kicker ?? '–') + ' = aufgebraucht mit ' + (postReach?.[1] ?? '–') + ')');
+  const postBoxes = [...(postChart?.querySelectorAll('.v4-dossier-chart-label') ?? [])].map(node => node.getBoundingClientRect());
+  const postOverlap = postBoxes.some((box, index) => postBoxes.slice(index + 1).some(other => box.left < other.right - 0.5 && other.left < box.right - 0.5 && box.top < other.bottom - 0.5 && other.top < box.bottom - 0.5));
+  ok(!postOverlap, tag + ': «Bereits pensioniert» – die Angaben überlagern sich nicht (' + postBoxes.map(box => Math.round(box.left) + '→' + Math.round(box.right)).join(' | ') + ')');
+  if (w >= 820) ok(postPages.every(entry => Math.abs(mm(entry.getBoundingClientRect().width) - 210) <= 0.6 && mm(entry.getBoundingClientRect().height) <= 297.5), tag + ': «Bereits pensioniert» – jede der sieben Seiten A4 (max ' + Math.round(Math.max(...postPages.map(entry => mm(entry.getBoundingClientRect().height)))) + ' mm)');
+  /* Dasselbe gilt vor der Pensionierung: ist das Vermögen vor dem Horizont aufgebraucht, wird
+     nicht das Nulljahr beschriftet, sondern das letzte Planjahr mit Vermögen (Aufbrauchjahr). */
+  let tightState = win.DevFixture.scenarios['vollstaendig']();
+  tightState = win.CheckV2State.apply(tightState, 'need', {need:12000});
+  win.DevFixture.write(tightState); win.V4.load();
+  await wait(600);
+  [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Beratung vorbereiten/.test(row.textContent))?.click();
+  await wait(700);
+  d.querySelector('[data-v4-next="dossier"]')?.click();
+  await wait(900);
+  const tightPage = [...d.querySelectorAll('.v4-dossier-page')].find(entry => /So entwickelt sich dein Vermögen/.test(entry.textContent)) ?? null;
+  const tightLabels = [...(tightPage?.querySelectorAll('.v4-dossier-chart-label') ?? [])].map(node => ({
+    kicker: node.querySelector('.v4-dossier-chart-kicker')?.textContent.trim() ?? '',
+    amount: digits(node.querySelector('strong')?.textContent)
+  }));
+  const tightReach = /mit (\d+) aufgebraucht/.exec(tightPage?.querySelector('.v4-dossier-status-title')?.textContent ?? '');
+  ok(tightLabels.length >= 2 && tightLabels.every(label => label.amount > 0), tag + ': knapper Plan – kein Nulljahr beschriftet (' + tightLabels.map(label => label.kicker + ' ' + label.amount).join(' | ') + ')');
+  ok(/^Start mit \d+$/.test(tightLabels[0]?.kicker ?? '') && !!tightReach && tightLabels[tightLabels.length - 1]?.kicker === `mit ${tightReach[1]}`, tag + ': knapper Plan – letzter Zeitpunkt = Aufbrauchjahr (' + (tightLabels[tightLabels.length - 1]?.kicker ?? '–') + ' = aufgebraucht mit ' + (tightReach?.[1] ?? '–') + ')');
+  const tightBoxes = [...(tightPage?.querySelectorAll('.v4-dossier-chart-label') ?? [])].map(node => node.getBoundingClientRect());
+  const tightOverlap = tightBoxes.some((box, index) => tightBoxes.slice(index + 1).some(other => box.left < other.right - 0.5 && other.left < box.right - 0.5 && box.top < other.bottom - 0.5 && other.top < box.bottom - 0.5));
+  ok(!tightOverlap, tag + ': knapper Plan – die Angaben überlagern sich nicht (' + tightBoxes.map(box => Math.round(box.left) + '→' + Math.round(box.right)).join(' | ') + ')');
+  win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']());
   f.remove();
 }
 
