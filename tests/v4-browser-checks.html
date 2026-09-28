@@ -22,12 +22,24 @@ const out = [];
 const ok = (c, m) => out.push((c ? 'PASS ' : 'FAIL ') + m);
 const wait = ms => new Promise(r => setTimeout(r, ms));
 
-async function frame(w, h) {
+/* Der Startscreen steht bei jedem App-/Browser-Aufruf zuerst. Für alle anderen Prüfungen wird er
+   hier einmal durchklickt (wie ein Nutzer); der Startscreen selbst wird in `landingChecks()`
+   geprüft. Nach einem echten Neuladen der Seite gilt dasselbe. */
+async function enterApp(win, d) {
+  const start = d.querySelector('[data-landing-start]');
+  if (!start) return false;
+  start.click();
+  await wait(700);
+  return true;
+}
+
+async function frame(w, h, {enter = true} = {}) {
   const f = document.createElement('iframe');
   f.width = w; f.height = h; f.src = '/v4.html';
   document.getElementById('frames').appendChild(f);
   await new Promise(r => { f.onload = r; });
   await wait(800);
+  if (enter) await enterApp(f.contentWindow, f.contentDocument);
   return f;
 }
 
@@ -58,6 +70,119 @@ function titleChecks(d, win, tag, {context = true} = {}) {
   }
   ok(d.querySelectorAll('#app .v4-head').length === 1, tag + ' genau ein Kopf');
   ok(!/#app .*v4-subtitle|v4-status-line/.test(d.body.innerHTML), tag + ' keine separate Status-/Untertitelzeile');
+}
+
+/* ---------- Startscreen (Landing) ----------
+   Bei jedem App-/Browser-Aufruf steht zuerst dieser Screen: das verbindliche Hintergrundbild als
+   Vollbild, Logo, Slogan, Aussage, ein Satz und genau ein Weg in die App. Innerhalb einer
+   laufenden Sitzung gibt es keinen Weg zurück auf den Startscreen. */
+async function landingChecks(w, h) {
+  const tag = w + 'px Startscreen';
+  const f = await frame(w, h, {enter:false}), d = f.contentDocument, win = f.contentWindow;
+  const view = {w:win.innerWidth, h:win.innerHeight};
+  /* 1) Erste Ansicht: Vollbild, Kopfzeile und Menü zurückgenommen, Hero im Modus «landing». */
+  const landing = d.querySelector('.v4-landing');
+  ok(!!landing, tag + ': Startscreen erscheint beim App-Aufruf');
+  ok(win.V4.landingVisible() === true, tag + ': App gilt als noch nicht gestartet (kein Speichern vom Startscreen)');
+  ok(d.querySelector('.masthead')?.hidden === true && d.querySelector('.menu-button')?.hidden === true, tag + ': Kopfzeile und Menü sind zurückgenommen');
+  ok(d.getElementById('v4Hero')?.dataset.mode === 'landing', tag + ': Hero-Modus «landing» (' + d.getElementById('v4Hero')?.dataset.mode + ')');
+  const heroBox = d.getElementById('v4Hero')?.getBoundingClientRect();
+  ok(!!heroBox && Math.abs(heroBox.height - view.h) <= 2, tag + ': Hintergrundbild füllt das Fenster (' + Math.round(heroBox?.height ?? 0) + ' von ' + view.h + ' px)');
+  const heroImage = d.querySelector('#v4Hero img');
+  ok((heroImage?.currentSrc ?? '').endsWith(w >= 700 ? 'Background_Desktop.png' : 'Background.png'), tag + ': verbindliches Asset (' + (heroImage?.currentSrc ?? '').split('/').pop() + ')');
+  const overlay = win.getComputedStyle(d.getElementById('v4Hero'), '::after').backgroundImage;
+  ok(/gradient/.test(overlay) && /rgba\(/.test(overlay), tag + ': leichter dunkler Verlauf für die Lesbarkeit (' + overlay.slice(0, 40) + '…)');
+  /* 2) Inhalt: Logo, Slogan, Aussage, Erklärung, genau eine Aktion. */
+  ok(d.querySelector('.v4-landing-brand')?.textContent.trim() === 'Ruhestands-Check', tag + ': Logo «Ruhestands-Check»');
+  const slogan = d.querySelector('.v4-landing-slogan');
+  ok(slogan?.textContent.trim() === 'Sicher planen. Investiert bleiben.' && win.getComputedStyle(slogan).textTransform === 'uppercase', tag + ': Slogan «Sicher planen. Investiert bleiben.» in Versalien');
+  ok(d.querySelector('.v4-landing-title')?.textContent.trim() === 'Dein Plan für den Ruhestand.', tag + ': Haupttitel «Dein Plan für den Ruhestand.»');
+  ok(d.querySelector('.v4-landing-sub')?.textContent.trim() === 'Finde heraus, was möglich ist – mit deinen eigenen Zahlen.', tag + ': Untertitel «… mit deinen eigenen Zahlen.»');
+  const cta = d.querySelector('[data-landing-start]');
+  ok(cta?.textContent.trim() === 'Jetzt starten' && !!cta.querySelector('svg'), tag + ': zentrale Aktion «Jetzt starten» mit Pfeil');
+  ok(d.querySelectorAll('.v4-landing button').length === 1, tag + ': genau ein Weg in die App');
+  ok(!d.querySelector('.v4-head') && !d.querySelector('.v4-detailbar'), tag + ': kein PageTitle und kein Rückweg auf dem Startscreen');
+  /* 3) Alles im ersten Bild, nichts läuft seitlich heraus. */
+  const ctaBox = cta.getBoundingClientRect();
+  ok(ctaBox.bottom <= view.h + 1 && ctaBox.right <= view.w + 1, tag + ': Aktion ohne Scrollen erreichbar (untere Kante ' + Math.round(ctaBox.bottom) + ' px)');
+  const overflowing = [...d.querySelectorAll('#app *')].filter(node => node.getBoundingClientRect().right > view.w + 1);
+  ok(overflowing.length === 0, tag + ': kein seitlicher Überlauf (' + (overflowing.map(node => node.className || node.tagName).join(', ') || 'geprüft') + ')');
+  /* Der Startscreen scrollt nicht: die Seite ist gesperrt, solange er steht, und der Inhalt
+     endet oberhalb der Fensterkante. */
+  ok(win.getComputedStyle(d.body).overflow === 'hidden' && d.body.classList.contains('v4-landing-open'), tag + ': Seite ist während des Startscreens gesperrt (' + win.getComputedStyle(d.body).overflow + ')');
+  ok(d.documentElement.clientWidth === view.w, tag + ': keine Scrollleiste (' + d.documentElement.clientWidth + ' von ' + view.w + ' px)');
+  const factsBox = d.querySelector('.v4-landing-facts')?.getBoundingClientRect();
+  ok(!!factsBox && factsBox.bottom <= view.h + 1, tag + ': Inhalt endet im Fenster (untere Kante ' + Math.round(factsBox?.bottom ?? 0) + ' von ' + view.h + ' px)');
+  /* Rechts kein heller Rand: die Bildfläche reicht über die rechte Layoutkante hinaus, und der
+     Hintergrund im Streifen (den manche Browser für die Scrollleiste reservieren) ist dunkel. */
+  const edgeBox = d.getElementById('v4Hero').getBoundingClientRect();
+  ok(edgeBox.left <= 0 && edgeBox.right >= view.w + 5, tag + ': Bildfläche deckt einen Scrollleisten-Streifen rechts (' + Math.round(edgeBox.left) + ' → ' + Math.round(edgeBox.right) + ' bei ' + view.w + ' px Breite)');
+  ok(win.getComputedStyle(d.body).backgroundColor === 'rgb(13, 31, 42)' && win.getComputedStyle(d.documentElement).overflow === 'hidden', tag + ': Streifen rechts ist dunkel statt hell (' + win.getComputedStyle(d.body).backgroundColor + ')');
+  /* 4) «Jetzt starten» ohne Plan → Schnellstart mit seinen fünf Angaben. */
+  win.__v4SuspendSave = true;
+  win.localStorage.removeItem('retirement-v3-plan');
+  cta.click();
+  await wait(800);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && d.querySelectorAll('.v4-start-card').length === 5, tag + ': ohne Plan führt «Jetzt starten» in den Schnellstart (5 Angaben)');
+  ok(!d.querySelector('.v4-landing') && win.V4.landingVisible() === false, tag + ': Startscreen ist danach weg');
+  ok(d.querySelector('.masthead')?.hidden === false, tag + ': Kopfzeile ist zurück');
+  ok(win.getComputedStyle(d.body).backgroundColor !== 'rgb(13, 31, 42)' && win.getComputedStyle(d.documentElement).overflow !== 'hidden', tag + ': Startfarbe und Sperre sind nach dem Eintritt wieder weg (' + win.getComputedStyle(d.body).backgroundColor + ')');
+  win.V4.renderStart();
+  await wait(400);
+  ok(!d.querySelector('.v4-landing'), tag + ': innerhalb der Sitzung kein erneuter Startscreen');
+  f.remove();
+  /* 5) Mit vorhandenem Plan → direkt «Mein Plan». */
+  const f2 = await frame(w, h, {enter:false}), d2 = f2.contentDocument, win2 = f2.contentWindow;
+  win2.DevFixture.write(win2.DevFixture.scenarios['vollstaendig']());
+  win2.V4.load();
+  await wait(600);
+  win2.V4.renderLanding();
+  await wait(400);
+  d2.querySelector('[data-landing-start]')?.click();
+  await wait(800);
+  ok(d2.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && d2.querySelectorAll('.v4-tile').length === 4, tag + ': mit vorhandenem Plan führt «Jetzt starten» direkt auf «Mein Plan»');
+  const startShare = Number(JSON.parse(win2.localStorage.getItem('retirement-v3-plan')).state.details.pension.pkShare);
+  const coreStart = Math.round(Number(win2.V4.evaluated(startShare).result.availableCapital));
+  const tileStart = Number(([...d2.querySelectorAll('.v4-tile')].find(tile => /Startkapital/.test(tile.textContent))?.querySelector('strong')?.textContent ?? '').replace(/[^\d]/g, ''));
+  ok(tileStart === coreStart && tileStart > 0, tag + ': der Plan ist gerechnet (Startkapital CHF ' + tileStart + ' = Rechenkern)');
+  f2.remove();
+  /* 6) Nach einem automatischen Neuladen (Service-Worker-Update) läuft die Sitzung weiter:
+     der Startscreen gehört zum App-Aufruf, nicht zum Update. */
+  const f3 = await frame(w, h, {enter:false}), d3 = f3.contentDocument, win3 = f3.contentWindow;
+  win3.DevFixture.write(win3.DevFixture.scenarios['vollstaendig']());
+  win3.sessionStorage.setItem('v4-sw-update', '1');
+  await new Promise(resolve => { f3.onload = resolve; f3.src = '/v4.html?swupdate=' + Date.now(); });
+  await wait(900);
+  ok(!f3.contentDocument.querySelector('.v4-landing') && f3.contentDocument.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.', tag + ': nach einem Update-Neuladen kein Startscreen (Sitzung läuft weiter)');
+  ok(f3.contentWindow.sessionStorage.getItem('v4-sw-update') === null, tag + ': die Markierung wird einmalig verbraucht');
+  f3.remove();
+}
+
+/* ---------- Startscreen auf kurzen Fenstern ----------
+   Kleine Handys und Querformat: der Startscreen bleibt ohne Scrollen bedienbar – Abstände und
+   Schrift verdichten sich, der Inhalt endet vor der Fensterkante. */
+async function landingShortChecks(w, h) {
+  const tag = w + '×' + h + ' Startscreen kurz';
+  const f = await frame(w, h, {enter:false}), d = f.contentDocument, win = f.contentWindow;
+  const view = {w:win.innerWidth, h:win.innerHeight};
+  ok(!!d.querySelector('.v4-landing'), tag + ': Startscreen erscheint');
+  ok(win.getComputedStyle(d.body).overflow === 'hidden' && d.documentElement.clientWidth === view.w, tag + ': kein Scrollen der Seite (' + win.getComputedStyle(d.body).overflow + ', Innenbreite ' + d.documentElement.clientWidth + ' px)');
+  const parts = ['.v4-landing-brand', '.v4-landing-title', '.v4-landing-sub', '[data-landing-start]', '.v4-landing-facts'];
+  const missing = parts.filter(selector => !d.querySelector(selector));
+  ok(missing.length === 0, tag + ': alle Elemente vorhanden' + (missing.length ? ' (fehlt: ' + missing.join(', ') + ')' : ''));
+  const boxes = parts.map(selector => ({selector, box:d.querySelector(selector)?.getBoundingClientRect()}));
+  const below = boxes.filter(entry => (entry.box?.bottom ?? 0) > view.h + 1 || (entry.box?.top ?? 0) < -1);
+  ok(below.length === 0, tag + ': alles im Fenster' + (below.length ? ' (' + below.map(entry => entry.selector + ' ' + Math.round(entry.box.bottom) + ' px').join(', ') + ')' : ' (unterste Kante ' + Math.round(Math.max(...boxes.map(entry => entry.box?.bottom ?? 0))) + ' von ' + view.h + ' px)'));
+  const factsBox = d.querySelector('.v4-landing-facts').getBoundingClientRect();
+  const ctaBox = d.querySelector('[data-landing-start]').getBoundingClientRect();
+  ok(ctaBox.bottom <= factsBox.top + 1, tag + ': Reihenfolge Aktion vor den Merkzeichen');
+  ok(d.getElementById('v4Hero').getBoundingClientRect().height >= view.h - 2, tag + ': Hintergrundbild deckt das Fenster (' + Math.round(d.getElementById('v4Hero').getBoundingClientRect().height) + ' von ' + view.h + ' px)');
+  const heroShort = d.getElementById('v4Hero').getBoundingClientRect();
+  ok(heroShort.right >= view.w + 5 && win.getComputedStyle(d.body).backgroundColor === 'rgb(13, 31, 42)', tag + ': kein heller Rand rechts (Bild bis ' + Math.round(heroShort.right) + ' px)');
+  d.querySelector('[data-landing-start]')?.click();
+  await wait(800);
+  ok(!d.querySelector('.v4-landing') && win.getComputedStyle(d.body).overflow !== 'hidden', tag + ': nach «Jetzt starten» ist die Seite wieder freigegeben (' + win.getComputedStyle(d.body).overflow + ')');
+  f.remove();
 }
 
 /* ---------- Mein Plan: Zielstruktur, Reihenfolge, Länge ---------- */
@@ -96,10 +221,10 @@ async function planStructure(w, h) {
   await wait(100);
   const heroImg = d.querySelector('#v4Hero img');
   ok((heroImg?.currentSrc ?? '').endsWith(w >= 700 ? 'public/images/Background_Desktop.png' : 'public/images/Background.png'), tag + ' Hero-Asset nach Breite (' + (heroImg?.currentSrc ?? '').split('/').pop() + ')');
-  /* Bewusste, dokumentierte Abweichung: seit dem Beratungsdossier sind es drei sekundäre Zeilen
-     (Jahresverlauf · Meine Varianten · Dossier). */
-  ok(app.querySelectorAll('.v4-rows .v4-row').length === 3, tag + ' drei sekundäre Zeilen (inkl. Dossier)');
-  ok(/^Dossier · Druckvorlage für die Beratung$/.test([...app.querySelectorAll('.v4-rows .v4-row')].at(-1)?.textContent.trim() ?? ''), tag + ' Dossier-Zeile als Druck-/PDF-Einstieg');
+  /* Bewusste, dokumentierte Abweichung: seit der Beratungsvorbereitung sind es drei sekundäre
+     Zeilen (Jahresverlauf · Meine Varianten · Beratung vorbereiten). */
+  ok(app.querySelectorAll('.v4-rows .v4-row').length === 3, tag + ' drei sekundäre Zeilen (inkl. Beratung vorbereiten)');
+  ok(/^Beratung vorbereiten$/.test([...app.querySelectorAll('.v4-rows .v4-row')].at(-1)?.textContent.trim() ?? ''), tag + ' Zeile «Beratung vorbereiten» führt zu Dossier und Datenstand');
   ok(app.querySelectorAll('.v4-verdict button').length === 0, tag + ' keine Aktion in der Status-Card');
   /* Action-Card «Rente oder Kapital?» direkt unter dem PK-Regler – kein Textlink, kein
      «Aktueller Plan»-Hinweis mehr; visuell zwischen den sekundären Zeilen und «Plan optimieren». */
@@ -131,7 +256,7 @@ async function planStructure(w, h) {
      existiert nur für die Schätzung (ohne Wohnkanton). */
   ok(!app.querySelector('.v4-verdict-note') && !/Berechnet mit deinen Angaben/.test(app.textContent), tag + ' Status ohne Herkunftszeile bei erfasstem Wohnkanton');
   const rows = [...app.querySelectorAll('.v4-rows .v4-row')].map(b => b.textContent.trim());
-  ok(rows[0] === 'Jahresverlauf' && /^Meine Varianten · \d gespeichert$/.test(rows[1]), tag + ' Zeilen korrekt (' + rows.join(' | ') + ')');
+  ok(rows[0] === 'Jahresverlauf' && /^Meine Varianten · \d gespeichert$/.test(rows[1]) && /^Beratung vorbereiten$/.test(rows[2] ?? ''), tag + ' Zeilen korrekt (' + rows.join(' | ') + ')');
   const improve = app.querySelector('.v4-next');
   ok(/Plan präzisieren/.test(improve?.textContent ?? ''), tag + ' zustandsabhängige Card «Plan präzisieren» vorhanden');
   const forbiddenSelectors = ['.v4-details', '.v4-detail-list', '.v4-detail', '.v4-save', '#saveLabel', '[data-save]', '.v4-open-list', '.v4-variant'];
@@ -231,7 +356,7 @@ async function openEditor(d, page) {
   await wait(450);
 }
 async function screenChecks(w, h) {
-  const routes = ['Schnellstart', 'Mein Plan', 'Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'Vergleich', 'years', 'personal', 'ahv', 'need', 'assets', 'assumptions', 'pension', 'extra'];
+  const routes = ['Schnellstart', 'Mein Plan', 'Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'Vergleich', 'Beratung vorbereiten', 'Beratungsangaben', 'years', 'personal', 'ahv', 'need', 'assets', 'assumptions', 'pension', 'extra'];
   for (const route of routes) {
     const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px ' + route;
     try {
@@ -240,6 +365,8 @@ async function screenChecks(w, h) {
         win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
         if (route === 'Varianten') win.V4.renderVariants();
         else if (route === 'Vergleich') win.V4.renderCompare();
+        else if (route === 'Beratung vorbereiten') win.V4.renderAdvice();
+        else if (route === 'Beratungsangaben') win.V4.renderAdvicePerson();
         else if (route === 'Angaben & Grundlagen') d.querySelector('[data-menu-page="basics"]')?.click();
         else if (route === 'Plan präzisieren') d.querySelector('[data-v4-next="improve"]')?.click();
         else if (route === 'Mein Plan') { /* schon offen */ }
@@ -262,14 +389,15 @@ async function screenChecks(w, h) {
     if (isDetail) {
       ok(!!headBack && !!headBack.querySelector('svg') && d.querySelectorAll('#app .v4-head-back').length === 1, tag + ' genau ein Rückweg-Knopf im Kopf');
       ok(!headClose, tag + ' kein «✕» auf dem Screen (nur Modals)');
-      /* Editoren werden über «Angaben & Grundlagen» geöffnet, «Annahmen» über das Menü. */
-      const viaBasics = !['Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'Vergleich', 'years', 'assumptions'].includes(route);
-      const expectedBack = viaBasics ? 'Angaben & Grundlagen' : 'Mein Plan';
+      /* Editoren werden über «Angaben & Grundlagen» geöffnet, «Annahmen» über das Menü, die
+         Beratungsangaben über die Beratungsvorbereitung. */
+      const viaBasics = !['Angaben & Grundlagen', 'Plan präzisieren', 'Varianten', 'Vergleich', 'Beratung vorbereiten', 'Beratungsangaben', 'years', 'assumptions'].includes(route);
+      const expectedBack = route === 'Beratungsangaben' ? 'Beratung vorbereiten' : viaBasics ? 'Angaben & Grundlagen' : 'Mein Plan';
       ok(headBack?.textContent.trim() === expectedBack, tag + ' Rückweg nennt die übergeordnete Seite («' + (headBack?.textContent.trim() ?? '') + '»)');
       headBack?.click();
       await wait(420);
       const afterTitle = d.querySelector('.v4-page-title')?.textContent.trim() ?? '';
-      ok(afterTitle === (viaBasics ? 'Angaben & Grundlagen.' : 'Mein Plan.'), tag + ' «Zurück» führt zur übergeordneten Seite (→ «' + afterTitle + '»)');
+      ok(afterTitle === (route === 'Beratungsangaben' ? 'Beratung vorbereiten.' : viaBasics ? 'Angaben & Grundlagen.' : 'Mein Plan.'), tag + ' «Zurück» führt zur übergeordneten Seite (→ «' + afterTitle + '»)');
     } else {
       ok(!headBack && !headClose, tag + ' Kopf ohne Rückweg-/Schliessen-Knopf');
     }
@@ -425,56 +553,26 @@ async function navigationChecks(w, h) {
   ok(groups.length === 3 && /^Mein Plan$/.test(groups[0]) && /^Planen$/.test(groups[1]) && /^Plan verstehen/.test(groups[2]), tag + ' Menü in drei Aufgabengruppen (' + groups.join(' | ') + ')');
   ok(/Details/.test(groups[2] ?? ''), tag + ' «Plan verstehen» ist als Detail-Ebene gekennzeichnet');
   const entries = [...d.querySelectorAll('#v4Menu [data-menu-page]')].map(node => ({page:node.dataset.menuPage, label:node.textContent.trim()}));
-  ok(entries.map(entry => entry.page).join(',') === 'plan,basics,variants,years,pots,assumptions', tag + ' Menüdestinationen (' + entries.map(entry => entry.page).join(',') + ')');
-  const forbiddenPages = ['ahv','pension','pension3a','extra','need','assets','personal','improve'];
-  ok(!entries.some(entry => forbiddenPages.includes(entry.page)), tag + ' keine Fach-Datensätze als Menüdestination');
+  ok(entries.map(entry => entry.page).join(',') === 'plan,basics,years,pots,assumptions', tag + ' Menüdestinationen (' + entries.map(entry => entry.page).join(',') + ')');
+  const forbiddenPages = ['ahv','pension','pension3a','extra','need','assets','personal','improve','variants','dossier','advice'];
+  ok(!entries.some(entry => forbiddenPages.includes(entry.page)), tag + ' keine Fach-Datensätze und keine Doppel-Einstiege als Menüdestination');
   ok(!/Plan verbessern|Steuern|Einkommen/.test(d.getElementById('v4Menu').textContent), tag + ' kein «Plan verbessern»/Fachjargon im Menü');
   const labels = entries.map(entry => entry.label);
   ok(labels.includes('Jahresverlauf') && labels.includes('Töpfe-Modell') && labels.includes('Annahmen & Berechnung'), tag + ' «Plan verstehen» enthält Jahresverlauf, Töpfe-Modell, Annahmen');
-  /* Pilotwerkzeuge: dezent unten, keine Navigationsziele. Der Reload-Knopf gehört dazu:
-     Tester sollen eine neue Version holen können, ohne Daten zu löschen. */
+  /* Werkzeuge: dezent unten, keine Navigationsziele. Der Reload-Knopf gehört dazu: Tester sollen
+     eine neue Version holen können, ohne Daten zu löschen. «Meine Varianten» und die
+     Beratungsvorbereitung sind bewusst **keine** Menüpunkte (Einstiege auf «Mein Plan», §7a). */
   const quiet = [...d.querySelectorAll('#v4Menu .v4-menu-quiet [data-menu-action]')].map(node => ({action:node.dataset.menuAction, label:node.textContent.trim()}));
-  ok(quiet.length === 3 && quiet[0].label === 'Angaben für die Beratung' && quiet[1].label === 'Plan zurücksetzen' && quiet[2].label === 'Neu laden', tag + ' Pilotbereich unten im Menü (' + quiet.map(entry => entry.label).join(' · ') + ')');
-  ok(!entries.some(entry => /Beratung|zurücksetzen|Neu laden/.test(entry.label)), tag + ' Pilotwerkzeuge sind keine Menüdestinationen');
+  ok(quiet.length === 2 && quiet[0].label === 'Plan zurücksetzen' && quiet[1].label === 'Neu laden', tag + ' Werkzeuge unten im Menü (' + quiet.map(entry => entry.label).join(' · ') + ')');
+  ok(!entries.some(entry => /Beratung|zurücksetzen|Neu laden|Varianten/.test(entry.label)), tag + ' Werkzeuge und Doppel-Einstiege sind keine Menüdestinationen');
   const menuOrder = [...d.querySelectorAll('#v4Menu [data-menu-page], #v4Menu [data-menu-action]')].map(node => node.textContent.trim());
-  ok(menuOrder.slice(-3).join(' | ') === 'Angaben für die Beratung | Plan zurücksetzen | Neu laden', tag + ' Reihenfolge im Menü (' + menuOrder.join(' → ') + ')');
+  ok(menuOrder.slice(-2).join(' | ') === 'Plan zurücksetzen | Neu laden', tag + ' Reihenfolge im Menü (' + menuOrder.join(' → ') + ')');
   ok(/^App-Version /.test(d.getElementById('v4Version')?.textContent.trim() ?? ''), tag + ' Menü nennt die App-Version (' + (d.getElementById('v4Version')?.textContent.trim() ?? 'fehlt') + ')');
-  /* Beratungs-Zusammenfassung: vollständiger Klartext zum Kopieren, kein automatischer Versand. */
-  d.querySelector('[data-menu-action="report"]')?.click();
-  await wait(500);
-  const report = d.getElementById('v4Report');
-  const reportText = report?.value ?? '';
-  ok(d.getElementById('v4ModalTitle')?.textContent === 'Angaben für die Beratung' && !!report, tag + ' «Angaben für die Beratung» öffnet die Zusammenfassung');
-  ok(!d.querySelector('#v4ModalBody a[href^="mailto"]') && !d.querySelector('#v4ModalBody form'), tag + ' kein automatischer Versand (kein mailto, kein Formular)');
-  ok(/^Ruhestands-Check – Angaben für die Beratung/.test(reportText) && /heutiger Kaufkraft/.test(reportText), tag + ' Bericht hat Kopfzeile und Währungshinweis');
-  const sections = ['PERSON UND ZEITRAUM','EINKOMMEN IM ERSTEN PLANJAHR','BEDARF UND ENTNAHME','VERMÖGEN ZUM PENSIONIERUNGSZEITPUNKT','AUFTEILUNG AUF DIE TÖPFE','ERGEBNIS','ANNAHMEN'];
-  const missingSections = sections.filter(section => !reportText.includes(section));
-  ok(missingSections.length === 0, tag + ' Bericht enthält alle Abschnitte' + (missingSections.length ? ' (fehlt: ' + missingSections.join(', ') + ')' : ''));
-  const reportValues = ['Alter heute:', 'Pensionierung mit:', 'Wohnkanton:', 'Einkommen brutto:', 'Geschätzte Steuern:', 'Einkommen netto:', 'Bedarf netto:', 'Aus Vermögen:', 'PK-Guthaben heute:', 'Säule 3a Guthaben:', 'Startkapital:', 'Reicht bis:', 'Anlagestrategie:', 'Inflation:'];
-  const missingValues = reportValues.filter(label => !reportText.includes(label));
-  ok(missingValues.length === 0, tag + ' Bericht enthält alle Kennwerte' + (missingValues.length ? ' (fehlt: ' + missingValues.join(', ') + ')' : ''));
-  ok(/noch nicht erfasst/.test(reportText), tag + ' nicht erfasste Angaben sind als solche bezeichnet');
-  /* Zahlen stimmen mit «Mein Plan» überein (gleicher Rechenkern). */
-  d.querySelector('[data-modal-close]')?.click();
-  await wait(250);
-  win.V4.renderPlan();
-  await wait(400);
-  const tileValues = [...d.querySelectorAll('.v4-tile > strong')].map(node => node.textContent.trim());
-  const reportWealth = (reportText.match(/Aus Vermögen: (CHF [\d'’]+)/) ?? [])[1] ?? '';
-  const reportCapital = (reportText.match(/Startkapital: (CHF [\d'’]+)/) ?? [])[1] ?? '';
-  ok(reportWealth === tileValues[2] && reportCapital === tileValues[3], tag + ' Bericht stimmt mit den Kennzahlen überein (' + reportWealth + ' / ' + reportCapital + ')');
-  /* Kopieren und Speichern sind angeboten; der Text ist vor dem Senden bearbeitbar. */
-  d.querySelector('.menu-button')?.click();
-  await wait(200);
-  d.querySelector('[data-menu-action="report"]')?.click();
-  await wait(400);
-  ok(!!d.querySelector('[data-report-copy]') && !!d.querySelector('[data-report-save]'), tag + ' «Text kopieren» und «Als Datei speichern» vorhanden');
-  ok(d.getElementById('v4Report')?.hasAttribute('readonly') === false || d.getElementById('v4Report') !== null, tag + ' Text ist einsehbar');
-  d.querySelector('[data-report-copy]')?.click();
-  await wait(400);
-  ok((d.getElementById('v4ReportState')?.textContent ?? '').length > 0, tag + ' Rückmeldung nach dem Kopieren («' + (d.getElementById('v4ReportState')?.textContent ?? '') + '»)');
-  d.querySelector('[data-modal-close]')?.click();
-  await wait(250);
+  ok(!/Angaben für die Beratung/.test(d.getElementById('v4Menu').textContent), tag + ' kein Bericht «Angaben für die Beratung» mehr im Menü');
+  /* Der Bericht «Angaben für die Beratung» ist entfallen: Die Beratungsvorbereitung bündelt
+     Angaben, Dossier und Datenstand (geprüft in `adviceChecks` und `backupChecks`). Hier bleibt
+     nur die Zusicherung, dass im Menü kein zweiter Beratungsweg mehr hängt. */
+  ok(!d.querySelector('[data-menu-action="report"]') && !d.getElementById('v4Report'), tag + ' kein Menüpunkt und kein Berichtsdialog mehr');
   /* Plan zurücksetzen: Rückfrage, danach Schnellstart ohne Plan. */
   d.querySelector('.menu-button')?.click();
   await wait(200);
@@ -658,6 +756,7 @@ async function pwaChecks() {
   ok(/updateViaCache:'none'/.test(register) && /registration\.update\(\)/.test(register), tag + ': Registrierung prüft den Worker bei jedem Start am Netz');
   ok(/new URL\('\.\.\/sw\.js', script\.src\)/.test(register) && /new URL\('\.', workerUrl\)/.test(register), tag + ': Worker und Scope werden relativ zum Skript aufgelöst (GitHub-Pages-tauglich)');
   ok(/controllerchange/.test(register) && /hadController/.test(register), tag + ': echtes Update lädt die Seite genau einmal neu');
+  ok(/sessionStorage\.setItem\('v4-sw-update', '1'\)/.test(register), tag + ': das automatische Neuladen ist markiert (kein Startscreen mitten in der Sitzung)');
   const f = await frame(390, 844), win = f.contentWindow;
   await wait(1400);
   ok(!win.__v4SwError, tag + ': Registrierung ohne Fehler (' + (win.__v4SwError ?? 'ok') + ')');
@@ -684,12 +783,15 @@ async function dossierChecks(w, h) {
   const digits = text => Number(String(text ?? '').replace(/[^\d]/g, ''));
   win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
   await wait(600);
-  const entry = [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Dossier/.test(row.textContent));
-  ok(!!entry, tag + ': Einstieg «Dossier» auf «Mein Plan» (' + (entry?.textContent.replace(/\s+/g, ' ').trim() ?? 'fehlt') + ')');
+  const entry = [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Beratung vorbereiten/.test(row.textContent));
+  ok(!!entry, tag + ': Einstieg «Beratung vorbereiten» auf «Mein Plan» (' + (entry?.textContent.replace(/\s+/g, ' ').trim() ?? 'fehlt') + ')');
   entry?.click();
-  await wait(800);
+  await wait(700);
+  ok(/Dossier ansehen \/ erstellen/.test(d.querySelector('[data-v4-next="dossier"]')?.textContent ?? ''), tag + ': Dossier-Einstieg liegt in der Beratungsvorbereitung');
+  d.querySelector('[data-v4-next="dossier"]')?.click();
+  await wait(900);
   ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Dossier.', tag + ': eigener Screen «Dossier.»');
-  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Mein Plan', tag + ': bestehender Rückweg «‹ Mein Plan» (keine neue Navigation)');
+  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Beratung vorbereiten', tag + ': bestehender Rückweg «‹ Beratung vorbereiten» (keine neue Navigation)');
   ok(!!d.querySelector('[data-dossier-print]'), tag + ': Aktion «Drucken / PDF erstellen» vorhanden');
   const pages = [...d.querySelectorAll('.v4-dossier-page')];
   ok(pages.length === 8, tag + ': acht Seiten (1 Titel/Summary · 2 Einkommen · 3 Vermögen · 4 Töpfe · 5 Verlauf · 6 Varianten · 7 Annahmen · 8 Entscheidungen) – ' + pages.length);
@@ -727,6 +829,39 @@ async function dossierChecks(w, h) {
   ok(variantColumns.length === variantShares.length, tag + ': alle gespeicherten Varianten (' + variantColumns.length + ')');
   ok(variantColumns.filter(column => column.classList.contains('is-current')).length === 1 && new RegExp('^' + share + ' % Kapitalbezug$').test(variantColumns.find(column => column.classList.contains('is-current'))?.querySelector('.v4-dossier-variant-head')?.textContent.trim() ?? ''), tag + ': aktuelle Variante korrekt erkannt und markiert (' + share + ' %)');
   ok(!/beste|besser|empfoh|Sieger|optimal/i.test(pages[5].textContent), tag + ': keine Sieger-/Empfehlungsdarstellung in den Varianten');
+  /* Seite 2 rechnet in Monatswerten: Bedarf, Einkommen und Entnahme aus Vermögen stammen aus dem
+     Rechenkern. Früher stand hier die **Jahres**entnahme der Projektion – daraus wurde im
+     Verhältnis «665 % Kapitalentnahme» und eine Entnahme, die nicht zum Bedarf passte. */
+  const needCard = [...pages[1].querySelectorAll('.v4-dossier-card')].find(card => /Bedarf und Deckung/.test(card.textContent));
+  const needRows = [...needCard.querySelectorAll('.v4-dossier-row')].map(row => ({label:row.querySelector('dt span')?.textContent.trim() ?? '', value:digits(row.querySelector('dd')?.textContent)}));
+  const needValue = label => needRows.find(row => row.label.startsWith(label))?.value ?? null;
+  const pageIncome = coreNet, pageGap = Math.round(Number(item.result.monthlyGap));
+  ok(needValue('Bedarf netto') === coreNeed && needValue('Einkommen netto') === pageIncome && needValue('Vermögensentnahme') === pageGap, tag + ': «Bedarf und Deckung» in Monatswerten wie der Rechenkern (' + needRows.map(row => row.label + ' ' + row.value).join(' · ') + ')');
+  ok(Math.abs(coreNeed - (pageIncome + pageGap)) <= 1, tag + ': Bedarf = Einkommen + Entnahme (' + coreNeed + ' = ' + pageIncome + ' + ' + pageGap + ')');
+  const tileWealth = digits([...pages[0].querySelectorAll('.v4-dossier-metric')].find(node => /Entnahme aus Vermögen/.test(node.textContent))?.querySelector('.v4-dossier-amount')?.textContent);
+  ok(tileWealth === pageGap, tag + ': Kachel «Entnahme aus Vermögen / Monat» ist dieselbe Zahl wie «Aus Vermögen / Monat» auf «Mein Plan» (' + tileWealth + ')');
+  const ratioLabels = [...pages[1].querySelectorAll('.v4-dossier-ratio-labels li')].map(node => digits(node.textContent));
+  const ratioSum = ratioLabels.reduce((sum, value) => sum + value, 0);
+  ok(ratioLabels.length === 2 && ratioLabels.every(value => value >= 0 && value <= 100) && ratioSum === 100, tag + ': Aufteilung bleibt zwischen 0 und 100 % (' + ratioLabels.join(' + ') + ' = ' + ratioSum + ')');
+  /* Keine Zeile legt Beschriftung, Herkunftsnotiz und Betrag übereinander: auf schmalen Screens
+     wird umgebrochen. In den Variantenspalten steht der Betrag unter der Beschriftung, deshalb
+     wird richtungsabhängig geprüft. */
+  const collisions = [];
+  pages.forEach((page, index) => {
+    [...page.querySelectorAll('.v4-dossier-row')].forEach(row => {
+      const dd = row.querySelector('dd'), dt = row.querySelector('dt');
+      if (!dd || !dt) return;
+      const ddBox = dd.getBoundingClientRect();
+      const stacked = getComputedStyle(row).flexDirection === 'column';
+      [...dt.children, dt].forEach(node => {
+        const box = node.getBoundingClientRect();
+        if (!box.width || !box.height) return;
+        const hit = stacked ? box.bottom > ddBox.top + 1 : box.right > ddBox.left + 0.5;
+        if (hit) collisions.push('S' + (index + 1) + ' ' + (node.className || node.tagName) + ' «' + row.textContent.replace(/\s+/g, ' ').trim().slice(0, 40) + '»');
+      });
+    });
+  });
+  ok(collisions.length === 0, tag + ': keine überlappenden Zeilen (' + (collisions.slice(0, 3).join(' | ') || pages.length + ' Seiten geprüft') + ')');
   /* A4 und Druck: die exakten Seitenmasse gelten in der Druck-/Desktop-Ansicht; auf schmalen
      Bildschirmen (< 820 px) werden die Seiten bewusst fliessend dargestellt. */
   const mm = px => px * 25.4 / 96;
@@ -735,6 +870,33 @@ async function dossierChecks(w, h) {
     ok(pages.every(page => mm(page.getBoundingClientRect().height) <= 297.5), tag + ': keine Seite überschreitet A4-Höhe (max ' + Math.round(Math.max(...pages.map(page => mm(page.getBoundingClientRect().height)))) + ' mm)');
   } else {
     out.push('      ' + tag + ': schmale Ansicht – Seiten fliessend (' + Math.round(mm(pages[0].getBoundingClientRect().width)) + ' mm breit), A4-Masse gelten im Druck');
+    /* Schmale Bildschirme: die Vorlage bleibt lesbar – kein seitlicher Überlauf, sichtbares
+       Branding-Bild und eine gestapelte Ergebnis-Card statt abgeschnittener Beträge. */
+    const shell = d.querySelector('.v4-dossier');
+    const overflowing = pages.concat([shell]).filter(node => node.scrollWidth > node.clientWidth + 1);
+    ok(overflowing.length === 0, tag + ': kein seitlicher Überlauf (' + (overflowing.length ? overflowing.map(node => (node.className || 'Dossier') + ' ' + node.scrollWidth + ' > ' + node.clientWidth).join(' | ') : 'alle acht Seiten innerhalb ' + pages[0].clientWidth + ' px') + ')');
+    const outOfPage = [];
+    pages.forEach((page, index) => {
+      const border = page.getBoundingClientRect().right + 1;
+      [...page.querySelectorAll('.v4-dossier-body *')].forEach(node => {
+        if (node.getClientRects().length && node.getBoundingClientRect().right > border) outOfPage.push('S' + (index + 1) + ' ' + (node.className || node.tagName));
+      });
+    });
+    ok(outOfPage.length === 0, tag + ': kein Inhalt läuft aus der Seite (' + (outOfPage.slice(0, 4).join(' | ') || 'alle Elemente innerhalb des Satzspiegels') + ')');
+    const heroBox = d.querySelector('.v4-dossier-hero').getBoundingClientRect();
+    const heroImage = d.querySelector('.v4-dossier-hero img').getBoundingClientRect();
+    ok(heroBox.height >= 140 && heroImage.height >= heroBox.height - 1, tag + ': Bildband auf Mobile sichtbar und gefüllt (' + Math.round(heroBox.width) + ' × ' + Math.round(heroBox.height) + ' px)');
+    const titleBox = pages[0].querySelector('.v4-dossier-title').getBoundingClientRect();
+    ok(titleBox.top < heroBox.bottom, tag + ': Titel liegt auf dem Bildband (Abstand zur Oberkante ' + Math.round(titleBox.top - heroBox.top) + ' px)');
+    ok(getComputedStyle(pages[0].querySelector('.v4-dossier-title')).whiteSpace === 'normal', tag + ': Titel bricht auf Mobile an Wortgrenzen um');
+    const resultStack = pages[0].querySelector('.v4-dossier-result');
+    const resultColumns = getComputedStyle(resultStack).gridTemplateColumns.split(' ').filter(Boolean);
+    ok(resultColumns.length === 1, tag + ': Ergebnis-Card stapelt auf Mobile (' + resultColumns.join(' / ') + ')');
+    const headlineBox = resultStack.querySelector('.v4-dossier-result-headline').getBoundingClientRect();
+    const valueBox = resultStack.querySelector('.v4-dossier-result-value').getBoundingClientRect();
+    ok(valueBox.top >= headlineBox.bottom - 1 && valueBox.left <= headlineBox.left + 1, tag + ': Ergebnisbetrag steht unter der Aussage und linksbündig (kein Abschneiden)');
+    const tileColumns = getComputedStyle(pages[0].querySelector('.v4-dossier-tiles')).gridTemplateColumns.split(' ').filter(Boolean).length;
+    ok(tileColumns === (w <= 420 ? 1 : 2), tag + ': Kennzahlen raster ' + tileColumns + '-spaltig bei ' + w + ' px');
   }
   const css = (await (await fetch('/css/v4-dossier.css')).text()).replace(/\s+/g, ' ');
   ok(/@page\s*\{\s*size:\s*A4 portrait;\s*margin:\s*0;?\s*\}/.test(css), tag + ': Print-Regel @page A4 portrait, margin 0');
@@ -752,52 +914,192 @@ async function dossierChecks(w, h) {
   f.remove();
 }
 
-/* ---------- Bericht wieder einlesen (Rückweg zur Sicherung) ----------
-   «Angaben für die Beratung» ist die einzige Sicherung, die die App selbst erzeugt: Der Text muss
-   sich wieder einlesen lassen und denselben Plan ergeben – erreichbar auch ohne Plan (Schnellstart). */
-async function reportImportChecks(w, h) {
-  const tag = w + 'px Bericht';
+/* ---------- Beratung vorbereiten ----------
+   Der Screen bündelt drei Aufgaben: Angaben vervollständigen (dieselben Editoren wie «Angaben &
+   Grundlagen», vorhandene Plandaten werden übernommen), Dossier und Datenstand. Er rechnet
+   nichts: Fortschritt und Zeilen entstehen aus dem bestehenden Zustand. */
+async function adviceChecks(w, h) {
+  const tag = w + 'px Beratung';
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow;
-  const rows = text => Object.fromEntries(String(text ?? '').split(/\r?\n/).map(line => line.match(/^([^:]{2,40}?)\s*:\s*(.+?)\s*$/)).filter(Boolean).map(match => [match[1], match[2]]));
-  const storedShare = () => { try { return JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? '{}')?.state?.details?.pension?.pkShare; } catch (error) { return null; } };
-  const report = async () => { d.querySelector('[data-menu-action="report"]')?.click(); await wait(400); const text = d.getElementById('v4Report')?.value ?? ''; d.querySelector('[data-modal-close]')?.click(); await wait(250); return text; };
+  const digits = text => Number(String(text ?? '').replace(/[^\d]/g, ''));
   win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
   await wait(600);
-  const before = await report();
-  ok(/^Ruhestands-Check – Angaben für die Beratung/.test(before) && /Startkapital: CHF/.test(before), tag + ': Bericht enthält Kopf, Angaben und Startkapital (' + before.split('\n').length + ' Zeilen)');
-  d.querySelector('[data-menu-action="report"]')?.click();
-  await wait(400);
-  ok(!!d.querySelector('[data-v4-action="report-import"]'), tag + ': Rückweg «Wieder einlesen» ist im Berichtsdialog erreichbar');
-  d.querySelector('[data-v4-action="report-import"]')?.click();
-  await wait(400);
-  ok(!!d.getElementById('v4ReportImport') && !!d.querySelector('[data-report-apply]'), tag + ': Einlese-Dialog mit Feld und «Angaben übernehmen»');
-  d.getElementById('v4ReportImport').value = before;
-  d.querySelector('[data-report-apply]')?.click();
-  await wait(800);
-  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && d.getElementById('v4Modal')?.open !== true, tag + ': Übernehmen schliesst den Dialog und führt auf «Mein Plan»');
-  ok(/Angaben übernommen \(\d+ Zeilen gelesen\)/.test(d.getElementById('v4Notice')?.textContent ?? ''), tag + ': Hinweis nennt die gelesenen Zeilen und die Neuberechnung (' + (d.getElementById('v4Notice')?.textContent.trim().slice(0, 48) ?? '–') + '…)');
-  const after = await report();
-  const keys = ['Alter heute','Pensionierung mit','Planungshorizont bis','Wohnkanton','Situation','AHV','Bedarf netto','PK-Guthaben heute','PK-Beiträge pro Jahr','PK-Kapitalbezug','Säule 3a Guthaben','Bank / liquide Mittel','Wertschriften','Anlagestrategie','Startkapital','Reicht bis'];
-  const a = rows(before), b = rows(after);
-  const diff = keys.filter(key => a[key] !== b[key]);
-  ok(diff.length === 0, tag + ': Rundlauf stellt dieselben Angaben wieder her (' + (diff.length ? diff.map(key => key + ': «' + a[key] + '» → «' + b[key] + '»').join(' | ') : keys.length + ' Zeilen identisch') + ')');
-  /* Fehlerfall: unbrauchbarer Text ändert nichts und nennt den Grund. */
-  const shareBefore = storedShare();
-  d.querySelector('[data-menu-action="report"]')?.click();
-  await wait(350);
-  d.querySelector('[data-v4-action="report-import"]')?.click();
-  await wait(350);
-  d.getElementById('v4ReportImport').value = 'Kein Bericht, nur Text.';
-  d.querySelector('[data-report-apply]')?.click();
+  const entry = [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Beratung vorbereiten/.test(row.textContent));
+  ok(!!entry, tag + ': Einstieg auf «Mein Plan» (' + (entry?.textContent.replace(/\s+/g, ' ').trim() ?? 'fehlt') + ')');
+  entry?.click();
+  await wait(700);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Beratung vorbereiten.', tag + ': eigener Screen «Beratung vorbereiten.»');
+  ok(d.querySelector('.v4-page-context')?.textContent.trim() === 'Dossier & Datenstand', tag + ': Kontextzeile nennt den Inhalt');
+  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Mein Plan', tag + ': Rückweg «‹ Mein Plan» (keine neue Navigation)');
+  ok(/Alles für dein Beratungsgespräch\./.test(d.querySelector('.v4-lead')?.textContent ?? ''), tag + ': Zweckzeile «Alles für dein Beratungsgespräch.»');
+  /* Oben der Fortschritt bzw. die vorhandenen Daten. */
+  const stand = d.querySelector('.v4-advice-stand');
+  const count = stand?.querySelector('.v4-advice-count')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  const total = digits(count.match(/von (\d+)/)?.[1]);
+  const done = digits(count.match(/(\d+) von/)?.[1]);
+  const rowCount = d.querySelectorAll('#app .v4-hebel-row').length;
+  ok(/^\d+ von \d+ Angaben erfasst$/.test(count) && total === rowCount && done <= total, tag + ': Fortschritt zählt dieselben Angaben wie die Zeilen (' + count + ' · ' + rowCount + ' Zeilen)');
+  const openCount = d.querySelectorAll('#app .v4-hebel-row .v4-badge-tone:not(.done)').length;
+  ok(done + openCount === total, tag + ': erfasste und offene Angaben ergeben die Gesamtzahl (' + done + ' + ' + openCount + ' = ' + total + ')');
+  ok(/Noch offen: |Alle Angaben erfasst/.test(stand?.querySelector('.v4-advice-open')?.textContent ?? ''), tag + ': offene Angaben werden benannt («' + (stand?.querySelector('.v4-advice-open')?.textContent.trim() ?? '–') + '»)');
+  const facts = [...stand.querySelectorAll('.v4-advice-facts li')].map(node => node.textContent.trim());
+  const tileCapital = [...d.querySelectorAll('.v4-tile > strong')].map(node => node.textContent.trim());
+  ok(facts.some(fact => /^Startkapital CHF/.test(fact)) && facts.some(fact => /^Reicht bis /.test(fact)), tag + ': «vorhandene Daten» mit Startkapital und Reichweite (' + facts.join(' · ') + ')');
+  /* 1 Angaben vervollständigen: dieselben Editoren, Plandaten übernommen. */
+  const pages = [...d.querySelectorAll('#app .v4-hebel-row')].map(row => row.dataset.v4Next);
+  ok(pages.join(',') === 'advice-person,personal,ahv,pension,pension3a,extra,need,assets,assets', tag + ': alle Angaben-Zeilen in fester Reihenfolge (' + pages.join(',') + ')');
+  ok([...d.querySelectorAll('#app .v4-hebel-row')].every(row => row.dataset.v4Parent === 'advice'), tag + ': Zeilen führen mit «Zurück» auf die Beratungsvorbereitung');
+  const rowText = page => [...d.querySelectorAll('#app .v4-hebel-row')].find(row => row.dataset.v4Next === page)?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  const rowNodes = [...d.querySelectorAll('#app .v4-hebel-row')];
+  const personal = rowNodes.find(row => row.dataset.v4Next === 'personal')?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  ok(/Persönliche Angaben/.test(personal) && /Alter & Pensionierung/.test(personal) && /60/.test(personal), tag + ': vorhandene Plandaten werden übernommen (' + personal.slice(0, 70) + ')');
+  const property = rowNodes.filter(row => row.dataset.v4Next === 'assets')[1]?.textContent.replace(/\s+/g, ' ').trim() ?? '';
+  ok(/Immobilien & Hypotheken/.test(property), tag + ': Immobilien & Hypotheken als eigene Zeile (' + property.slice(0, 60) + ')');
+  ok(rowText('assets').length > 0 && rowText('need').length > 0, tag + ': Vermögen und Bedarf bleiben erreichbar');
+  ok(!!d.querySelector('[data-v4-next="dossier"]'), tag + ': «Dein Dossier» mit Einstieg «Dossier ansehen / erstellen»');
+  ok(/Dossier ansehen \/ erstellen/.test(d.querySelector('[data-v4-next="dossier"]')?.textContent ?? ''), tag + ': Dossier-Knopf benannt');
+  /* 3 Daten sichern: die beauftragten Wege, dezent unten. */
+  ok(!!d.querySelector('[data-backup-save]') && /^Plan & Beratungsdaten speichern ↓$/.test(d.querySelector('[data-backup-save]')?.textContent.trim() ?? ''), tag + ': «Plan & Beratungsdaten speichern ↓»');
+  ok(!!d.querySelector('[data-backup-import]') && /^Gespeicherte Daten einlesen ↑$/.test(d.querySelector('[data-backup-import]')?.textContent.trim() ?? ''), tag + ': «Gespeicherte Daten einlesen ↑»');
+  ok(!!d.querySelector('[data-backup-copy]'), tag + ': dezenter Weg «Datenstand in die Zwischenablage kopieren»');
+  ok(/Das Dossier ist die lesbare Druckvorlage/.test(d.querySelector('.v4-advice-backup')?.textContent ?? ''), tag + ': Dossier und Datenstand sind sprachlich getrennt');
+  ok(!/Dossier speichern|Dossier laden/.test(d.querySelector('.v4-advice-backup')?.textContent ?? ''), tag + ': «Dossier speichern» kommt nicht vor');
+  /* Beratungsangaben: eigener Editor, speichert getrennt vom Plan, erscheint im Dossier. */
+  [...d.querySelectorAll('#app .v4-hebel-row')].find(row => row.dataset.v4Next === 'advice-person')?.click();
   await wait(500);
-  ok(/keine Angaben erkennen/.test(d.getElementById('v4ReportImportState')?.textContent ?? '') && storedShare() === shareBefore, tag + ': unbrauchbarer Text meldet den Grund und lässt den Plan unverändert (' + storedShare() + ' %)');
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Beratungsangaben.', tag + ': Editor «Beratungsangaben.»');
+  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Beratung vorbereiten', tag + ': Rückweg zum Beratungsscreen');
+  ok(!!d.getElementById('adviceName') && !!d.getElementById('adviceMeeting') && !!d.getElementById('adviceNotes'), tag + ': Felder Name, Gesprächsdatum und Notizen');
+  d.getElementById('adviceName').value = 'Anna Muster';
+  d.getElementById('adviceMeeting').value = '2026-10-05';
+  d.getElementById('adviceNotes').value = 'Fragen zur Hypothek\nKapitalbezug prüfen';
+  d.getElementById('v4AdviceForm').dispatchEvent(new win.Event('submit', {bubbles:true, cancelable:true}));
+  await wait(600);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Beratung vorbereiten.', tag + ': «Übernehmen» kehrt auf die Beratungsvorbereitung zurück (kein Rechenvorgang)');
+  const adviceStore = JSON.parse(win.localStorage.getItem('retirement-v4-advice') ?? 'null');
+  ok(adviceStore?.advice?.name === 'Anna Muster' && adviceStore?.advice?.meetingOn === '2026-10-05' && /Kapitalbezug/.test(adviceStore?.advice?.notes ?? ''), tag + ': Beratungsdaten liegen im eigenen Speicher (' + JSON.stringify(adviceStore?.advice?.name) + ')');
+  ok(Number(adviceStore?.storageVersion) === Number(win.CheckV3State.STORAGE_VERSION), tag + ': Beratungsdaten tragen die Speichergeneration (' + adviceStore?.storageVersion + ')');
+  ok(!/Anna Muster/.test(win.localStorage.getItem('retirement-v3-plan') ?? ''), tag + ': Beratungsdaten stehen nicht im Plan (V2/V3 bleiben unberührt)');
+  ok(/Für Anna Muster/.test(d.querySelector('.v4-advice-stand')?.textContent ?? ''), tag + ': Fortschritt nennt den erfassten Namen');
+  ok(/Name erfasst/.test([...d.querySelectorAll('#app .v4-hebel-row')].find(row => row.dataset.v4Next === 'advice-person')?.textContent ?? ''), tag + ': Zeile «Name & Notizen» ist erfasst');
+  /* Dossier nimmt die Beratungsangaben mit. */
+  d.querySelector('[data-v4-next="dossier"]')?.click();
+  await wait(900);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Dossier.', tag + ': Dossier wird aus der Beratungsvorbereitung geöffnet');
+  ok(d.querySelector('.v4-head-back')?.textContent.trim() === 'Beratung vorbereiten', tag + ': Dossier führt zurück auf «Beratung vorbereiten»');
+  ok(/Vorbereitet für Anna Muster · Gespräch vom 05\.10\.2026/.test(d.querySelector('.v4-dossier-for')?.textContent ?? ''), tag + ': Dossier nennt Name und Gesprächsdatum (' + (d.querySelector('.v4-dossier-for')?.textContent.trim() ?? 'fehlt') + ')');
+  ok(/Fragen zur Hypothek/.test(d.querySelector('.v4-dossier-notes')?.textContent ?? ''), tag + ': Notizen erscheinen im Dossier');
+  f.remove();
+}
+
+/* ---------- Datenstand: vollständige Sicherung, atomar wieder eingelesen ----------
+   Der Datenstand enthält Plan, Angaben, Varianten, Anlagestrategie/Annahmen und Beratungsdaten –
+   erreichbar aus der Beratungsvorbereitung und (ohne Plan) aus dem Schnellstart. */
+async function backupChecks(w, h) {
+  const tag = w + 'px Datenstand';
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow;
+  const readPlan = () => { try { return JSON.parse(win.localStorage.getItem('retirement-v3-plan') ?? 'null'); } catch (error) { return null; } };
+  const openImport = async () => { d.querySelector('[data-backup-import]')?.click(); await wait(400); };
+  win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']()); win.V4.load();
+  await wait(600);
+  /* Beratungsdaten erfassen, damit der Datenstand wirklich alles enthält. */
+  [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Beratung vorbereiten/.test(row.textContent))?.click();
+  await wait(600);
+  [...d.querySelectorAll('#app .v4-hebel-row')].find(row => row.dataset.v4Next === 'advice-person')?.click();
+  await wait(500);
+  d.getElementById('adviceName').value = 'Anna Muster';
+  d.getElementById('adviceMeeting').value = '2026-10-05';
+  d.getElementById('adviceNotes').value = 'Notiz für den Datenstand';
+  d.getElementById('v4AdviceForm').dispatchEvent(new win.Event('submit', {bubbles:true, cancelable:true}));
+  await wait(500);
+  const record = readPlan();
+  /* Der Datenstand selbst ist die massgebliche Momentaufnahme – verglichen wird deshalb gegen das,
+     was in der Datei steht (die reine Anzeigeposition `position` bleibt aussen vor). */
+  const stable = value => { const copy = JSON.parse(value); delete copy.position; return JSON.stringify(copy); };
+  const text = win.V4.backupText();
+  const payload = JSON.parse(text);
+  const before = {
+    plan: JSON.stringify(payload.plan.state),
+    advice: win.localStorage.getItem('retirement-v4-advice'),
+    share: payload.plan.state.details.pension.pkShare,
+    variants: JSON.stringify(payload.plan.state.v3Variants),
+    strategy: payload.plan.state.riskProfile,
+    assets: JSON.stringify(payload.plan.state.details.assets ?? {})
+  };
+  ok(!!record, tag + ': Ausgangsplan ist gespeichert');
+  /* Der Datenstand selbst: ein Objekt mit allem, was der Ruhestands-Check hat. */
+  ok(payload.app === 'ruhestands-check' && payload.kind === 'backup' && Number(payload.format) === 1, tag + ': eigener Dateityp (app/kind/format)');
+  ok(!!payload.savedAt && !!payload.appVersion && !!payload.plan?.state, tag + ': Zeitstempel, App-Version und Plan sind enthalten');
+  ok(payload.plan.storageVersion === win.CheckV3State.STORAGE_VERSION && payload.plan.version === 2, tag + ': Plan trägt Schema und Speichergeneration (' + payload.plan.version + '/' + payload.plan.storageVersion + ')');
+  ok(JSON.stringify(payload.plan.state.v3Variants ?? null) === before.variants && payload.plan.state.riskProfile === before.strategy, tag + ': Varianten und Strategie sind im Datenstand (' + JSON.stringify(payload.plan.state.v3Variants) + ' · ' + payload.plan.state.riskProfile + ')');
+  ok(JSON.stringify(payload.plan.state.details.assets ?? {}) === before.assets, tag + ': Vermögensangaben inkl. Immobilien und Hypotheken sind enthalten');
+  ok(payload.advice?.name === 'Anna Muster' && payload.advice?.meetingOn === '2026-10-05' && /Datenstand/.test(payload.advice?.notes ?? ''), tag + ': Beratungsdaten sind im Datenstand');
+  ok('share' in (payload.compare ?? {}) && 'view' in (payload.compare ?? {}), tag + ': Vergleichseinstellungen sind enthalten');
+  ok(!/Dossier/.test(text.slice(0, 200)), tag + ': die Datei heisst nicht «Dossier» und ist keine Druckvorlage');
+  ok(/^ruhestands-check-datenstand-\d{4}-\d{2}-\d{2}\.json$/.test(win.V4.backupFileName()), tag + ': Dateiname «' + win.V4.backupFileName() + '»');
+  /* Lesen: gültig, fremd, defekt, zu neu. */
+  const parsed = win.V4.parseBackup(text);
+  ok(!!parsed.state && parsed.advice.name === 'Anna Muster', tag + ': der eigene Datenstand lässt sich lesen');
+  const rejects = (value, expected) => { try { win.V4.parseBackup(value); return false; } catch (error) { return expected.test(error.message); } };
+  ok(rejects('Kein JSON', /kein Ruhestands-Check-Datenstand/), tag + ': unlesbarer Text wird mit Grund abgelehnt');
+  ok(rejects(JSON.stringify({app:'ruhestands-check', kind:'report', format:1, plan:payload.plan}), /kein Ruhestands-Check-Datenstand/), tag + ': fremde Datei wird abgelehnt');
+  ok(rejects(JSON.stringify({app:'ruhestands-check', kind:'backup', format:99, plan:payload.plan}), /neueren Version/), tag + ': neueres Format wird abgelehnt');
+  ok(rejects(JSON.stringify({app:'ruhestands-check', kind:'backup', format:1}), /fehlt der Plan/), tag + ': Datenstand ohne Plan wird abgelehnt');
+  /* Fehlerfall über die Oberfläche: der Plan bleibt unverändert. */
+  await openImport();
+  ok(!!d.getElementById('v4BackupText') && !!d.getElementById('v4BackupFile') && !!d.querySelector('[data-backup-apply]'), tag + ': Einlese-Dialog mit Datei, Feld und «Daten einlesen»');
+  d.getElementById('v4BackupText').value = 'Kein Datenstand, nur Text.';
+  d.querySelector('[data-backup-apply]')?.click();
+  await wait(600);
+  ok(/kein Ruhestands-Check-Datenstand/.test(d.getElementById('v4BackupState')?.textContent ?? '') && stable(JSON.stringify(readPlan()?.state)) === stable(before.plan), tag + ': unbrauchbarer Text meldet den Grund und lässt den Plan unverändert');
+  /* Rundlauf: Plan über eine echte Bedienhandlung ändern, Datenstand einlesen, alter Zustand ist
+     wieder da – Beratungsdaten inklusive. */
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(300);
+  win.V4.renderVariants();
+  await wait(500);
+  d.querySelector('#app [data-adopt-variant]:not([disabled])')?.click();
+  await wait(800);
+  const changed = readPlan();
+  ok(stable(JSON.stringify(changed.state)) !== stable(before.plan), tag + ': der Plan wurde für den Rundlauf geändert (Kapitalbezug ' + changed.state.details.pension.pkShare + ' %)');
+  const adviceBefore = JSON.parse(before.advice ?? 'null')?.advice;
+  win.localStorage.removeItem('retirement-v4-advice');
+  win.V4.load();
+  await wait(500);
+  [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Beratung vorbereiten/.test(row.textContent))?.click();
+  await wait(600);
+  await openImport();
+  d.getElementById('v4BackupText').value = text;
+  d.querySelector('[data-backup-apply]')?.click();
+  await wait(900);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && d.getElementById('v4Modal')?.open !== true, tag + ': Einlesen schliesst den Dialog und führt auf «Mein Plan»');
+  ok(stable(JSON.stringify(readPlan()?.state)) === stable(before.plan), tag + ': Rundlauf stellt den vollständigen Plan wieder her (Kapitalbezug ' + readPlan()?.state?.details?.pension?.pkShare + ' %)');
+  const adviceAfter = JSON.parse(win.localStorage.getItem('retirement-v4-advice') ?? 'null')?.advice;
+  ok(JSON.stringify(adviceAfter) === JSON.stringify(adviceBefore), tag + ': Beratungsdaten werden mit dem Datenstand wiederhergestellt (' + JSON.stringify(adviceAfter?.name) + ')');
+  ok(/Datenstand eingelesen/.test(d.getElementById('v4Notice')?.textContent ?? ''), tag + ': Hinweis bestätigt das Einlesen (' + (d.getElementById('v4Notice')?.textContent.trim().slice(0, 46) ?? '–') + '…)');
+  /* Kopieren als zweiter Weg (Handy → PC ohne Datei). */
+  d.querySelector('#app [data-v4-next="advice"]')?.click();
+  await wait(600);
+  d.querySelector('[data-backup-copy]')?.click();
+  /* Entweder die Zwischenablage antwortet (Hinweis) oder der Text zum Markieren erscheint –
+     beides ist Erfolg; auf das Promise der Clipboard-API wird gewartet. */
+  let copyFeedback = '';
+  for (let attempt = 0; attempt < 10; attempt++) {
+    copyFeedback = (d.getElementById('v4Notice')?.textContent ?? '') + ' ' + (d.getElementById('v4ModalBody')?.textContent ?? '');
+    if (/Datenstand kopiert|Markiere den Text|nicht freigegeben/.test(copyFeedback)) break;
+    await wait(250);
+  }
+  ok(/Datenstand kopiert|Markiere den Text|nicht freigegeben/.test(copyFeedback), tag + ': «Datenstand kopieren» meldet Erfolg oder zeigt den Text zum Markieren (' + copyFeedback.trim().slice(0, 46) + '…)');
+  d.querySelector('[data-modal-close]')?.click();
+  await wait(250);
   /* Ohne Plan erreichbar: nach dem Zurücksetzen aus dem Schnellstart. */
   win.__v4SuspendSave = true;
   win.localStorage.removeItem('retirement-v3-plan');
   await new Promise(resolve => { f.onload = resolve; f.src = '/v4.html?leer=' + Date.now(); });
   await wait(900);
+  await enterApp(f.contentWindow, f.contentDocument);
   const dl = f.contentDocument;
-  ok(!!dl.querySelector('[data-v4-action="report-import"]') && !dl.querySelector('.menu-button:not([hidden])'), tag + ': im Schnellstart (kein Plan) gibt es den Einstieg «Gespeicherte Angaben einlesen»');
+  ok(!!dl.querySelector('[data-backup-import]') && !dl.querySelector('.menu-button:not([hidden])'), tag + ': im Schnellstart (kein Plan) gibt es den Einstieg «Gespeicherte Daten einlesen ↑»');
   f.remove();
 }
 
@@ -813,6 +1115,7 @@ async function storageVersionChecks() {
     win.localStorage.setItem('retirement-v3-plan', raw);
     await new Promise(resolve => { f.onload = resolve; f.src = '/v4.html?store=' + Date.now(); });
     await wait(900);
+    await enterApp(f.contentWindow, f.contentDocument);
     return {d:f.contentDocument, win:f.contentWindow};
   };
   /* 1) Ein normaler Plan liegt in der aktuellen Hülle mit Speicherversion. */
@@ -1699,6 +2002,7 @@ async function variantChecks(w, h) {
   win.localStorage.setItem('retirement-v3-plan', JSON.stringify(legacy));
   await new Promise(resolve => { f.onload = resolve; f.src = '/v4.html?legacy=' + Date.now(); });
   await wait(900);
+  await enterApp(f.contentWindow, f.contentDocument);
   const dl = f.contentDocument, wl = f.contentWindow;
   ok(dl.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.', tag + ' Schema-1-Stand öffnet «Mein Plan»');
   ok(!!dl.querySelector('.v4-lever [data-v4-next="compare"]'), tag + ' alte Planung erhält sofort den Vergleichseinstieg (drei Variantenplätze statt einem)');
@@ -1710,7 +2014,9 @@ async function variantChecks(w, h) {
   const postRows = [...dl.querySelectorAll('#app .v4-rows .v4-row')].map(row => row.textContent.trim());
   ok(dl.querySelector('.v4-page-title')?.textContent.trim() === 'Mein Plan.' && !dl.querySelector('.v4-lever'), tag + ' «Bereits pensioniert»: kein Bezugsregler');
   ok(!postRows.some(row => /Varianten/.test(row)) && postRows.length === 2 && postRows.includes('Jahresverlauf'), tag + ' ohne Kapitalbezug keine Variantenzeile (' + (postRows.join(' | ') || '–') + ')');
-  ok(dl.querySelector('#v4Menu [data-menu-page="variants"]')?.hidden === true, tag + ' ohne Kapitalbezug kein Menüpunkt «Meine Varianten»');
+  /* «Meine Varianten» ist überhaupt kein Menüpunkt mehr (§7a) – die Prüfung bleibt als Zusicherung,
+     dass ohne Kapitalbezug auch kein toter Einstieg im Menü hängt. */
+  ok(!dl.querySelector('#v4Menu [data-menu-page="variants"]'), tag + ' «Meine Varianten» ist kein Menüpunkt (auch ohne Kapitalbezug kein toter Einstieg)');
   ok(!dl.querySelector('[data-v4-next="compare"]'), tag + ' ohne Kapitalbezug kein Vergleichseinstieg');
   wl.V4.renderVariants();
   await wait(600);
@@ -1981,11 +2287,15 @@ async function comparisonChecks(w, h) {
   ok(/Individuell besprechen/.test(advice?.textContent ?? '') && !advice?.querySelector('summary'), tag + ' Beratungs-Card ist ein CTA (kein Accordion) mit «Individuell besprechen →»');
   const ctaStyle = advice ? win.getComputedStyle(advice) : null;
   ok(ctaStyle?.borderTopColor === green && /^rgb\(237, 242, 237\)$/.test(ctaStyle?.backgroundColor ?? ''), tag + ' Beratungs-Card mit grünem Rahmen und Mint-Fläche (' + ctaStyle?.backgroundColor + ' / ' + ctaStyle?.borderTopColor + ')');
-  d.querySelector('[data-v4-action="advisor"]')?.click();
-  await wait(400);
-  ok(d.getElementById('v4ModalTitle')?.textContent.trim() === 'Angaben für die Beratung', tag + ' CTA öffnet den bestehenden Beratungsflow (' + (d.getElementById('v4ModalTitle')?.textContent ?? '') + ')');
-  d.querySelector('[data-modal-close]')?.click();
-  await wait(250);
+  /* Der frühere Bericht ist weg: Der CTA führt in die Beratungsvorbereitung (Angaben, Dossier,
+     Datenstand) – der Beratungsflow bleibt damit erreichbar, ohne einen zweiten Weg zu öffnen. */
+  d.querySelector('[data-v4-next="advice"]')?.click();
+  await wait(600);
+  ok(d.querySelector('.v4-page-title')?.textContent.trim() === 'Beratung vorbereiten.', tag + ' CTA öffnet die Beratungsvorbereitung (' + (d.querySelector('.v4-page-title')?.textContent.trim() ?? '') + ')');
+  ok(!!d.querySelector('[data-v4-next="dossier"]') && !!d.querySelector('[data-backup-save]'), tag + ' Beratungsvorbereitung bietet Dossier und Datenstand');
+  /* Zurück in den Vergleich: die folgenden Prüfungen betreffen die Berechnungsbasis dort. */
+  win.V4.renderCompare();
+  await wait(500);
   /* 10) Berechnungsbasis */
   const basis = d.querySelector('.v4-cmp-basis');
   const basisLine = basis?.querySelector('.v4-cmp-basis-line')?.textContent ?? '';
@@ -2084,6 +2394,14 @@ async function amountInputChecks(w) {
     try { await startChecks(w, h, 'pre'); await startChecks(w, h, 'post'); } catch (e) { ok(false, w + ' Schnellstart: ' + e.message); }
     flush();
   }
+  for (const [w, h] of [[390,844],[1000,900]]) {
+    try { await landingChecks(w, h); } catch (e) { ok(false, w + ' Startscreen: ' + e.message); }
+    flush();
+  }
+  for (const [w, h] of [[320,568],[844,390]]) {
+    try { await landingShortChecks(w, h); } catch (e) { ok(false, w + ' Startscreen kurz: ' + e.message); }
+    flush();
+  }
   flush();
   for (const [w, h] of [[390,844],[430,900],[1000,900]]) {
     try { await planStructure(w, h); } catch (e) { ok(false, w + ' Mein Plan: ' + e.message); }
@@ -2163,7 +2481,11 @@ async function amountInputChecks(w) {
   }
   flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
-    try { await reportImportChecks(w, h); } catch (e) { ok(false, w + ' Bericht: ' + e.message); }
+    try { await adviceChecks(w, h); } catch (e) { ok(false, w + ' Beratung: ' + e.message); }
+  }
+  flush();
+  for (const [w, h] of [[390,844],[1000,900]]) {
+    try { await backupChecks(w, h); } catch (e) { ok(false, w + ' Datenstand: ' + e.message); }
   }
   flush();
   for (const [w, h] of [[1000,900],[390,844]]) {
@@ -2181,3 +2503,4 @@ async function amountInputChecks(w) {
 </script>
 </body>
 </html>
+

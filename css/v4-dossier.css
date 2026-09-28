@@ -35,6 +35,9 @@
   background:linear-gradient(180deg,rgba(247,246,242,.94) 0,rgba(247,246,242,.84) 130px,rgba(247,246,242,.42) 56%,rgba(247,246,242,0) 88%)}
 .v4-dossier-title{margin:10px 0 2px;font:600 clamp(30px,4.4mm,40px)/1.1 Georgia,"Times New Roman",serif;color:var(--v3-brand);white-space:nowrap}
 .v4-dossier-claim{margin:0;font:italic 400 15px/1.4 Georgia,"Times New Roman",serif;color:#2b3a41}
+/* Beratungsangaben: wer das Dossier bekommt und wann das Gespräch stattfindet (nur wenn erfasst). */
+.v4-dossier-for{margin:10px 0 0;font:600 13px/1.4 system-ui,sans-serif;color:var(--v3-green)}
+.v4-dossier-notes{margin:0;font:12.5px/1.5 system-ui,sans-serif;color:var(--dossier-ink);white-space:pre-line;overflow-wrap:break-word}
 .v4-dossier-pills{display:flex;flex-wrap:wrap;gap:7px;margin:14px 0 0;padding:0;list-style:none}
 .v4-dossier-pills li{padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.66);border:1px solid rgba(31,98,85,.14);font:600 12px/1.2 system-ui,sans-serif;color:#22383a;white-space:nowrap}
 .v4-dossier-section-title{margin:0;font:600 17px/1.2 Georgia,"Times New Roman",serif;color:var(--v3-brand)}
@@ -172,7 +175,17 @@
   .v4-dossier-cover-body{min-height:0;padding:18px 16px 0;background:linear-gradient(180deg,rgba(247,246,242,.92) 0,rgba(247,246,242,.62) 52%,rgba(247,246,242,.16) 82%,rgba(247,246,242,0) 100%)}
   .v4-dossier-title{font-size:26px;white-space:normal}
   .v4-dossier-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .v4-dossier-columns,.v4-dossier-variants,.v4-dossier-decisions,.v4-dossier-pots{grid-template-columns:1fr}
+  /* Eine Spalte und echte Schrumpfgrenze (`minmax(0,1fr)`): `1fr` allein behält die
+     Min-Content-Breite der Karten und schöbe den Inhalt seitlich aus der Seite. */
+  .v4-dossier-columns,.v4-dossier-variants,.v4-dossier-decisions,.v4-dossier-pots{grid-template-columns:minmax(0,1fr)}
+  .v4-dossier-card,.v4-dossier-card-title,.v4-dossier-rows,.v4-dossier-variant,.v4-dossier-pot,.v4-dossier-decision{min-width:0}
+  /* Bezeichnungen dürfen auf schmalen Screens umbrechen – die Zahl bleibt einzeilig rechts.
+     Die kleine Herkunftsnotiz («nach Steuern», «nicht aufgeteilt») rutscht in eine eigene Zeile,
+     statt die Bezeichnung zu quetschen. */
+  .v4-dossier-row dt{flex-wrap:wrap}
+  .v4-dossier-row dt>span{white-space:normal}
+  .v4-dossier-row dt small{flex-basis:100%}
+  .v4-dossier-row dd{flex:none}
   .v4-dossier-metric-label{min-height:0}
   /* Ergebnis-Card stapelt: links Aussage, darunter der Betrag – nichts läuft aus der Karte. */
   .v4-dossier-result{grid-template-columns:minmax(0,1fr);gap:10px;padding:14px}

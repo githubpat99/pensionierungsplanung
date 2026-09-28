@@ -44,7 +44,7 @@
   function build(context) {
     const {
       state, item, variantItems = [], money, compactMoney, percent, appVersion,
-      heroAsset, strategy, canton, taxModelName, createdAt = new Date()
+      heroAsset, strategy, canton, taxModelName, advice = {}, createdAt = new Date()
     } = context;
     const plan = item?.plan ?? null;
     const result = item?.result ?? null;
@@ -62,6 +62,11 @@
     const year = value => value === null ? NOT_CAPTURED : money(value);
 
     /* --- Person und Zeitraum ------------------------------------------------------------- */
+    /* Beratungsdaten (Name, Gesprächsdatum, Notizen) kommen aus dem Zustand der Oberfläche und
+       werden **nicht** gerechnet – sie beschriften das Dossier und werden «Noch nicht erfasst»,
+       wenn sie fehlen. */
+    const meetingOn = String(advice.meetingOn ?? '').trim();
+    const meetingMatch = meetingOn.match(/^(\d{4})-(\d{2})-(\d{2})$/);
     const person = {
       mode: state.mode,
       situation: state.mode === 'pre' ? 'Vor der Pensionierung' : 'Bereits pensioniert',
@@ -69,7 +74,9 @@
       retirementAge: state.mode === 'pre' ? amountOrNull(state.values.retirement) : null,
       targetAge: amountOrNull(state.targetAge),
       canton: canton || null,
-      horizonMode: state.horizonMode === 'manual' ? 'manuell' : 'automatisch'
+      horizonMode: state.horizonMode === 'manual' ? 'manuell' : 'automatisch',
+      name: String(advice.name ?? '').trim() || null,
+      meetingOn: meetingMatch ? `${meetingMatch[3]}.${meetingMatch[2]}.${meetingMatch[1]}` : null
     };
 
     /* --- Die zentralen Zahlen (Kennzahlen des ersten Planjahres) ------------------------- */
@@ -80,11 +87,15 @@
     const startCapital = capitalEntered ? rounded(result?.availableCapital) : null;
     const incomeNet = rounded(result?.monthlyIncomeNet);
     const needNet = rounded(result?.monthlyNeed);
-    const withdrawal = rounded(first?.withdrawal);
+    /* Immer dieselbe Zahl wie «Aus Vermögen / Monat» auf «Mein Plan»: der Rechenkern liefert den
+       monatlichen Fehlbetrag des ersten Planjahres als `monthlyGap` (= Jahresentnahme / 12). Der
+       Jahreswert der Projektion (`first.withdrawal`) darf hier nicht stehen – sonst passen die
+       Anteile nicht mehr zum monatlichen Bedarf (Fehler «665 % Kapitalentnahme»). */
+    const withdrawal = rounded(result?.monthlyGap);
     const tiles = [
       metric('Bedarf netto / Monat', needNet, {formatter:money, icon:'shoppingCart'}),
       metric('Einkommen netto / Monat', incomeNet, {formatter:money, icon:'wallet'}),
-      metric('Entnahme aus Vermögen', withdrawal, {formatter:money, icon:'coins'}),
+      metric('Entnahme aus Vermögen / Monat', withdrawal, {formatter:money, icon:'coins'}),
       metric('Startkapital', startCapital, {formatter:compactMoney, icon:'pigMoney'})
     ];
 
@@ -123,11 +134,14 @@
       estimateNote: context.ahvEstimated ? 'Die AHV-Pauschale ist ein Durchschnittswert, bis du deine eigene Rente erfasst.' : ''
     };
     const need = {
-      net: metric('Bedarf netto', needNet, {formatter:money}),
-      fromIncome: metric('Einkommen', incomeNet, {formatter:money}),
-      fromWealth: metric('Vermögensentnahme', withdrawal, {formatter:money}),
-      incomeShare: (incomeNet !== null && needNet) ? Math.round(incomeNet / needNet * 100) : null,
-      withdrawalShare: (withdrawal !== null && needNet) ? Math.round(withdrawal / needNet * 100) : null
+      net: metric('Bedarf netto / Monat', needNet, {formatter:money}),
+      fromIncome: metric('Einkommen netto / Monat', incomeNet, {formatter:money}),
+      fromWealth: metric('Vermögensentnahme / Monat', withdrawal, {formatter:money}),
+      /* Anteile nur, wenn wirklich aus dem Vermögen entnommen wird: bei gedecktem Bedarf gäbe es
+         sonst Werte über 100 % (oder negative Balken). Beide Anteile bleiben zwischen 0 und 100. */
+      covered: withdrawal !== null && withdrawal <= 0,
+      incomeShare: (needNet && incomeNet !== null) ? Math.max(0, Math.min(100, Math.round(incomeNet / needNet * 100))) : null,
+      withdrawalShare: (needNet && withdrawal !== null) ? Math.max(0, Math.min(100, Math.round(withdrawal / needNet * 100))) : null
     };
 
     /* --- Vermögen ------------------------------------------------------------------------- */
@@ -253,6 +267,8 @@
       },
       person, summary, income, need, assets: assetsSection, pots, projection, variants,
       assumptions: {rows: assumptionsRows},
+      /* Notizen aus der Beratungsvorbereitung – freier Text, nur Darstellung. */
+      preparation: {notes: String(advice.notes ?? '').trim() || null},
       decisions,
       disclaimer: 'Modellrechnung in heutiger Kaufkraft. Die Ergebnisse basieren auf den erfassten Angaben und den dargestellten Annahmen. Keine Steuer- oder Anlageberatung.'
     };
@@ -332,6 +348,9 @@
       + `<div class="v4-dossier-cover-body"><p class="v4-dossier-brand"><span class="v4-dossier-brandline" aria-hidden="true"></span>Ruhestands-Check</p>`
       + `<h1 class="v4-dossier-title">${escapeText(data.meta.title)}</h1>`
       + `<p class="v4-dossier-claim">${escapeText(data.meta.claim)}</p>`
+      + (data.person.name || data.person.meetingOn
+        ? `<p class="v4-dossier-for">${data.person.name ? `Vorbereitet für ${escapeText(data.person.name)}` : 'Beratungsvorbereitung'}${data.person.meetingOn ? ` · Gespräch vom ${escapeText(data.person.meetingOn)}` : ''}</p>`
+        : '')
       + `<ul class="v4-dossier-pills">${pills.map(pill => `<li>${escapeText(pill)}</li>`).join('')}</ul></div>`
       + `<div class="v4-dossier-body"><h2 class="v4-dossier-section-title">Die zentralen Zahlen</h2>`
       + `<div class="v4-dossier-tiles">${data.summary.tiles.map(metricCard).join('')}</div>`
@@ -341,11 +360,13 @@
       + `</div></div></section>`);
 
     /* Seite 2 – Einkommen und Bedarf */
-    const ratio = (data.need.incomeShare !== null && data.need.withdrawalShare !== null)
-      ? `<div class="v4-dossier-ratio" role="img" aria-label="Anteile: ${data.need.incomeShare} % Einkommen, ${data.need.withdrawalShare} % Kapitalentnahme">`
-        + `<div class="v4-dossier-ratio-bar"><span class="income" style="width:${data.need.incomeShare}%"></span><span class="wealth" style="width:${data.need.withdrawalShare}%"></span></div>`
-        + `<ul class="v4-dossier-ratio-labels"><li><span class="dot income" aria-hidden="true"></span>${data.need.incomeShare} % Einkommen</li><li><span class="dot wealth" aria-hidden="true"></span>${data.need.withdrawalShare} % Kapitalentnahme</li></ul></div>`
-      : missingBlock('Für die Aufteilung fehlen noch Angaben.');
+    const ratio = data.need.covered
+      ? `<p class="v4-dossier-note is-strong">Dein Einkommen deckt den Bedarf vollständig – es ist keine Entnahme aus dem Vermögen nötig.</p>`
+      : (data.need.incomeShare !== null && data.need.withdrawalShare !== null)
+        ? `<div class="v4-dossier-ratio" role="img" aria-label="Anteile: ${data.need.incomeShare} % Einkommen, ${data.need.withdrawalShare} % Vermögensentnahme">`
+          + `<div class="v4-dossier-ratio-bar"><span class="income" style="width:${data.need.incomeShare}%"></span><span class="wealth" style="width:${data.need.withdrawalShare}%"></span></div>`
+          + `<ul class="v4-dossier-ratio-labels"><li><span class="dot income" aria-hidden="true"></span>${data.need.incomeShare} % Einkommen</li><li><span class="dot wealth" aria-hidden="true"></span>${data.need.withdrawalShare} % Vermögensentnahme</li></ul></div>`
+        : missingBlock('Für die Aufteilung fehlen noch Angaben.');
     pages.push(page(2, 'So finanzierst du deinen Ruhestand', 'Einkommen, Steuern und die notwendige Entnahme aus deinem Vermögen.',
       `<div class="v4-dossier-columns"><div class="v4-dossier-card"><p class="v4-dossier-card-title">Einkommen im ersten Planjahr</p>`
       + `<dl class="v4-dossier-rows">${data.income.sources.map(source => valueRow({label:source.label, text:source.text, amount:source.amount})).join('')}${data.income.rows.map(row => valueRow(row)).join('')}</dl>`
@@ -398,11 +419,17 @@
       `<div class="v4-dossier-card"><dl class="v4-dossier-rows">${data.assumptions.rows.map(row => valueRow(row)).join('')}</dl></div>`
       + `<p class="v4-dossier-disclaimer">${escapeText(data.disclaimer)}</p>`));
 
-    /* Seite 8 – Nächste Entscheidungen (nur wenn Themen im Plan vorkommen) */
-    if (data.decisions.length) {
-      pages.push(page(8, 'Deine nächsten Entscheidungen', 'Themen, die in deiner Planung tatsächlich vorkommen.',
-        `<div class="v4-dossier-decisions">${data.decisions.map(entry => `<div class="v4-dossier-decision">`
-          + `<p class="v4-dossier-decision-title">${escapeText(entry.title)}</p><p class="v4-dossier-decision-text">${escapeText(entry.text)}</p></div>`).join('')}</div>`));
+    /* Seite 8 – Nächste Entscheidungen und Notizen (nur wenn Themen im Plan vorkommen) */
+    const notes = data.preparation?.notes ?? null;
+    if (data.decisions.length || notes) {
+      const notesCard = notes
+        ? `<div class="v4-dossier-card is-muted"><p class="v4-dossier-card-title">Notizen aus der Vorbereitung</p><p class="v4-dossier-notes">${escapeText(notes)}</p></div>`
+        : '';
+      pages.push(page(8, data.decisions.length ? 'Deine nächsten Entscheidungen' : 'Notizen aus der Vorbereitung',
+        data.decisions.length ? 'Themen, die in deiner Planung tatsächlich vorkommen.' : 'Festgehalten für das Beratungsgespräch.',
+        (data.decisions.length ? `<div class="v4-dossier-decisions">${data.decisions.map(entry => `<div class="v4-dossier-decision">`
+          + `<p class="v4-dossier-decision-title">${escapeText(entry.title)}</p><p class="v4-dossier-decision-text">${escapeText(entry.text)}</p></div>`).join('')}</div>` : '')
+        + notesCard));
     }
 
     return `<div class="v4-dossier" data-pages="${pages.length}">${pages.join('')}</div>`;

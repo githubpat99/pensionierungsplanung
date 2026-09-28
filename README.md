@@ -8,7 +8,11 @@ Lokale Browseranwendung zur Planung von Einkommen, Bedarf und verfügbarem Kapit
 
 Als **installierbare App (PWA)** startet derselbe Einstieg: `site.webmanifest` verweist mit `start_url: "./index.html"` und `scope: "./"` nie auf eine Versionsdatei; Icons (192/512/maskable, aus `RC_Icon.png` abgeleitet) liegen in `public/icons/`. Der Service Worker `sw.js` (registriert über `js/pwa-register.js` in allen Einstiegen) lädt die Hülle vor, räumt beim Aktivieren jeden anderen Cache (auch alte V2/V3-Caches) und liefert Offline die Hülle `index.html`.
 
-Die App speichert den Plan im Browser auf diesem Gerät (`retirement-v3-plan`). Ein allfälliger V2-Stand unter `retirement-v2-plan` wird nicht mehr gelesen oder verändert. Die historische Datei `Rentenberechnung.xlsx` ist keine Eingabe der aktuellen Oberfläche.
+Bei jedem App-/Browser-Aufruf steht zuerst der **Startscreen**: das verbindliche Hintergrundbild als Vollbild mit Logo, Slogan «Sicher planen. Investiert bleiben.», «Dein Plan für den Ruhestand.» und der Aktion **«Jetzt starten»** – mit vorhandenem Plan geht es direkt auf «Mein Plan», ohne Plan in den Schnellstart.
+
+Die App speichert den Plan im Browser auf diesem Gerät (`retirement-v3-plan`); die **Beratungsangaben** (Name, Gesprächsdatum, Notizen) liegen getrennt davon unter `retirement-v4-advice`. Ein allfälliger V2-Stand unter `retirement-v2-plan` wird nicht mehr gelesen oder verändert. Die historische Datei `Rentenberechnung.xlsx` ist keine Eingabe der aktuellen Oberfläche.
+
+Über **«Beratung vorbereiten»** (dritte Zeile auf «Mein Plan») führt der Weg zum Gespräch: Angaben vervollständigen, das **Dossier** als druckbare A4-Vorlage (PDF) und ganz unten der **Datenstand** – eine JSON-Datei mit dem ganzen Ruhestands-Check (Plan, Angaben, Varianten, Strategie/Annahmen, Beratungsdaten) zum Weiterarbeiten auf einem anderen Gerät, ohne Konto und Cloud. Dossier und Datenstand sind bewusst zwei verschiedene Dinge.
 
 ## Aufbau
 

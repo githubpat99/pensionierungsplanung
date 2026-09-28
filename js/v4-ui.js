@@ -63,9 +63,44 @@
   let saveTimer = null;
   let storageBlocked = false;
   let storageFailed = false;
+  /* Der Startscreen steht bei jedem App-/Browser-Aufruf zuerst (siehe `renderLanding()`). */
+  let landingVisible = false;
   const normalizeP3 = source => V3State.normalize(source);
   const variantShares = () => V3State.variants(state);
   const chosenShare = () => state.mode === 'post' ? 0 : numeric(state.details.pension?.pkShare ?? 0);
+
+  /* ---------------- Beratungsdaten (nicht Teil der Rechnung) ----------------
+     Alles, was nur für das Beratungsgespräch nützlich ist – Name, Gesprächsdatum, Notizen.
+     Diese Angaben fliessen **nicht** in den Rechenkern ein; sie liegen in einem eigenen
+     Speicherschlüssel, damit die historischen Einstiege V2/V3 den Plan unverändert lesen und
+     schreiben können. Jeder Datenstand (Backup) nimmt sie mit. */
+  const adviceKey = 'retirement-v4-advice';
+  const emptyAdvice = () => ({name:'', meetingOn:'', notes:''});
+  function readAdvice() {
+    try {
+      const raw = JSON.parse(localStorage.getItem(adviceKey) ?? 'null');
+      const data = raw?.advice ?? raw ?? {};
+      return {
+        name:String(data.name ?? '').slice(0, 120),
+        meetingOn:String(data.meetingOn ?? '').slice(0, 10),
+        notes:String(data.notes ?? '').slice(0, 2000)
+      };
+    } catch (error) { return emptyAdvice(); }
+  }
+  function writeAdvice() {
+    try {
+      /* Mit Generation gestempelt: ändert sich der Aufbau, kann später migriert werden. */
+      localStorage.setItem(adviceKey, JSON.stringify({storageVersion:V3State.STORAGE_VERSION, savedAt:new Date().toISOString(), advice}));
+      globalThis.__v4AdviceSaved = advice;
+    } catch (error) { globalThis.__v4AdviceError = error?.message ?? String(error); }
+  }
+  let advice = readAdvice();
+  const adviceDone = () => !!(advice.name || advice.meetingOn || advice.notes);
+  /* Anzeige des Gesprächsdatums in Schweizer Schreibweise (gespeichert wird ISO). */
+  const swissDate = value => {
+    const match = String(value ?? '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? `${match[3]}.${match[2]}.${match[1]}` : '';
+  };
 
   /* Speicherung läuft im Hintergrund (Autosave). Kein Speicher-Text und kein
      «Jetzt speichern»-Knopf mehr im UI – «Mein Plan» endet nach den sekundären
@@ -73,7 +108,9 @@
   const canDefer = typeof setTimeout === 'function';
   function persist() {
     try {
-      if (storageBlocked || globalThis.__v4SuspendSave) return;
+      /* Solange der Startscreen steht, wird nichts geschrieben: der Nutzer ist noch nicht in der
+         App, und «landing» ist keine gültige Planposition. */
+      if (landingVisible || storageBlocked || globalThis.__v4SuspendSave) return;
       state.position = route;
       state = normalizeP3(state);
       V3State.validate(state);
@@ -159,7 +196,7 @@
   /* Die Oberfläche beschriftet jedes Planjahr mit `row.age + 1` (die erste Zeile der Projektion
      heisst «Alter 66»). Die Reichweite des Rechenkerns (`capitalExhaustionAge`) ist der rohe
      Zeilenindex des Jahres, in dem das Vermögen aufgebraucht ist – sie wird hier mit derselben
-     Konvention ausgegeben. So zeigen Statusbox, Varianten, Strategien, Vergleich, Bericht und
+     Konvention ausgegeben. So zeigen Statusbox, Varianten, Strategien, Vergleich, Dossier und
      Grafik dieselbe Zahl aus derselben Quelle. */
   function exhaustionAge(result) { return result?.capitalExhaustionAge ? numeric(result.capitalExhaustionAge) + 1 : null; }
   function reachAge(result, targetAge) { const age = exhaustionAge(result); return age ? `Alter ${age}` : `Alter ${targetAge}+`; }
@@ -268,20 +305,21 @@
     return `<button type="button" class="v4-next" data-v4-next="improve"><span class="v4-next-icon" aria-hidden="true">${Icons.icon(icon, {size:20})}</span><span>${copy}</span>${Icons.icon('chevronRight', {size:18})}</button>`;
   }
 
-  /* ---------------- SEKUNDÄRE AKTIONEN (maximal zwei kompakte Zeilen) ----------------
-     «Mein Plan» ist kein Inhaltsverzeichnis: der Jahresverlauf und die Varianten stehen
-     hier nur als kompakte Einstiege, ihre Inhalte leben auf eigenen Screens. */
+  /* ---------------- SEKUNDÄRE AKTIONEN (drei kompakte Zeilen) ----------------
+     «Mein Plan» ist kein Inhaltsverzeichnis: der Jahresverlauf, die Varianten und die
+     Beratungsvorbereitung stehen hier nur als kompakte Einstiege, ihre Inhalte leben auf
+     eigenen Screens. */
   function secondaryRows() {
     const count = variantShares().length;
     const row = (label, page) => `<li><button type="button" class="v4-row" data-v4-next="${page}"><span>${label}</span>${Icons.icon('chevronRight', {size:18})}</button></li>`;
     /* Nach der Pensionierung gibt es keinen Kapitalbezug mehr (TC-02.01: «Post-Ansichten ohne
        Bezugsregler») – dann entfällt auch der Varianteneinstieg, statt auf einen toten Screen zu führen. */
     const variants = state.mode === 'pre' ? row(`Meine Varianten · ${count} gespeichert`, 'variants') : '';
-    /* Dritter Einstieg: das gedruckte Beratungsdossier. Bewusste Abweichung von der früheren
-       Zwei-Zeilen-Regel (dokumentiert in PRODUCT_RULES §24.3): Der Dossier-Weg ist kein Inhalt,
-       sondern die Druck-/PDF-Ausgabe des Plans und gehört deshalb sichtbar auf «Mein Plan». */
-    const dossier = row('Dossier · Druckvorlage für die Beratung', 'dossier');
-    return `<ul class="v4-rows">${row('Jahresverlauf', 'years')}${variants}${dossier}</ul>`;
+    /* Dritter Einstieg: die Beratungsvorbereitung. In ihr sind der frühere Dossier-Einstieg und
+       der Bericht «Angaben für die Beratung» aus dem Menü aufgegangen (bewusste Abweichung von
+       der Zwei-Zeilen-Regel, dokumentiert in PRODUCT_RULES §24.3 und §27). */
+    const adviceEntry = row('Beratung vorbereiten', 'advice');
+    return `<ul class="v4-rows">${row('Jahresverlauf', 'years')}${variants}${adviceEntry}</ul>`;
   }
   function dataKnown() {
     const pre = state.mode === 'pre', a = state.details.assets ?? null;
@@ -438,10 +476,11 @@
      und führt immer auf «Mein Plan» (Apply-and-return-Regel, siehe
      docs/information-architecture-v4.md §8). */
   let detailParent = 'plan';
-  const parentLabel = parent => parent === 'basics' ? 'Angaben & Grundlagen' : parent === 'improve' ? 'Plan präzisieren' : 'Mein Plan';
+  const parentLabel = parent => parent === 'basics' ? 'Angaben & Grundlagen' : parent === 'improve' ? 'Plan präzisieren' : parent === 'advice' ? 'Beratung vorbereiten' : 'Mein Plan';
   function goBack() {
     if (detailParent === 'basics') renderBasics();
     else if (detailParent === 'improve') renderImprove();
+    else if (detailParent === 'advice') renderAdvice();
     else returnToPlan();
   }
   /* `{detail:true}` ergänzt unter der Titelzeile den Rückweg mit dem Namen der übergeordneten
@@ -475,6 +514,54 @@
     ].filter(Boolean).join('');
     return `<p>Für deinen ersten Check rechnen wir mit sinnvollen Annahmen:</p><ul>${rows}</ul><p>Alles davon kannst du danach Schritt für Schritt durch deine eigenen Angaben ersetzen.</p>`;
   }
+  /* ---------------- Startscreen (Landing) ----------------
+     Bei jedem App- bzw. Browser-Aufruf steht zuerst dieser Startscreen: das verbindliche
+     Hintergrundbild als Vollbild (Hero-Modus `landing`), darauf Logo, Slogan, die Aussage
+     «Dein Plan für den Ruhestand.», ein Satz Erklärung und genau ein Weg in die App.
+     Innerhalb einer laufenden Sitzung gibt es keinen Weg zurück: der Screen wird nur beim
+     Start gerendert, hat kein Menü und keinen Rückweg. */
+  function setMasthead(visible) {
+    const masthead = document.querySelector('.masthead');
+    if (masthead) masthead.hidden = !visible;
+  }
+  /* Der Startscreen ist genau ein Bildschirm: solange er steht, ist die Seite gesperrt
+     (`html.v4-landing-open`/`body.v4-landing-open`), damit er nie scrollt und rechts kein
+     heller Rand entsteht – der Weg in die App ist die eine Aktion. */
+  function setLandingLock(active) {
+    document.documentElement.classList.toggle('v4-landing-open', active);
+    document.body.classList.toggle('v4-landing-open', active);
+  }
+  function renderLanding() {
+    route = 'plan'; detailParent = 'plan';
+    setMenuAvailable(false);
+    /* Erst nach `setMenuAvailable` setzen: das holt die Kopfzeile zurück und beendet den
+       Startscreen-Zustand für alle App-Screens. */
+    landingVisible = true;
+    /* Die Kopfzeile der App tritt zurück: das Logo steht beim Startscreen im Bild. */
+    setMasthead(false);
+    setLandingLock(true);
+    window.scrollTo(0, 0);
+    const facts = [['chartBar', 'Deine Zahlen'], ['circleCheck', 'Klare Antworten'], ['trendingUp', 'Mehr Möglichkeiten']];
+    app.innerHTML = `<section class="v4-landing" aria-labelledby="v4LandingTitle">`
+      + `<div class="v4-landing-body">`
+      + `<p class="v4-landing-brand"><span class="brand-leaf" aria-hidden="true"></span><span class="v4-landing-name">Ruhestands-Check</span></p>`
+      + `<p class="v4-landing-slogan">Sicher planen. Investiert bleiben.</p>`
+      + `<h1 class="v4-landing-title" id="v4LandingTitle">Dein Plan für den Ruhestand.</h1>`
+      + `<p class="v4-landing-sub">Finde heraus, was möglich ist – mit deinen eigenen Zahlen.</p>`
+      + `<button type="button" class="v4-landing-cta" data-landing-start>${Icons.icon('arrowUpRight', {size:20})}<span>Jetzt starten</span></button>`
+      + `<ul class="v4-landing-facts">${facts.map(([icon, label]) => `<li>${Icons.icon(icon, {size:16})}<span>${esc(label)}</span></li>`).join('')}</ul>`
+      + `</div></section>`;
+    globalThis.RetirementHero?.sync?.();
+  }
+  /* «Jetzt starten»: mit vorhandenem Plan direkt auf den gespeicherten Screen (dieselbe
+     Ladefunktion wie beim Start der App, inklusive Migration und Meldungen), ohne Plan in den
+     Schnellstart mit seinen fünf Angaben. */
+  function startApp() {
+    setMasthead(true);
+    setStartDraft();
+    if (!load()) renderStart();
+    window.scrollTo(0, 0);
+  }
   function renderStart() {
     state = normalizeP3(state);
     route = 'plan'; detailParent = 'plan'; markDirty();
@@ -487,7 +574,7 @@
       // Kompaktheitsregel: genau zwei Zeilen je Karte (Label + Feld), Erklärung im Feld.
       const info = meta.info ? modalInfo({title:meta.info.title, body:meta.info.body, aria:meta.info.title + ' erklären'}) : '';
       return `<section class="v4-start-card"><div class="v4-start-head"><span class="v4-detail-icon" aria-hidden="true">${Icons.icon(meta.icon, {size:16})}</span><label for="start-${field.key}">${meta.label}</label>${info}</div><div class="v4-entry"><input id="start-${field.key}" name="${field.key}" type="text" inputmode="${amount ? 'decimal' : 'numeric'}" autocomplete="off" placeholder="${esc(meta.short ?? '')}"${amount ? ' data-amount' : ''} value="${esc(formatAmount(draft[field.key] ?? ''))}"><span class="v4-entry-unit">${meta.unit}</span></div></section>`;
-    }).join('')}</div><p class="v4-assumptions">Wir rechnen mit sinnvollen Annahmen, bis du sie ersetzt. ${modalInfo({title:'Annahmen für den ersten Check', body:assumptionsBody(), aria:'Verwendete Annahmen anzeigen'})}</p><p id="v4Error" class="v3-error" role="alert"></p><button class="primary v4-cta" type="submit">Meinen ersten Plan anzeigen <span aria-hidden="true">→</span></button><button type="button" class="v4-chip v4-report-open" data-v4-action="report-import">Gespeicherte Angaben einlesen</button></form>`;
+    }).join('')}</div><p class="v4-assumptions">Wir rechnen mit sinnvollen Annahmen, bis du sie ersetzt. ${modalInfo({title:'Annahmen für den ersten Check', body:assumptionsBody(), aria:'Verwendete Annahmen anzeigen'})}</p><p id="v4Error" class="v3-error" role="alert"></p><button class="primary v4-cta" type="submit">Meinen ersten Plan anzeigen <span aria-hidden="true">→</span></button><button type="button" class="v4-chip v4-report-open" data-backup-import>Gespeicherte Daten einlesen ↑</button></form>`;
     window.CantonPicker?.enhanceAll(app);
     app.querySelectorAll('[data-situation]').forEach(button => button.addEventListener('click', () => {
       assignForm(); state = V3State.changeMode(state, button.dataset.situation); renderStart();
@@ -668,6 +755,115 @@
     window.scrollTo(0, 0);
     const groups = basicsRows().map(group => `<section class="v4-hebel v4-basics"><h2 class="v4-basics-title">${group.title}</h2><ul class="v4-hebel-list">${group.rows.map(entry => hebelRow(entry, 'basics')).join('')}</ul></section>`).join('');
     app.innerHTML = `${title('Angaben & Grundlagen.', 'Deine Angaben.', detailHead)}<p class="v4-lead">Alles, was in deinen Plan einfliesst – jede Zeile öffnet den passenden Editor.</p>${groups}`;
+  }
+
+  /* ---------------- Beratung vorbereiten ----------------
+     Ein Screen, drei Aufgaben: Angaben vervollständigen, Dossier, Daten sichern. Er rechnet
+     nichts und erfindet keine Zahlen: Fortschritt und Zeilen entstehen aus dem bestehenden
+     Zustand (`basicsRows`, `captured`, `precisionItems`), die Kennzahlen aus `evaluated`.
+     Die Zeilen öffnen **dieselben Editoren** wie «Angaben & Grundlagen» – vorhandene Plandaten
+     werden also übernommen und nicht nochmals erfasst. */
+  function adviceSub() {
+    return [advice.name ? 'Name erfasst' : 'Name fehlt', advice.meetingOn ? `Gespräch ${swissDate(advice.meetingOn)}` : 'Datum fehlt', advice.notes ? 'Notizen erfasst' : 'Notizen fehlen'].join(' · ');
+  }
+  function adviceRows() {
+    const flat = basicsRows().flatMap(group => group.rows);
+    const pick = pages => flat.filter(row => pages.includes(row.page));
+    const a = state.details.assets ?? {};
+    const propertyDone = entered(a.propertyValue) || entered(a.mortgage);
+    const property = {
+      page:'assets', icon:'buildingBank', label:'Immobilien & Hypotheken',
+      value: entered(a.propertyValue) ? money(numeric(a.propertyValue)) : '',
+      sub: propertyDone
+        ? [entered(a.propertyValue) ? `Immobilienwert ${money(numeric(a.propertyValue))}` : null, entered(a.mortgage) ? `Hypothek ${money(numeric(a.mortgage))}` : null].filter(Boolean).join(' · ')
+        : 'Noch ergänzen',
+      badge: propertyDone ? 'erfasst' : 'offen', tone: propertyDone ? 'done' : 'open'
+    };
+    const person = {
+      page:'advice-person', icon:'user', label:'Name & Notizen',
+      value: advice.name ?? '',
+      sub: adviceSub(), badge: adviceDone() ? 'erfasst' : 'offen', tone: adviceDone() ? 'done' : 'open'
+    };
+    return [
+      {title:'Für das Gespräch', rows:[person]},
+      {title:'Persönliche Angaben', rows:pick(['personal'])},
+      {title:'Vorsorge & Einkommen', rows:pick(['ahv','pension','pension3a','extra'])},
+      {title:'Bedarf, Vermögen & Immobilien', rows:[...pick(['need','assets']), property]}
+    ].filter(group => group.rows.length);
+  }
+  /* Fortschritt: «vorhandene Daten» heisst erfasste Angaben – geschätzte zählen nicht als
+     erfasst, weil sie im Gespräch noch ersetzt werden. Gezählt wird genau das, was die Zeilen
+     darüber zeigen (eine Quelle für Anzeige und Zahl). */
+  function adviceProgress() {
+    const rows = adviceRows().flatMap(group => group.rows);
+    const open = rows.filter(row => row.tone !== 'done');
+    return {total:rows.length, done:rows.length - open.length, open};
+  }
+  function adviceProgressCard(item) {
+    const {total, done, open} = adviceProgress();
+    const percentDone = total ? Math.round(done / total * 100) : 0;
+    const profile = globalThis.RiskProfiles?.getRiskProfile(state.riskProfile);
+    const facts = [
+      item ? `Startkapital ${money(numeric(item.result.availableCapital))}` : null,
+      item ? `Reicht bis ${reachAge(item.result, item.plan.retirement.targetAge)}` : null,
+      profile ? `Strategie ${profile.label}` : null,
+      state.mode === 'pre' ? `Varianten ${variantShares().length}` : null,
+      advice.name ? `Für ${advice.name}` : null
+    ].filter(Boolean);
+    const openText = open.length
+      ? `Noch offen: ${open.map(row => row.label).join(', ')}.`
+      : 'Alle Angaben erfasst – dein Dossier ist vollständig.';
+    return `<section class="v4-advice-stand" aria-label="Dein Stand">`
+      + `<div class="v4-advice-head"><p class="v4-advice-kicker">Dein Stand</p><p class="v4-advice-count"><strong>${done} von ${total}</strong> Angaben erfasst</p></div>`
+      + `<div class="v4-advice-bar" role="img" aria-label="${percentDone} % der Angaben erfasst"><span style="width:${percentDone}%"></span></div>`
+      + `<p class="v4-advice-open">${esc(openText)}</p>`
+      + (facts.length ? `<ul class="v4-advice-facts">${facts.map(fact => `<li>${esc(fact)}</li>`).join('')}</ul>` : '')
+      + `</section>`;
+  }
+  function renderAdvice() {
+    closeMenu(); route = 'advice'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
+    window.scrollTo(0, 0);
+    const item = evaluated(previewShare ?? chosenShare());
+    /* Die Gruppen sind reine Zwischentitel innerhalb des einen Hebels – keine verschachtelten
+       Karten, damit Fortschritt, Angaben, Dossier und Datenstand eine ruhige Reihenfolge bilden. */
+    const groups = adviceRows().map(group => `<p class="v4-basics-title">${group.title}</p><ul class="v4-hebel-list">${group.rows.map(entry => hebelRow(entry, 'advice')).join('')}</ul>`).join('');
+    const dossierCard = `<button type="button" class="v4-next" data-v4-next="dossier"><span class="v4-next-icon" aria-hidden="true">${Icons.icon('listDetails', {size:20})}</span><span><strong>Dossier ansehen / erstellen</strong><small>Die Druckvorlage für das Gespräch – mit deinen Angaben, Kennzahlen und Annahmen.</small></span>${Icons.icon('chevronRight', {size:18})}</button>`;
+    /* Daten sichern: die beiden beauftragten Wege als Knöpfe, das Kopieren als dezente Zeile
+       darunter (Handy → PC ohne Datei). Das Dossier (PDF) ist bewusst etwas anderes als dieser
+       Datenstand und wird hier auch so benannt. */
+    const backup = `<div class="v4-backup-actions"><button type="button" class="primary v4-block-action" data-backup-save>Plan &amp; Beratungsdaten speichern ↓</button>`
+      + `<button type="button" class="v4-chip" data-backup-import>Gespeicherte Daten einlesen ↑</button>`
+      + `<button type="button" class="v4-quiet-link" data-backup-copy>Datenstand in die Zwischenablage kopieren</button></div>`
+      + `<p class="v4-info-source">Der Datenstand enthält Plan, Angaben, Varianten, Anlagestrategie und Annahmen sowie die Beratungsdaten – ohne Konto und ohne Cloud. Das Dossier ist die lesbare Druckvorlage und wird als PDF gespeichert.</p>`;
+    app.innerHTML = `${title('Beratung vorbereiten.', 'Dossier & Datenstand', detailHead)}<p class="v4-lead">Alles für dein Beratungsgespräch.</p>`
+      + adviceProgressCard(item)
+      + `<section class="v4-hebel v4-basics">${hebelHead(1, 'Angaben vervollständigen', 'Deine Plandaten werden übernommen – ergänze nur, was noch fehlt.')}${groups}</section>`
+      + `<section class="v4-hebel">${hebelHead(2, 'Dein Dossier', 'Die Druckvorlage für die Beratung – jederzeit neu erstellbar.')}${dossierCard}</section>`
+      + `<section class="v4-hebel v4-advice-backup">${hebelHead(3, 'Daten sichern', 'Nimm deinen Stand mit – auf ein anderes Gerät oder als Sicherung.')}${backup}</section>`;
+  }
+  /* Beratungsangaben (Name, Gesprächsdatum, Notizen): eigener, kleiner Editor. Diese Angaben
+     sind **nicht** planungsrelevant, es wird nichts neu gerechnet – «Übernehmen» kehrt deshalb
+     auf «Beratung vorbereiten» zurück (dokumentierte Ausnahme der Apply-and-return-Regel). */
+  function renderAdvicePerson() {
+    closeMenu(); route = 'advice-person'; detailParent = 'advice'; markDirty(); setMenuAvailable(true);
+    window.scrollTo(0, 0);
+    const form = `<form id="v4AdviceForm" class="v4-form"><div class="v4-form-table">`
+      + `<label for="adviceName">Name</label><div class="v4-form-value"><input id="adviceName" name="name" type="text" autocomplete="name" maxlength="120" value="${esc(advice.name)}"></div>`
+      + `<label for="adviceMeeting">Gespräch am</label><div class="v4-form-value"><input id="adviceMeeting" name="meetingOn" type="date" value="${esc(advice.meetingOn)}"><span class="v4-form-unit">Datum</span></div>`
+      + `<label for="adviceNotes">Notizen</label><div class="v4-form-value"><textarea id="adviceNotes" name="notes" rows="6" maxlength="2000" placeholder="Fragen, Themen, Abmachungen …">${esc(advice.notes)}</textarea></div>`
+      + `</div><p class="v4-info-source">Diese Angaben erscheinen im Dossier und gehören zum Datenstand. Sie fliessen nicht in die Berechnung ein.</p>`
+      + `<p id="v4Error" class="v3-error" role="alert"></p><button type="submit" class="primary v4-form-submit">Übernehmen</button></form>`;
+    app.innerHTML = `${title('Beratungsangaben.', 'Name, Datum & Notizen', detailHead)}${form}`;
+    document.getElementById('v4AdviceForm').addEventListener('submit', event => {
+      event.preventDefault();
+      advice = {
+        name:String(document.getElementById('adviceName')?.value ?? '').trim().slice(0, 120),
+        meetingOn:String(document.getElementById('adviceMeeting')?.value ?? '').trim().slice(0, 10),
+        notes:String(document.getElementById('adviceNotes')?.value ?? '').trim().slice(0, 2000)
+      };
+      writeAdvice();
+      renderAdvice();
+    });
   }
   /* Hebel 2: die drei Strategien sind echte Vorschau-Szenarien. Ein Tap rechnet die
      vollständige Ruhestandsprojektion mit diesem Profil neu (gemeinsamer Rechenkern) und
@@ -1296,8 +1492,10 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       + `<div class="v4-cmp-canvas" id="v4CmpCanvas"></div>`
       + `<p class="v4-cmp-hint">${Icons.icon('infoCircle', {size:15})} Wichtig: Wenn das freie Vermögen aufgebraucht ist, laufen AHV und PK-Rente weiter.</p></section>`;
     /* Klar als Beratungs-CTA erkennbar (nicht als Informations-Accordion): mintfarbene Fläche,
-       grüner Rahmen, dunkelgrüner Titel und rechts «Individuell besprechen →» statt Chevron. */
-    const advice = `<button type="button" class="v4-cmp-cta-row" data-v4-action="advisor"><span class="v4-cmp-cta-icon" aria-hidden="true">${Icons.icon('arrowUpRight', {size:18})}</span><span class="v4-cmp-cta-title">Und deine Anlagestrategie?</span><span class="v4-cmp-cta-line">Passt deine Strategie zu Rente, Bedarf und Anlagehorizont?</span><span class="v4-cmp-cta-action">Individuell besprechen <span aria-hidden="true">→</span></span></button>`;
+       grüner Rahmen, dunkelgrüner Titel und rechts «Individuell besprechen →» statt Chevron.
+       Der Weg führt in die Beratungsvorbereitung (Angaben, Dossier, Datenstand) – den früheren
+       Bericht «Angaben für die Beratung» gibt es nicht mehr. */
+    const advice = `<button type="button" class="v4-cmp-cta-row" data-v4-next="advice"><span class="v4-cmp-cta-icon" aria-hidden="true">${Icons.icon('arrowUpRight', {size:18})}</span><span class="v4-cmp-cta-title">Und deine Anlagestrategie?</span><span class="v4-cmp-cta-line">Passt deine Strategie zu Rente, Bedarf und Anlagehorizont?</span><span class="v4-cmp-cta-action">Individuell besprechen <span aria-hidden="true">→</span></span></button>`;
     const basisBlock = `<details class="v4-cmp-basis"><summary><span class="v4-cmp-basis-head">${Icons.icon('adjustments', {size:16})} So haben wir gerechnet</span><span class="v4-cmp-basis-line">${basis.short.map(esc).join(' · ')}</span>${Icons.icon('chevronDown', {size:18})}</summary><div class="v4-cmp-basis-body">${infoRows(basis.rows)}<p class="v4-info-source">Beide Varianten werden mit denselben Angaben und derselben Anlagestrategie gerechnet; nur der PK-Kapitalanteil unterscheidet sich. Der Vergleich verändert weder deinen Plan noch deine Töpfe.</p></div></details>`;
     app.innerHTML = `${title('Rente oder Kapital?', 'Zwei Varianten im Vergleich.', detailHead)}<div class="v4-cmp"><div class="v4-cmp-cards-wrap">${cards}<p class="v4-cmp-summary"><span class="v4-cmp-summary-icon" aria-hidden="true">${Icons.icon('arrowsExchange', {size:18})}</span><span>${summary.map(esc).join('<br>')}</span></p></div>${chartCard}${details}${advice}${basisBlock}</div>`;
     const canvas = document.getElementById('v4CmpCanvas');
@@ -1334,13 +1532,14 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
   }
   function closeModal() { const dialog = document.getElementById('v4Modal'); if (!dialog) return; if (typeof dialog.close === 'function') dialog.close(); else dialog.removeAttribute('open'); }
   function closeMenu() { const menu = document.getElementById('v4Menu'), button = document.querySelector('.menu-button'); if (menu) menu.hidden = true; if (button) button.setAttribute('aria-expanded', 'false'); }
-  /* Menü nur zeigen, wenn es einen Plan gibt (im Schnellstart ausgeblendet). */
+  /* Menü nur zeigen, wenn es einen Plan gibt (im Schnellstart ausgeblendet). Jeder App-Screen
+     holt zugleich die Kopfzeile zurück: der Startscreen versteckt sie (sein Logo steht im Bild). */
   function setMenuAvailable(available) {
     const button = document.querySelector('.menu-button');
     if (button) button.hidden = !available;
-    /* «Meine Varianten» ist an den Kapitalbezug gebunden und erscheint nur vor der Pensionierung. */
-    const variants = document.querySelector('#v4Menu [data-menu-page="variants"]');
-    if (variants) variants.hidden = state.mode !== 'pre';
+    setMasthead(true);
+    setLandingLock(false);
+    landingVisible = false;
     /* Sichtbare App-Version im Pilotbereich: Tester können ihre Version nennen. */
     const version = document.getElementById('v4Version');
     if (version && !version.textContent.trim()) version.textContent = `App-Version ${globalThis.V4Version?.label?.() ?? 'unbekannt'}`;
@@ -1376,6 +1575,7 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     });
     return {
       state, item, variantItems, money, compactMoney, percent,
+      advice:{...advice},
       incomeSources:Calculator.incomeSourcesAtStart(item.plan),
       capitalParts,
       freeCapital:freeRest > 0.5 ? freeRest : null,
@@ -1391,7 +1591,8 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     };
   }
   function renderDossier() {
-    closeMenu(); route = 'dossier'; detailParent = 'plan'; markDirty(); setMenuAvailable(true);
+    /* Das Dossier wird aus der Beratungsvorbereitung geöffnet – dorthin führt auch «Zurück». */
+    closeMenu(); route = 'dossier'; detailParent = 'advice'; markDirty(); setMenuAvailable(true);
     window.scrollTo(0, 0);
     const item = evaluated(previewShare ?? chosenShare());
     if (!item) { returnToPlan(); return; }
@@ -1400,246 +1601,131 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     app.innerHTML = `${title('Dossier.', 'Dein Ruhestandsplan für die Beratung', detailHead)}<div class="v4-dossier-toolbar"><button type="button" class="primary" data-dossier-print>Drucken / PDF erstellen</button></div>${dossier.render(dossier.build(dossierContext(item)))}`;
   }
 
-  /* ---------------- Pilot: Angaben für die Beratung, Plan zurücksetzen ----------------
-     Zwei Werkzeuge unten im Menü. «Angaben für die Beratung» bereitet den Plan als Klartext
-     auf, den der Nutzer kopieren oder als Datei speichern und selbst verschicken kann –
-     nichts wird automatisch gesendet, und es ist sichtbar, was drinsteht. */
-  const pad = value => String(value ?? '').padEnd(0, ' ');
-  const reportLine = (label, value, note = '') => `${label}: ${value}${note ? `   ${note}` : ''}`;
-  /* Klartext-Bericht aus demselben Zustand und Rechenkern wie die Oberfläche. */
-  function advisorReport(item = evaluated(previewShare ?? chosenShare())) {
-    const when = new Date();
-    const stamp = `${String(when.getDate()).padStart(2, '0')}.${String(when.getMonth() + 1).padStart(2, '0')}.${when.getFullYear()}, ${String(when.getHours()).padStart(2, '0')}:${String(when.getMinutes()).padStart(2, '0')}`;
-    const out = [];
-    const h = text => { out.push('', text, '─'.repeat(Math.max(24, text.length))); };
-    const pre = state.mode === 'pre';
-    const known = dataKnown(), amounts = captured();
-    const ahv = Estimates ? Estimates.ahvOf(state) : {origin:'estimated', monthly:0};
-    const profile = globalThis.RiskProfiles?.getRiskProfile(state.riskProfile);
-    const plan = state.details.assumptions ?? {};
-    const a = state.details.assets ?? {}, p3 = state.details.pension3a ?? {}, pension = state.details.pension ?? {};
-    const inAge = value => entered(value) ? `${numeric(value)} Jahre` : 'nicht erfasst';
-    const amount = value => entered(value) ? money(numeric(value)) : 'noch nicht erfasst';
-
-    out.push('Ruhestands-Check – Angaben für die Beratung');
-    out.push(`Erstellt: ${stamp}`);
-    out.push('Alle Beträge in heutiger Kaufkraft (real). Modellrechnung, keine Steuer- oder Anlageberatung.');
-
-    h('PERSON UND ZEITRAUM');
-    out.push(reportLine('Alter heute', inAge(state.values.age)));
-    out.push(reportLine('Pensionierung mit', state.values.retirement !== undefined ? `${numeric(state.values.retirement)}` : (pre ? 'nicht erfasst' : 'bereits pensioniert')));
-    out.push(reportLine('Planungshorizont bis', state.targetAge !== undefined && state.targetAge !== null ? `${numeric(state.targetAge)}` : 'automatisch'));
-    out.push(reportLine('Wohnkanton', State.canton(state) || 'nicht erfasst'));
-    out.push(reportLine('Situation', pre ? 'vor der Pensionierung' : 'bereits pensioniert'));
-
-    if (item) {
-      const sources = Calculator.incomeSourcesAtStart(item.plan).filter(source => source.annualIncome > 0.5);
-      h('EINKOMMEN IM ERSTEN PLANJAHR');
-      if (!sources.length) out.push(reportLine('Einnahmen', 'keine erfasst'));
-      sources.forEach(source => out.push(reportLine(source.name, `${money(source.annualIncome / 12)} / Monat`, source.id === 'ahv' && ahv.origin === 'estimated' ? '(geschätzte AHV-Pauschale)' : '')));
-      out.push(reportLine('Einkommen brutto', `${money(numeric(item.result.incomeGross) / 12)} / Monat`));
-      out.push(reportLine('Geschätzte Steuern', `− ${money(numeric(item.result.incomeTax) / 12)} / Monat`, `(kantonales Modell ${State.canton(state) || '–'})`));
-      out.push(reportLine('Einkommen netto', `${money(Math.round(numeric(item.result.monthlyIncomeNet)))} / Monat`));
-
-      const needMonthly = Math.round(numeric(item.result.monthlyNeed)), incomeMonthly = Math.round(numeric(item.result.monthlyIncomeNet));
-      const fromWealth = Math.max(0, needMonthly - incomeMonthly);
-      h('BEDARF UND ENTNAHME');
-      out.push(reportLine('Bedarf netto', `${money(needMonthly)} / Monat`));
-      out.push(reportLine('Aus Vermögen', `${money(fromWealth)} / Monat`, fromWealth > 0 ? '(= Bedarf − Einkommen netto)' : '(Einkommen deckt den Bedarf)'));
-
-      h('VERMÖGEN ZUM PENSIONIERUNGSZEITPUNKT');
-      out.push(reportLine('PK-Guthaben heute', amount(pension.pk)));
-      out.push(reportLine('PK-Beiträge pro Jahr', amount(pension.pkContrib)));
-      out.push(reportLine('PK-Kapitalbezug', `${chosenShare()} %`, `(Varianten ${variantShares().join(' / ')} %)`));
-      out.push(reportLine('PK-Kapital netto', money(Calculator.calculateAvailableCapital(item.plan, chosenShare()).netPkCapitalWithdrawal)));
-      out.push(reportLine('Säule 3a Guthaben', amounts.p3 !== null ? money(amounts.p3) : 'noch nicht erfasst'));
-      out.push(reportLine('Säule 3a Beiträge pro Jahr', amounts.p3Contrib ? money(amounts.p3Contrib) : 'keine erfasst'));
-      out.push(reportLine('Bank / liquide Mittel', amount(a.cash)));
-      out.push(reportLine('Wertschriften', amount(a.securities)));
-      out.push(reportLine('Weitere Positionen', amount(a.otherAssets)));
-      /* Das freie Kapital aus dem Schnellstart steckt nicht in den Einzelpositionen – ohne
-         diese Zeile klaffte zwischen den Positionen und dem Startkapital eine Lücke. */
-      if (amounts.free > 0) out.push(reportLine('Frei verfügbares Kapital', money(amounts.free), state.details.assets ? '(Summe der Positionen)' : '(Angabe aus dem Schnellstart, nicht weiter aufgeteilt)'));
-      out.push(reportLine('Immobilienwert', amount(a.propertyValue), '(gebundenes Vermögen)'));
-      out.push(reportLine('Hypotheken', amount(a.mortgage)));
-      if (amounts.property > 0) out.push(reportLine('Immobilien netto', money(amounts.property)));
-      out.push(reportLine('Startkapital', money(numeric(item.result.availableCapital))));
-
-      const allocation = roundedParts(item.result.bucketAllocation ?? [], item.result.availableCapital);
-      h('AUFTEILUNG AUF DIE TÖPFE (Modell)');
-      ['Geldmarkt','Obligationen','Wertschöpfung'].forEach((name, position) => out.push(reportLine(name, money(allocation[position] ?? 0))));
-
-      h('ERGEBNIS');
-      out.push(reportLine('Reicht bis', reachAge(item.result, item.plan.retirement.targetAge)));
-      if (!exhaustionAge(item.result)) out.push(reportLine('Restvermögen am Planungshorizont', money(horizonValue(item).value)));
-    }
-
-    h('ANNAHMEN');
-    out.push(reportLine('Anlagestrategie', profile ? `${profile.label} · ${percent(numeric(profile.expectedRealReturn) * 100)} % pro Jahr` : 'nicht erfasst', state.strategyChosen === true ? '(vom Nutzer gewählt)' : '(Modellannahme)'));
-    out.push(reportLine('Inflation', `${percent(numeric(plan.inflation ?? State.defaults.inflation))} % pro Jahr`));
-    out.push(reportLine('PK-Verzinsung bis Pensionierung', `${percent(numeric(plan.pkInterest ?? State.defaults.pkInterest))} %`));
-    out.push(reportLine('3a-Rendite bis Pensionierung', `${percent(numeric(plan.p3Return ?? State.defaults.p3Return))} %`));
-    out.push(reportLine('Wertschriftenrendite bis Pensionierung', `${percent(assumedSecuritiesRate())} %`, '(interner Produktsatz)'));
-
-    if (variantShares().length > 1) {
-      h('VARIANTEN (PK-Kapitalbezug)');
-      variantShares().forEach(share => out.push(reportLine(`${share} % Kapitalbezug`, share === chosenShare() ? 'aktueller Plan' : 'gespeicherte Variante')));
-    }
-
-    out.push('', 'Erstellt mit dem Ruhestands-Check. Die Werte stammen aus dem gemeinsamen Rechenkern und den oben genannten Annahmen.', '');
-    return out.join('\n');
-  }
-  function openAdvisorModal() {
-    const body = `<p class="v3-modal-lead">Diese Zusammenfassung ist für dein Beratungsgespräch gedacht. Kopiere sie oder speichere sie als Datei – sie wird <strong>nicht</strong> automatisch verschickt.</p><label class="v4-report-label" for="v4Report">Deine Angaben</label><textarea id="v4Report" class="v4-report" rows="14" readonly spellcheck="false">${esc(advisorReport())}</textarea><p class="v4-info-source">Enthalten sind Person und Zeitraum, Einkommen, Bedarf, Vermögen, das Ergebnis sowie die verwendeten Annahmen – geschätzte Werte sind als solche bezeichnet. Du kannst den Text vor dem Kopieren bearbeiten.</p><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-report-copy>Text kopieren</button><button type="button" class="v4-chip" data-report-save>Als Datei speichern</button><button type="button" class="v4-chip" data-v4-action="report-import">Wieder einlesen</button></div><p class="v4-report-state" id="v4ReportState" role="status"></p>`;
-    openModal({modalTitle:'Angaben für die Beratung', modalBody:body});
-  }
-  /* Rückweg zur Sicherung: derselbe Text lässt sich wieder einlesen – erreichbar aus dem
-     Pilotbereich **und** aus dem Schnellstart (nach «Plan zurücksetzen» gibt es kein Menü). */
-  const reportImportForm = () => `<p class="v3-modal-lead">Füge den kopierten Text oder den Inhalt deiner gespeicherten .txt-Datei ein und tippe auf «Angaben übernehmen».</p><p class="v4-info-source"><strong>Dein aktueller Plan wird dadurch ersetzt.</strong> Übernommen werden deine Eingaben – Zeitraum, Wohnkanton, Einkommen, Bedarf, PK-Kapital, Säule 3a, Vermögenspositionen, Annahmen und Anlagestrategie. Startkapital, Töpfe und Ergebnis rechnet die App neu; fehlt eine Pflichtangabe, wird nichts geändert.</p><textarea id="v4ReportImport" class="v4-report" rows="10" spellcheck="false" placeholder="Bericht hier einfügen …"></textarea><div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-report-apply>Angaben übernehmen</button></div><p class="v4-report-state" id="v4ReportImportState" role="status"></p>`;
-  function openReportImportModal() { openModal({modalTitle:'Gespeicherte Angaben einlesen', modalBody:reportImportForm()}); }
-  async function copyAdvisorReport() {
-    const field = document.getElementById('v4Report');
-    const note = document.getElementById('v4ReportState');
-    if (!field) return;
-    /* Zuerst markieren: damit funktioniert «Kopieren» auch ohne Clipboard-API (und der
-       Nutzer kann jederzeit mit Ctrl/Cmd + C nachhelfen). Danach der bequeme Weg. */
-    field.removeAttribute('readonly');
-    field.focus();
-    field.select();
-    if (note) note.textContent = 'Text ist markiert – mit Ctrl/Cmd + C kopieren.';
+  /* ---------------- Datenstand sichern und wieder einlesen ----------------
+     Der Datenstand ist die **Sicherung des ganzen Ruhestands-Checks**: Plan (Zeitraum, Kanton,
+     Einkommen, Bedarf, PK, Säule 3a, Vermögen samt Immobilien und Hypotheken), die gespeicherten
+     Varianten, die Anlagestrategie, die Annahmen und die Beratungsdaten (Name, Gesprächsdatum,
+     Notizen). Er ist bewusst **nicht** das Dossier: das Dossier ist die lesbare Druckvorlage (PDF)
+     für das Gespräch, der Datenstand ist die Datei zum Weiterarbeiten auf einem anderen Gerät –
+     ohne Benutzerkonto und ohne Cloud.
+     Beim Einlesen wird ausschliesslich über `V3State.restore` gelesen (dieselbe Prüfung und
+     Migration wie beim Start); abgeleitete Werte rechnet die App immer selbst. */
+  const backupFormat = 1;
+  const backupEnvelope = () => ({
+    app:'ruhestands-check',
+    kind:'backup',
+    format:backupFormat,
+    savedAt:new Date().toISOString(),
+    appVersion:globalThis.V4Version?.APP_VERSION ?? null,
+    plan:V3State.encode(normalizeP3(state)),
+    advice:{...advice},
+    compare:{share:comparisonState.share ?? null, view:comparisonState.view}
+  });
+  const backupText = () => JSON.stringify(backupEnvelope(), null, 2);
+  const backupFileName = () => `ruhestands-check-datenstand-${new Date().toISOString().slice(0, 10)}.json`;
+  function saveBackup() {
+    const name = backupFileName();
     try {
-      if (!navigator.clipboard?.writeText) return;
-      await navigator.clipboard.writeText(field.value);
-      if (note) note.textContent = 'Kopiert – jetzt in deine E-Mail einfügen.';
-    } catch (error) { /* Auswahl bleibt bestehen; Hinweis oben steht schon */ }
-  }
-  function saveAdvisorReport() {
-    const text = document.getElementById('v4Report')?.value ?? advisorReport();
-    const stamp = new Date().toISOString().slice(0, 10);
-    try {
-      const url = URL.createObjectURL(new Blob([text], {type:'text/plain;charset=utf-8'}));
+      const url = URL.createObjectURL(new Blob([backupText()], {type:'application/json;charset=utf-8'}));
       const link = document.createElement('a');
-      link.href = url; link.download = `ruhestands-check-angaben-${stamp}.txt`;
+      link.href = url; link.download = name;
       document.body.append(link); link.click(); link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
-      const note = document.getElementById('v4ReportState');
-      if (note) note.textContent = 'Datei gespeichert.';
-    } catch (error) { /* Download nicht möglich – der Text bleibt zum Kopieren */ }
-  }
-  /* ---------------- Bericht wieder einlesen (Rückweg zur Sicherung) ----------------
-     Der Bericht ist die einzige Sicherung, die die App selbst erzeugt («Text kopieren» / «Als
-     Datei speichern»). Er lässt sich hier wieder einlesen: gelesen werden die **erfassten
-     Eingaben** – Person und Zeitraum, Wohnkanton, Einkommensquellen, Bedarf, PK, Säule 3a,
-     Vermögenspositionen, Annahmen und Anlagestrategie. **Abgeleitete Werte** (Einkommen
-     brutto/netto, Steuern, PK-Kapital netto, Startkapital, Töpfe, Ergebnis) werden nicht
-     übernommen, sondern vom gemeinsamen Rechenkern neu berechnet – eine zweite Rechnung gibt es
-     nicht. Schlägt das Einlesen fehl, bleibt der bisherige Plan unverändert. */
-  const reportNumber = value => {
-    /* Schweizer Format: Apostroph gruppiert, Komma trennt Dezimalen – beides wird entfernt bzw.
-       umgesetzt, damit «CHF 1'271'380» als 1271380 und «4,5 %» als 4.5 gelesen wird. */
-    const cleaned = String(value ?? '').replace(/CHF|%/gi, '').replace(/[’'\u00a0\s]/g, '').replace(/−/g, '-');
-    const match = cleaned.match(/-?\d+(?:[.,]\d+)?/);
-    return match ? Number(match[0].replace(',', '.')) : null;
-  };
-  /* Liest die Zeilen «Bezeichnung: Wert» – tolerant gegenüber Leerzeilen und Zusatznotizen. */
-  function reportFields(text) {
-    const fields = new Map();
-    String(text ?? '').split(/\r?\n/).forEach(line => {
-      const match = String(line).match(/^\s*([^:]{2,40}?)\s*:\s*(.+?)\s*$/);
-      if (match) fields.set(match[1], match[2]);
-    });
-    return fields;
-  }
-  function importAdvisorReport(text) {
-    const fields = reportFields(text);
-    if (!fields.size) throw Error('Ich konnte im Text keine Angaben erkennen. Füge den Bericht vollständig ein.');
-    const used = new Set();
-    const read = label => { const raw = fields.get(label); if (raw !== undefined) used.add(label); return raw; };
-    const number = label => { const raw = read(label); return raw === undefined ? undefined : reportNumber(raw); };
-    /* Beträge: fehlende Zeile = unverändert, «noch nicht erfasst» = leer (nicht erfasst). */
-    const amount = label => { const raw = read(label); if (raw === undefined) return undefined; const value = reportNumber(raw); return value === null ? '' : value; };
-    const mode = (() => { const raw = read('Situation'); return raw === undefined ? state.mode : (/bereits pensioniert/i.test(raw) ? 'post' : 'pre'); })();
-    const age = number('Alter heute');
-    const retirement = mode === 'post' ? undefined : number('Pensionierung mit');
-    const need = number('Bedarf netto');
-    const canton = (read('Wohnkanton') ?? '').trim().toUpperCase();
-    const missing = [];
-    if (age === undefined || age === null) missing.push('Alter heute');
-    if (mode !== 'post' && (retirement === undefined || retirement === null)) missing.push('Pensionierung mit');
-    if (need === undefined || need === null) missing.push('Bedarf netto');
-    if (!/^[A-Z]{2}$/.test(canton)) missing.push('Wohnkanton');
-    if (missing.length) throw Error(`Im Text fehlen: ${missing.join(', ')}. Bitte den vollständigen Bericht einfügen.`);
-    /* Einkommensquellen: AHV und weitere Renten/Einnahmen sind Eingaben; die PK-Rente ist es nur
-       nach der Pensionierung (vorher wird sie aus dem PK-Guthaben gerechnet). Eine **geschätzte**
-       AHV-Pauschale wird nicht als Eingabe übernommen – sie bleibt eine Schätzung und wird
-       identisch neu gebildet. */
-    const ahvLine = fields.get('AHV');
-    const ahvSuggested = ahvLine !== undefined && /gesch/i.test(ahvLine);
-    const ahv = ahvLine === undefined || ahvSuggested ? undefined : reportNumber(ahvLine);
-    if (ahvLine !== undefined && !ahvSuggested) used.add('AHV');
-    const other = number('Weitere Renten'), additional = number('Weitere Einnahmen'), pkRent = number('PK-Rente');
-    const shareRaw = read('PK-Kapitalbezug');
-    const share = shareRaw === undefined ? undefined : reportNumber(shareRaw);
-    const variantMatch = String(shareRaw ?? '').match(/Varianten\s+([\d\s/]+)/);
-    const variants = variantMatch ? variantMatch[1].split('/').map(part => Number(part.trim())).filter(value => Number.isInteger(value) && value >= 0 && value <= 100) : null;
-    /* «Frei verfügbares Kapital» ist nur eine Eingabe, wenn es aus dem Schnellstart stammt;
-       sonst ist es die Summe der Positionen (abgeleitet) und wird nicht übernommen. */
-    const freeRaw = read('Frei verfügbares Kapital');
-    const free = freeRaw !== undefined && /Schnellstart/i.test(freeRaw) ? reportNumber(freeRaw) : undefined;
-    const strategyRaw = read('Anlagestrategie');
-    const strategy = strategyRaw === undefined ? undefined : Object.keys(profileLabels).find(key => new RegExp('^' + profileLabels[key], 'i').test(strategyRaw)) ?? null;
-    const assumptionDraft = {
-      inflation:number('Inflation'), pkInterest:number('PK-Verzinsung bis Pensionierung'),
-      p3Return:number('3a-Rendite bis Pensionierung'), targetAge:number('Planungshorizont bis')
-    };
-    const horizonRaw = read('Planungshorizont bis');
-    /* Aufbau über dieselben APIs wie die Editoren – keine zweite Zustandslogik. */
-    let next = State.fresh(mode);
-    next = State.apply(next, 'time', mode === 'post' ? {age} : {age, retirement});
-    next = State.apply(next, 'tax', {canton});
-    next = State.apply(next, 'income', {canton, ahv:ahv ?? 0, other:other ?? 0, additional:additional ?? 0});
-    next = State.apply(next, 'need', {need});
-    if (mode === 'post') next = State.apply(next, 'pension', {pkRent:pkRent ?? 0});
-    else next = State.apply(next, 'pension', {pk:amount('PK-Guthaben heute') ?? 0, pkContrib:amount('PK-Beiträge pro Jahr') ?? 0, pkShare:Number.isInteger(share) ? share : 50});
-    next = apply3a(next, {p3:amount('Säule 3a Guthaben'), p3Contrib:amount('Säule 3a Beiträge pro Jahr')});
-    /* Freies Kapital zuerst: es ist die Basis, aus der die Positionen aufgeteilt werden. */
-    if (free !== undefined) next = State.apply(next, 'free', {free});
-    const assetValues = {cash:amount('Bank / liquide Mittel'), securities:amount('Wertschriften'), otherAssets:amount('Weitere Positionen'), propertyValue:amount('Immobilienwert'), mortgage:amount('Hypotheken')};
-    const assetParts = [['cash', ['cash']], ['securities', ['securities']], ['otherAssets', ['otherAssets']], ['property', ['propertyValue', 'mortgage']]];
-    assetParts.forEach(([part, keys]) => {
-      const values = {};
-      keys.forEach(key => { if (assetValues[key] !== undefined) values[key] = assetValues[key] === '' ? '' : assetValues[key]; });
-      if (Object.keys(values).length) next = State.applyAsset(next, part, values, {keepOptional:true, allowEmpty:true});
-    });
-    const hasAssumptions = Object.values(assumptionDraft).some(value => value !== undefined);
-    if (hasAssumptions) {
-      const values = {...State.defaults, ...next.details.assumptions};
-      Object.entries(assumptionDraft).forEach(([key, value]) => { if (value !== undefined && value !== null) values[key] = value; });
-      if (horizonRaw !== undefined && /automatisch/i.test(horizonRaw)) values.targetAge = undefined;
-      next = State.apply(next, 'assumptions', {...values, reviewed:true});
+      notice(`Datenstand gespeichert (${name}) – Plan, Angaben, Varianten, Strategie und Beratungsdaten.`, {id:`backup-save-${Date.now()}`});
+    } catch (error) {
+      globalThis.__v4LastError = error?.message ?? String(error);
+      notice('Der Datenstand liess sich hier nicht als Datei speichern. Nutze «Datenstand in die Zwischenablage kopieren».', {id:'backup-save-error', tone:'warn'});
     }
-    if (strategy !== undefined && strategy !== null) { next.riskProfile = strategy; next.strategyChosen = /vom Nutzer gewählt/i.test(strategyRaw); }
-    if (variants && variants.length) next.v3Variants = variants;
-    /* Übernommene Angaben landen immer auf «Mein Plan»; `position` muss dafür eine gültige
-       V3-Position sein (nicht der Adapter-Platzhalter «time»). */
-    next.position = 'plan';
-    const validated = V3State.validate(V3State.normalize(next));
-    const recomputed = [...fields.keys()].filter(label => !used.has(label));
-    return {state:validated, read:used.size, recomputed};
   }
-  function applyAdvisorReport() {
-    const field = document.getElementById('v4ReportImport');
-    const note = document.getElementById('v4ReportImportState');
-    if (!field) return;
+  /* Der Datenstand als markierbarer Text – der Rückfallweg, wenn die Zwischenablage nicht
+     greifbar ist (ältere Browser, verweigerte Freigabe, hängende API). */
+  function showBackupText(text, lead = 'Markiere den Text und kopiere ihn mit Ctrl/Cmd + C.') {
+    openModal({modalTitle:'Datenstand kopieren', modalBody:`<p class="v3-modal-lead">${esc(lead)}</p><textarea id="v4BackupCopy" class="v4-report" rows="10" readonly spellcheck="false">${esc(text)}</textarea>`});
+    const field = document.getElementById('v4BackupCopy');
+    field?.focus();
+    field?.select();
+  }
+  async function copyBackup() {
+    const text = backupText();
+    let settled = false;
+    /* Nie stumm bleiben: antwortet die Zwischenablage nicht innert 1,2 s, wird der Text gezeigt. */
+    const timer = setTimeout(() => { if (!settled) { settled = true; showBackupText(text, 'Der Browser hat die Zwischenablage nicht freigegeben – markiere den Text und kopiere ihn mit Ctrl/Cmd + C.'); } }, 1200);
     try {
-      const result = importAdvisorReport(field.value);
-      /* Erst wenn alles gültig ist, wird der Plan ersetzt – sonst bleibt der alte Stand. */
-      state = result.state;
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(text);
+        settled = true; clearTimeout(timer);
+        notice('Datenstand kopiert – z. B. in eine Notiz oder E-Mail einfügen und auf dem anderen Gerät wieder einlesen.', {id:`backup-copy-${Date.now()}`});
+        return;
+      }
+    } catch (error) { /* Ohne Clipboard-API: Text zum Markieren zeigen */ }
+    if (!settled) { settled = true; clearTimeout(timer); showBackupText(text); }
+  }
+  const backupImportForm = () => `<p class="v3-modal-lead">Wähle deine gespeicherte Datei oder füge den Datenstand ein und tippe auf «Daten einlesen».</p>`
+    + `<p class="v4-info-source"><strong>Dein aktueller Stand wird dadurch ersetzt.</strong> Übernommen werden Plan, Angaben, Varianten, Anlagestrategie, Annahmen und Beratungsdaten. Startkapital, Töpfe und Ergebnis rechnet die App wie immer selbst.</p>`
+    + `<label class="v4-file" for="v4BackupFile">Datei wählen (JSON)</label><input id="v4BackupFile" class="v4-file-input" type="file" accept=".json,application/json">`
+    + `<textarea id="v4BackupText" class="v4-report" rows="6" spellcheck="false" placeholder="Datenstand hier einfügen …"></textarea>`
+    + `<div class="v4-hebel-actions"><button type="button" class="primary v4-block-action" data-backup-apply>Daten einlesen</button></div>`
+    + `<p class="v4-report-state" id="v4BackupState" role="status"></p>`;
+  function openBackupImportModal() {
+    openModal({modalTitle:'Gespeicherte Daten einlesen', modalBody:backupImportForm()});
+    const input = document.getElementById('v4BackupFile');
+    input?.addEventListener('change', () => {
+      const file = input.files?.[0];
+      const note = document.getElementById('v4BackupState');
+      if (!file) return;
+      if (note) note.textContent = `Datei «${file.name}» gewählt …`;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const field = document.getElementById('v4BackupText');
+        if (field) field.value = String(reader.result ?? '');
+        if (note) note.textContent = `Datei «${file.name}» gelesen – jetzt «Daten einlesen» tippen.`;
+      };
+      reader.onerror = () => { if (note) note.textContent = 'Die Datei liess sich nicht lesen.'; };
+      reader.readAsText(file);
+    });
+  }
+  /* Prüft den Datenstand vollständig, bevor irgendetwas ersetzt wird. */
+  function parseBackup(text) {
+    let payload;
+    try { payload = JSON.parse(String(text ?? '')); } catch (error) { throw Error('Das ist kein Ruhestands-Check-Datenstand (die Datei ist nicht lesbar).'); }
+    if (!payload || payload.app !== 'ruhestands-check' || payload.kind !== 'backup') throw Error('Das ist kein Ruhestands-Check-Datenstand.');
+    if (Number(payload.format) > backupFormat) throw Error('Dieser Datenstand stammt aus einer neueren Version der App. Bitte lade die Seite neu.');
+    if (!payload.plan) throw Error('Im Datenstand fehlt der Plan.');
+    const restored = V3State.restore(typeof payload.plan === 'string' ? payload.plan : JSON.stringify(payload.plan));
+    if (!restored.ok) throw Error(restored.message);
+    const data = payload.advice ?? {};
+    return {
+      state:restored.state,
+      migrated:restored.migrated === true,
+      advice:{
+        name:String(data.name ?? '').slice(0, 120),
+        meetingOn:String(data.meetingOn ?? '').slice(0, 10),
+        notes:String(data.notes ?? '').slice(0, 2000)
+      },
+      compare:{share:payload.compare?.share ?? null, view:payload.compare?.view === 'income' ? 'income' : 'assets'}
+    };
+  }
+  function applyBackup() {
+    const field = document.getElementById('v4BackupText');
+    const note = document.getElementById('v4BackupState');
+    try {
+      const parsed = parseBackup(field?.value ?? '');
+      /* Erst wenn alles gültig ist, wird der Stand ersetzt – sonst bleibt der bisherige. */
+      state = parsed.state;
+      advice = parsed.advice;
+      writeAdvice();
+      comparisonState.share = parsed.compare.share;
+      comparisonState.view = parsed.compare.view;
+      comparisonState.last = null;
+      writeComparisonPrefs();
       previewShare = null;
-      markDirty();
+      /* Ein eingelesener Stand ist ein bewusster Ersatz – auch wenn der bisherige aus einer
+         neueren Generation stammte, wird ab jetzt wieder normal gespeichert. */
+      storageBlocked = false;
       closeModal();
-      renderPlan();
-      notice(`Angaben übernommen (${result.read} Zeilen gelesen). Startkapital, Töpfe und Ergebnis rechnet die App wie immer selbst${result.recomputed.length ? `; nicht als Eingabe übernommen: ${result.recomputed.slice(0, 4).join(', ')}${result.recomputed.length > 4 ? ' …' : ''}` : ''}.`, {id:`report-import-${Date.now()}`});
+      returnToPlan();
+      save();
+      notice(`Datenstand eingelesen: Plan, ${variantShares().length === 1 ? 'eine Variante' : `${variantShares().length} Varianten`}, Anlagestrategie und Beratungsdaten sind übernommen${parsed.migrated ? ' (älterer Stand wurde migriert)' : ''}. Startkapital, Töpfe und Ergebnis rechnet die App wie immer selbst.`, {id:`backup-import-${Date.now()}`});
     } catch (error) {
       globalThis.__v4LastError = error?.message ?? String(error);
       if (note) note.textContent = error.message;
@@ -1765,6 +1851,8 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
   function load() {
     let raw = null;
     try { raw = localStorage.getItem(storageKey); } catch (error) { raw = null; }
+    /* Die Beratungsangaben liegen neben dem Plan – beim Laden gilt der gespeicherte Stand. */
+    advice = readAdvice();
     if (!raw) return false;
     const result = V3State.restore(raw);
     if (!result.ok) {
@@ -1785,6 +1873,8 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (state.position === 'variants') renderVariants();
     else if (state.position === 'comparison') renderCompare();
     else if (state.position === 'dossier') renderDossier();
+    else if (state.position === 'advice') renderAdvice();
+    else if (state.position === 'advice-person') renderAdvicePerson();
     else if (state.position === 'years') renderYear();
     else if (state.position === 'improve') renderImprove();
     else if (state.position === 'basics') renderBasics();
@@ -1800,8 +1890,11 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
     if (event.target.closest('[data-modal-close]')) { closeModal(); return; }
     const back = event.target.closest('[data-v4-back]');
     if (back) { goBack(); return; }
-    if (event.target.closest('[data-v4-action="advisor"]')) { openAdvisorModal(); return; }
-    if (event.target.closest('[data-v4-action="report-import"]')) { openReportImportModal(); return; }
+    if (event.target.closest('[data-landing-start]')) { startApp(); return; }
+    if (event.target.closest('[data-backup-save]')) { saveBackup(); return; }
+    if (event.target.closest('[data-backup-copy]')) { copyBackup(); return; }
+    if (event.target.closest('[data-backup-import]')) { openBackupImportModal(); return; }
+    if (event.target.closest('[data-backup-apply]')) { applyBackup(); return; }
     const pots = event.target.closest('[data-v4-action="pots"]');
     if (pots) { openPotsModal(pots); return; }
     const next = event.target.closest('[data-v4-next]');
@@ -1815,39 +1908,38 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
       else if (target === 'variants') renderVariants();
       else if (target === 'compare') renderCompare();
       else if (target === 'dossier') renderDossier();
+      else if (target === 'advice') renderAdvice();
+      else if (target === 'advice-person') renderAdvicePerson();
       else openDetail(target, parent);
       return;
     }
     const menu = event.target.closest('[data-menu-page]');
     if (menu) {
       /* Das Menü ist aufgabenorientiert (siehe docs/information-architecture-v4.md §7):
-         Mein Plan · Planen (Angaben & Grundlagen, Varianten) · Plan verstehen
-         (Jahresverlauf, Töpfe-Modell, Annahmen & Berechnung). Einzelne Datensätze wie
-         AHV, PK oder Säule 3a sind Aufgabenbestandteile und stehen hinter
-         «Angaben & Grundlagen» – nicht als eigene Destination. */
+         Mein Plan · Planen (Angaben & Grundlagen) · Plan verstehen (Jahresverlauf,
+         Töpfe-Modell, Annahmen & Berechnung). Einzelne Datensätze wie AHV, PK oder Säule 3a
+         sind Aufgabenbestandteile und stehen hinter «Angaben & Grundlagen» – nicht als eigene
+         Destination. «Meine Varianten» und die Beratungsvorbereitung sind keine Menüpunkte,
+         sondern Einstiege auf «Mein Plan» (§7a): Varianten sind Alternativen genau dieses
+         Plans, die Beratungsvorbereitung bündelt Angaben, Dossier und Datenstand. */
       const target = menu.dataset.menuPage;
       closeMenu();
       if (target === 'plan') returnToPlan();
       else if (target === 'basics') renderBasics();
-      else if (target === 'variants') renderVariants();
       else if (target === 'years') renderYear();
       else if (target === 'pots') openPotsModal(null);   // dieselbe Komponente: Jahresanfang des ersten Planjahres
       else openDetail(target, 'plan');
       return;
     }
-    /* Pilotwerkzeuge unten im Menü: Beratungsangaben, Plan zurücksetzen, Seite neu laden. */
+    /* Werkzeuge unten im Menü: Plan zurücksetzen, Seite neu laden. */
     const action = event.target.closest('[data-menu-action]');
     if (action) {
       closeMenu();
-      if (action.dataset.menuAction === 'report') openAdvisorModal();
-      else if (action.dataset.menuAction === 'reset') openResetModal();
+      if (action.dataset.menuAction === 'reset') openResetModal();
       else if (action.dataset.menuAction === 'reload') { save(); location.reload(); }
       return;
     }
     if (event.target.closest('[data-notice-close]')) { hideNotice(); return; }
-    if (event.target.closest('[data-report-copy]')) { copyAdvisorReport(); return; }
-    if (event.target.closest('[data-report-save]')) { saveAdvisorReport(); return; }
-    if (event.target.closest('[data-report-apply]')) { applyAdvisorReport(); return; }
     /* Dossier: der Druck läuft über den Browser («Drucken / Als PDF speichern»); die
        Druckansicht blendet Navigation, Buttons und Schatten aus (siehe css/v4-dossier.css). */
     if (event.target.closest('[data-dossier-print]')) { window.print(); return; }
@@ -1904,9 +1996,20 @@ function incomeValues() { return {ahv:0, other:state.values.regular ?? 0, additi
      Das Icon kommt aus der einen Icon-Quelle (`js/icons.js`), nie als eigenes SVG. */
   const modalCloseButton = document.querySelector('#v4Modal [data-modal-close]');
   if (modalCloseButton && !modalCloseButton.firstChild) modalCloseButton.innerHTML = Icons.icon('close', {size:22, stroke:1.7});
-  window.V4 = {save, load, planFor, evaluated, renderPlan, renderStart, renderVariants, renderCompare, comparisonOf, precisionItems, profileComparison, needImpact};
-  setStartDraft(); renderStart();
-  load();
+  window.V4 = {save, load, planFor, evaluated, renderPlan, renderStart, renderVariants, renderCompare, comparisonOf, precisionItems, profileComparison, needImpact, renderAdvice, renderAdvicePerson, backupText, backupFileName, parseBackup, applyBackup, adviceOf:() => ({...advice}), renderLanding, startApp, landingVisible:() => landingVisible};
+  /* Jeder App-Aufruf beginnt auf dem Startscreen; erst «Jetzt starten» lädt den Plan bzw.
+     zeigt den Schnellstart (genau ein Weg hinein, siehe `renderLanding()`).
+     Ausnahme: Nach einem automatischen Neuladen durch ein Service-Worker-Update wird die
+     laufende Sitzung fortgesetzt – der Startscreen gehört zum App-Aufruf, nicht zum Update. */
+  const swUpdateReload = (() => {
+    try {
+      const flagged = sessionStorage.getItem('v4-sw-update') === '1';
+      sessionStorage.removeItem('v4-sw-update');
+      return flagged;
+    } catch (error) { return false; }
+  })();
+  setStartDraft();
+  if (swUpdateReload) startApp(); else renderLanding();
 
   /* ---------------- Testmodus (Dev-Szenarien, nur mit ?dev=1) ---------------- */
   if (globalThis.DevFixture?.enabled?.()) {

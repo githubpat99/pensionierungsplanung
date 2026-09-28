@@ -29,6 +29,17 @@ body{position:relative}
   rgba(247,246,242,.26) 146px,
   rgba(247,246,242,.5) 46%,
   var(--v3-bg) 100%)}
+/* Startscreen: dasselbe Bild als Vollbild, leicht abgedunkelt, damit die weisse Schrift auf
+   Himmel und Wasser ruhig liegt. Kein Creme-Verlauf – der Startscreen ist ein eigenes Bild.
+   Höhe über `100%` (nicht `100svh`): der Screen ist damit genau ein Bildschirm hoch, ohne
+   18 px Überhang. Nach rechts ist die Bildfläche bewusst **überbreit** (`right:-26px`): so deckt
+   sie auch den Scrollleisten-Streifen ab, den manche Browser für das Layout reservieren –
+   deshalb war dort ein heller Rand sichtbar. */
+.v4-hero[data-mode="landing"]{--v4-hero-image-opacity:1;left:-2px;right:-26px;height:100%}
+.v4-hero[data-mode="landing"] .v4-hero-image{object-position:center}
+.v4-hero[data-mode="landing"]::after{background:
+  radial-gradient(125% 85% at 50% 44%, rgba(9,22,32,.50) 0%, rgba(9,22,32,.34) 58%, rgba(9,22,32,.26) 100%),
+  linear-gradient(180deg, rgba(9,22,32,.30) 0%, rgba(9,22,32,.16) 30%, rgba(9,22,32,.24) 70%, rgba(9,22,32,.46) 100%)}
 /* Plan und Detailseiten: derselbe Bildaufbau, derselbe ruhige Kopfbereich, darunter
    zurückgenommener als im Schnellstart. */
 .v4-hero[data-mode="calm"]{--v4-hero-height:min(74vw,26vh);--v4-hero-image-opacity:.9}
@@ -406,15 +417,12 @@ body{padding-bottom:18px}
 .v4-form-group small{font-weight:400;color:var(--v3-muted)}
 .v4-asset-form .v4-form-table label{font-size:13.5px}
 .v4-form-value input::placeholder{font:13px system-ui,sans-serif;color:var(--v3-muted);opacity:1}
-/* Pilot: Beratungs-Zusammenfassung als Klartext zum Kopieren oder Speichern. */
-.v4-report-label{display:block;margin:0 0 4px;font:600 13px system-ui,sans-serif;color:var(--v3-ink)}
+/* Datenstand: Textfeld zum Einlesen bzw. Kopieren (JSON) und Zustandshinweis darunter. */
 .v4-report{width:100%;min-height:240px;padding:10px;border:1px solid var(--v3-line);border-radius:10px;background:var(--v3-surface);color:var(--v3-ink);font:12.5px/1.5 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;white-space:pre;overflow:auto;resize:vertical}
 .v4-report-state{margin:8px 0 0;font:13px system-ui,sans-serif;color:var(--v3-green)}
 /* Rückweg zur Sicherung: als dezenter Textlink, damit der Schnellstart ohne Scrollen bleibt. */
 .v4-report-open{display:block;margin:2px auto 0;padding:0 8px;min-height:0;width:auto;border:0;background:transparent;color:var(--v3-green);font:600 13px/1.3 system-ui,sans-serif;text-decoration:underline;text-underline-offset:2px;cursor:pointer}
 .v4-report-open:hover,.v4-report-open:focus-visible{background:var(--v3-soft);border-radius:8px}
-.v4-report-import .v4-report{min-height:140px}
-.v4-report-import .v4-report-state{color:var(--v3-warn,#8a6d1f)}
 /* Info-Dialoge: Schliessen-Knopf als reines «✕» (IconX, 22 px, Strichstärke 1,7) in der
    dunkelgrünen Textfarbe – kein Kreis, kein Hintergrund, kein Rahmen, kein Schatten.
    Mindestens 40 × 40 px unsichtbare Touchfläche, sauber oben rechts im Kopf; erst Hover
@@ -572,4 +580,89 @@ body{padding-bottom:18px}
 .v4-notice-close:hover,.v4-notice-close:focus-visible{background:var(--v3-soft);color:var(--v3-green)}
 @media(min-width:700px){.v4-notice{left:auto;right:18px;max-width:520px}}
 .v4-menu-version{margin:6px 0 0;padding:0 14px;font:11px/1.4 system-ui,sans-serif;color:var(--v3-muted);white-space:nowrap}
+
+/* ---------- «Beratung vorbereiten»: Fortschritt, Angaben, Dossier, Datenstand ---------- */
+.v4-advice-stand{border:1px solid var(--v3-line);border-radius:14px;background:var(--v3-surface);padding:14px;margin:0 0 12px}
+.v4-advice-head{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:4px 10px}
+.v4-advice-kicker{margin:0;font:600 11px/1.2 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--v3-muted)}
+.v4-advice-count{margin:0;font:13px/1.4 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-advice-count strong{font:600 20px/1.1 Georgia,"Times New Roman",serif;color:var(--v3-ink)}
+.v4-advice-bar{height:8px;margin:10px 0 0;border-radius:999px;background:#ecebe6;overflow:hidden}
+.v4-advice-bar span{display:block;height:100%;border-radius:999px;background:var(--v3-green)}
+.v4-advice-open{margin:8px 0 0;font:12.5px/1.45 system-ui,sans-serif;color:var(--v3-muted)}
+.v4-advice-facts{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0;padding:0;list-style:none}
+.v4-advice-facts li{padding:5px 10px;border-radius:999px;background:var(--v3-soft);font:600 12px/1.2 system-ui,sans-serif;color:var(--v3-green);white-space:nowrap}
+.v4-advice-backup{background:#faf9f5}
+.v4-backup-actions{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin:12px 0 0}
+.v4-backup-actions .v4-block-action{margin-top:0}
+.v4-quiet-link{align-self:center;min-height:36px;padding:0 6px;border:0;background:transparent;color:var(--v3-muted);font:12.5px system-ui,sans-serif;text-decoration:underline;cursor:pointer}
+.v4-quiet-link:hover,.v4-quiet-link:focus-visible{color:var(--v3-green)}
+.v4-file{display:block;margin:12px 0 6px;font:600 13px system-ui,sans-serif;color:var(--v3-ink)}
+.v4-file-input{display:block;width:100%;font:13px system-ui,sans-serif;color:var(--v3-muted)}
+
+/* ---------- Startscreen (Landing) ----------
+   Das verbindliche Hintergrundbild liegt als Vollbild dahinter (Hero-Modus «landing»), der
+   Inhalt steht mittig darauf: Logo, Slogan, Aussage, ein Satz, genau ein Weg in die App.
+   Hier ist die Schrift weiss auf dem Foto und trägt einen weichen Schatten – die Regel
+   «kein Textschatten» gilt für die Creme-Köpfe der App, nicht für dieses Vollbild. */
+/* Der Startscreen füllt genau einen Bildschirm und scrollt nicht. Die Sperre sitzt am
+   **Wurzelelement** (`html.v4-landing-open`, gesetzt in `renderLanding()`/`setMenuAvailable()`):
+   so entsteht gar keine Scrollleiste und damit auch kein heller Rand rechts. `height:100%`
+   über die Kette html → body → #app gibt dem Screen genau die Fensterhöhe – ohne `100svh`,
+   das in manchen Umgebungen 18 px zu hoch ausfällt. Die Hintergrundfarbe sitzt bewusst am
+   **body** (und nicht am `html`): nur so wird sie auf die Zeichenfläche übertragen und liegt
+   hinter dem Bild statt darüber. */
+html.v4-landing-open{overflow:hidden}
+html.v4-landing-open,html.v4-landing-open body{height:100%}
+html.v4-landing-open #app{height:100%}
+body.v4-landing-open{overflow:hidden;background:#0d1f2a}
+.v4-landing{position:relative;z-index:1;display:grid;place-items:center;min-height:100%;padding:44px 22px;text-align:center}
+.v4-landing-body{display:flex;flex-direction:column;align-items:center;max-width:660px}
+.v4-landing-brand{display:flex;align-items:center;gap:10px;margin:0}
+.v4-landing-name{font-family:Georgia,"Times New Roman",serif;font-size:21px;font-weight:600;letter-spacing:-.01em;color:#fff;text-shadow:0 1px 10px rgba(9,22,32,.55)}
+.v4-landing-slogan{margin:9px 0 0;font:600 11px/1.3 system-ui,sans-serif;letter-spacing:.17em;text-transform:uppercase;color:rgba(255,255,255,.88);text-shadow:0 1px 10px rgba(9,22,32,.55)}
+.v4-landing-title{margin:30px 0 0;font-family:Georgia,"Times New Roman",serif;font-size:clamp(32px,9vw,58px);font-weight:600;line-height:1.08;letter-spacing:-.02em;color:#fff;text-wrap:balance;text-shadow:0 2px 18px rgba(9,22,32,.55)}
+.v4-landing-sub{margin:16px 0 0;font:15.5px/1.5 system-ui,sans-serif;color:rgba(255,255,255,.94);text-shadow:0 1px 12px rgba(9,22,32,.5)}
+.v4-landing-cta{display:inline-flex;align-items:center;gap:10px;margin:30px 0 0;min-height:54px;padding:0 28px;border:0;border-radius:999px;background:var(--v3-green);color:#fff;font:600 16.5px system-ui,sans-serif;cursor:pointer;box-shadow:0 12px 28px rgba(9,22,32,.32)}
+.v4-landing-cta svg{flex:none}
+.v4-landing-cta:hover,.v4-landing-cta:focus-visible{background:#17503f;box-shadow:0 14px 30px rgba(9,22,32,.4)}
+.v4-landing-cta:focus-visible{outline:2px solid #fff;outline-offset:3px}
+.v4-landing-facts{display:flex;flex-wrap:wrap;justify-content:center;gap:8px 20px;margin:24px 0 0;padding:0;list-style:none}
+.v4-landing-facts li{display:inline-flex;align-items:center;gap:7px;font:600 12.5px system-ui,sans-serif;color:rgba(255,255,255,.9);text-shadow:0 1px 10px rgba(9,22,32,.5)}
+.v4-landing-facts svg{color:rgba(255,255,255,.85)}
+@media(min-width:700px){
+  .v4-landing-sub{font-size:17px}
+  .v4-landing-facts{gap:8px 26px}
+}
+/* Kurze Fenster (kleine Handys, Querformat): Abstände und Schrift verdichten, damit der
+   Startscreen ohne Scrollen auskommt – der Inhalt bleibt vollständig sichtbar. */
+@media(max-height:700px){
+  .v4-landing{padding:26px 20px}
+  .v4-landing-title{margin-top:20px}
+  .v4-landing-sub{margin-top:12px}
+  .v4-landing-cta{margin-top:22px;min-height:50px}
+  .v4-landing-facts{margin-top:18px}
+}
+@media(max-height:560px){
+  .v4-landing{padding:18px 18px}
+  .v4-landing-name{font-size:19px}
+  .v4-landing-title{margin-top:14px;font-size:clamp(24px,5.4vh,34px)}
+  .v4-landing-sub{margin-top:8px;font-size:14px}
+  .v4-landing-cta{margin-top:16px;min-height:46px;padding:0 22px;font-size:15px}
+  .v4-landing-facts{margin-top:12px;gap:6px 16px}
+}
+/* Notfall (sehr niedrige Fenster): der Startscreen darf dann selbst scrollen, statt Inhalt
+   abzuschneiden – die Seite bleibt trotzdem gesperrt. */
+@media(max-height:430px){
+  .v4-landing{overflow-y:auto;align-content:start}
+}
+@media(max-width:430px){
+  .v4-landing-title{font-size:clamp(28px,8.4vw,34px)}
+}
+@media(max-width:389px){
+  .v4-landing{padding:32px 18px}
+  .v4-landing-title{margin-top:22px}
+  .v4-landing-cta{margin-top:24px;min-height:50px;font-size:15.5px}
+}
+
 

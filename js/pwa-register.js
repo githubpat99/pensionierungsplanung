@@ -38,6 +38,9 @@
     /* Nur bei einem echten Update neu laden; die Erstinstallation startet die Seite nicht neu. */
     if (!hadController || reloading) return;
     reloading = true;
+    /* Als automatisches Neuladen markieren: die App setzt die laufende Sitzung fort und zeigt
+       **nicht** den Startscreen (der gehört zum App-/Browser-Aufruf, nicht zum Update). */
+    try { root.sessionStorage.setItem('v4-sw-update', '1'); } catch (error) { /* Speicher gesperrt */ }
     root.location.reload();
   });
   root.addEventListener('load', async () => {

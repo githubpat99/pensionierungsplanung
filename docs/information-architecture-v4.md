@@ -30,9 +30,14 @@ Die App fühlt sich nicht wie eine Sammlung von Finanzfunktionen an, sondern wie
 ## 3. Sitemap
 
 ```
+STARTSCHREEN (Landing, bei jedem App-/Browser-Aufruf zuerst)
+│   Vollbild-Hintergrund · Logo · Slogan · «Dein Plan für den Ruhestand.»
+│   · Untertitel · «Jetzt starten» (mit Plan → Mein Plan, ohne Plan → Schnellstart)
+│
 MEIN PLAN (Home)
 │   Planstatus · 4 Kennzahlen · PK-Bezug · zustandsabhängige Aktion
 │   · Jahresverlauf (Schnelleinstieg) · Meine Varianten (Schnelleinstieg)
+│   · Beratung vorbereiten (Schnelleinstieg)
 │
 ├── PLANEN
 │   ├── Angaben & Grundlagen        (Daten-Hub aller Editoren)
@@ -47,9 +52,11 @@ MEIN PLAN (Home)
 │   ├── Meine Varianten                      (max. 3, aktueller Plan zuerst und offen;
 │   │     └── Action-Card «Rente oder Kapital?» → Variantenvergleich   nur vor der Pensionierung)
 │   ├── Rente oder Kapital?                  (Vergleich; Action-Card unter dem PK-Regler,
-│         kein Menüpunkt · CTA → Beratungsflow · «Übernehmen» gibt es hier nicht)
-│   └── Dossier                              (Druck-/PDF-Vorlage; Zeile auf «Mein Plan»,
-│         kein Menüpunkt · A4-Seiten, Browser-Druck)
+│   │         kein Menüpunkt · CTA → Beratungsvorbereitung · «Übernehmen» gibt es hier nicht)
+│   └── Beratung vorbereiten                 (Angaben, Dossier, Datenstand; dritte Zeile auf
+│         ├── Angaben vervollständigen       «Mein Plan», kein Menüpunkt · Fortschritt oben)
+│         ├── Dein Dossier  → Dossier        (Druck-/PDF-Vorlage, A4-Seiten, Browser-Druck)
+│         └── Daten sichern                  (Datei speichern/einlesen, Zwischenablage)
 │
 └── PLAN VERSTEHEN   DETAILS
     ├── Jahresverlauf               («Jahr für Jahr.»)
@@ -67,13 +74,39 @@ Daten fehlen/geschätzt ──▶ «Plan präzisieren» ──▶ Angaben ergän
                                                               «Plan optimieren» (Strategie, Bedarf)
 ```
 
+## 3a. Startscreen (Landing)
+
+- **Wann:** Bei **jedem App- bzw. Browser-Aufruf** ist er die erste Ansicht; die App wird erst
+  mit «Jetzt starten» betreten. **Innerhalb einer laufenden Sitzung** gibt es keinen Weg zurück
+  (kein Menü, kein Rückweg, keine Titelzeile).
+- **Bild:** das verbindliche Hero-Asset als Vollbild (`#v4Hero` im Modus `landing`, Mobile
+  `Background.png`, ab 700 px `Background_Desktop.png`), darüber ein leichter dunkler Verlauf.
+  Die Kopfzeile der App ist dabei ausgeblendet – das Logo steht im Bild.
+- **Inhalt:** Logo «Ruhestands-Check» · Slogan «Sicher planen. Investiert bleiben.» ·
+  «Dein Plan für den Ruhestand.» · «Finde heraus, was möglich ist – mit deinen eigenen Zahlen.» ·
+  **genau eine** Aktion «Jetzt starten» · darunter «Deine Zahlen · Klare Antworten ·
+  Mehr Möglichkeiten».
+- **Weg hinein:** «Jetzt starten» ruft dieselbe Ladefunktion wie der App-Start: **mit Plan**
+  direkt auf den gespeicherten Screen («Mein Plan»), **ohne Plan** in den Schnellstart
+  (5 Angaben). **Kein Scrollen und kein heller Rand rechts:** Der Startscreen ist genau ein
+  Bildschirm, die Seite ist gesperrt, solange er steht (`html.v4-landing-open`, Höhe über
+  `html → body → #app` = `100%` statt `100svh`), die Bildfläche ist nach rechts überbreit
+  (`right:-26px`) und der `body` trägt die dunkle Startfarbe, damit ein reservierter
+  Scrollleisten-Streifen nicht hell aufleuchtet; auf kurzen Fenstern verdichten sich Abstände
+  und Schrift (Notfall-Scroll des Screens erst unter 430 px Fensterhöhe). Solange er steht,
+  schreibt die App nichts. Nach einem **automatischen Neuladen** durch ein
+  Service-Worker-Update läuft die Sitzung direkt weiter (Markierung `v4-sw-update`) – der
+  Startscreen gehört zum App-Aufruf, nicht zum Update.
+
 ## 4. «Mein Plan» – erlaubt und nicht erlaubt
 
 **Erlaubt (vollständige Liste, in dieser Reihenfolge):** PageTitle · Planstatus (ohne
 Knöpfe) · vier Kennzahlen (Einkommen netto / Monat · Bedarf netto / Monat · Aus Vermögen /
 Monat · Startkapital) · PK-Bezug · genau eine zustandsabhängige Aktion («Plan präzisieren»
-bzw. «Plan optimieren») · maximal zwei sekundäre Zeilen («Jahresverlauf», «Meine Varianten ·
-n gespeichert»).
+bzw. «Plan optimieren») · **drei** sekundäre Zeilen («Jahresverlauf», «Meine Varianten ·
+n gespeichert», «Beratung vorbereiten»). Die dritte Zeile ist eine
+dokumentierte Abweichung von der Zwei-Zeilen-Regel: der Weg zum Beratungsgespräch ist kein
+Inhalt, sondern eine Aufgabe.
 
 **Nicht erlaubt:** Detail-Überschrift/Inhaltsverzeichnis, Varianten-Karten, Strategie-,
 Töpfe-, Steuern-, AHV-, PK-, Einkommens- oder Vermögens-Blöcke, «Plan verbessern», «Plan
@@ -184,10 +217,12 @@ gespeicherte Varianten und erklärt den Unterschied zwischen mehr Kapital und le
   mit Abstand unter der Zeichenfläche und unter **jedem** Punkt, links das Pensionierungsalter,
   keine zusätzlichen Zehnjahreswerte – Beispiel «optimiert»: 65 · 78 · 90).
 - **Dossier** (`Dossier.` / `Dein Ruhestandsplan für die Beratung`): gedruckte A4-Vorlage für das
-  Beratungsgespräch, erreichbar über die Zeile «Dossier · Druckvorlage für die Beratung» auf
-  «Mein Plan» – **kein** Menüpunkt, bestehender Rückweg «‹ Mein Plan». Acht Seiten (Titel/Summary ·
-  Einkommen · Vermögen · Töpfe · Verlauf · PK-Varianten · Annahmen · nächste Entscheidungen) mit
-  `Background.png` als Brandingelement, Kennzahlen einzeilig, «Noch nicht erfasst» statt «CHF 0»,
+  Beratungsgespräch, erreichbar über die Karte «Dossier ansehen / erstellen» in der
+  **Beratungsvorbereitung** (§7b) – **kein** Menüpunkt, bestehender Rückweg «‹ Beratung
+  vorbereiten». Acht Seiten (Titel/Summary · Einkommen · Vermögen · Töpfe · Verlauf ·
+  PK-Varianten · Annahmen · nächste Entscheidungen/Notizen) mit
+  `Background.png` als Brandingelement, Kennzahlen einzeilig und in Monatswerten des Rechenkerns,
+  «Noch nicht erfasst» statt «CHF 0», Name/Gesprächsdatum und Notizen aus den Beratungsangaben,
   Druck über den Browser («Drucken / PDF erstellen»). Details: `docs/PRODUCT_RULES.md` §26 und
   `docs/MASTER_SPEC.md` §24.12. Fällt das freie Vermögen auf 0, steht die Marke **«0 mit {Alter}»** direkt an der
   Linie (nie «Plan endet» oder «Geld reicht nur bis») – **dieselbe Zahl wie «Vermögen reicht bis»
@@ -210,8 +245,9 @@ gespeicherte Varianten und erklärt den Unterschied zwischen mehr Kapital und le
 - **Beratung als CTA (kein Accordion):** Die Zeile «Und deine Anlagestrategie?» hat mintfarbenen
   Hintergrund, grünen Rahmen, dunkelgrünen Titel, das Icon `arrowUpRight` und die Subline «Passt
   deine Strategie zu Rente, Bedarf und Anlagehorizont?»; rechts unten steht «Individuell
-  besprechen →» statt eines Chevrons. Die ganze Fläche öffnet den **bestehenden** Beratungsflow
-  (Dialog «Angaben für die Beratung»). Kein neuer Flow.
+  besprechen →» statt eines Chevrons. Die ganze Fläche führt in die **Beratungsvorbereitung**
+  (§7b: Angaben, Dossier, Datenstand). Kein neuer Flow; der frühere Bericht «Angaben für die
+  Beratung» existiert nicht mehr.
 - **Unter der Grafik: zwei Klappzeilen plus Beratungs-CTA.** «Die wichtigsten Unterschiede» und
   «So haben wir gerechnet» (Tabler-Icon `adjustments`, kein Emoji) sind `<details>` mit Kopfzeile,
   Kurzzeile und Chevron; die geschlossene Kurzzeile der Berechnungsbasis ist knapp und ohne
@@ -232,45 +268,52 @@ MEIN PLAN
     Mein Plan
 PLANEN
     Angaben & Grundlagen
-    Meine Varianten
 PLAN VERSTEHEN            DETAILS
     Jahresverlauf
     Töpfe-Modell
     Annahmen & Berechnung
 ───────────────────────────────  (dezent abgesetzt, keine Navigation)
-    Angaben für die Beratung
     Plan zurücksetzen
     Neu laden
     App-Version 25.09.2026 · Build 1
 ```
 
-**Pilotbereich (Pilottesting):** Ganz unten stehen dezent abgesetzt **«Angaben für die
-Beratung»**, **«Plan zurücksetzen»** und **«Neu laden»** samt Versionszeile (Klasse
-.v4-menu-quiet, gedämpfte Schrift, Trennlinie darüber). Sie sind bewusst **keine**
-Menüdestinationen im Sinn der Informationsarchitektur, sondern Werkzeuge für die Übergabe, den
-Neustart bzw. das Aktualisieren:
+**Werkzeuge (Pilottesting):** Ganz unten stehen dezent abgesetzt **«Plan zurücksetzen»** und
+**«Neu laden»** samt Versionszeile (Klasse .v4-menu-quiet, gedämpfte Schrift, Trennlinie darüber).
+Sie sind bewusst **keine** Menüdestinationen im Sinn der Informationsarchitektur, sondern Werkzeuge
+für den Neustart bzw. das Aktualisieren:
 
-- **Angaben für die Beratung** bereitet den Plan als **Klartext** auf, den der Nutzer kopieren
-  oder als Datei speichern und selbst verschicken kann: Person und Zeitraum · Einkommen im
-  ersten Planjahr · Bedarf und Entnahme · Vermögen zum Pensionierungszeitpunkt · Aufteilung auf
-  die Töpfe · Ergebnis · Annahmen · Varianten. **Transparent:** nicht erfasste Werte stehen als
-  «noch nicht erfasst», geschätzte AHV als «geschätzte AHV-Pauschale», der Kopf nennt «heutige
-  Kaufkraft» und «Modellrechnung, keine Steuer- oder Anlageberatung». Der Text ist bearbeitbar,
-  und es wird **nichts automatisch verschickt** (kein mailto-Link, kein Formular); «Text
-  kopieren» markiert den Text und nutzt die Clipboard-API, wenn verfügbar, «Als Datei
-  speichern» legt eine .txt-Datei ab.
 - **Plan zurücksetzen** fragt zuerst nach («Plan zurücksetzen?» mit «Abbrechen») und entfernt
   danach alle erfassten Angaben, Varianten und die Anlagestrategie aus diesem Browser; die App
   startet wieder im **Schnellstart** (ohne Hamburger, weil kein Plan existiert).
 - **Neu laden** speichert den aktuellen Stand und lädt die Seite neu – **ohne** Datenverlust und
   ohne Cache-Löschen. Darunter steht die **App-Version** (aus `js/v4-version.js`): Tester können
   sie in einer Rückmeldung nennen, und die Zuordnung «welche Version, welcher Fehler» ist eindeutig.
-- **Gespeicherte Angaben einlesen (Rückweg):** Der Bericht ist die einzige Sicherung, die die App
-  selbst erzeugt – deshalb führt ein Weg zurück: «Wieder einlesen» im Berichtsdialog und der
-  dezente Textlink **«Gespeicherte Angaben einlesen»** im **Schnellstart** (erreichbar auch ohne
-  Plan, also nach «Plan zurücksetzen»). Eingelesen werden die erfassten Eingaben; abgeleitete Werte
-  rechnet der gemeinsame Rechenkern neu. Der Vorgang ersetzt den Plan atomar – bei fehlenden
-  Pflichtangaben oder unlesbarem Text bleibt alles unverändert.
+
+**Nicht mehr im Menü** (bewusst, §7b): «Meine Varianten» – Varianten sind alternative Versionen
+genau dieses Plans, der Einstieg liegt deshalb direkt auf «Mein Plan» – und der frühere Bericht
+«Angaben für die Beratung», dessen Aufgaben die **Beratungsvorbereitung** übernommen hat
+(Angaben, Dossier, Datenstand).
+
+## 7b. Beratung vorbereiten – Angaben, Dossier, Datenstand
+
+- **Einstieg:** dritte sekundäre Zeile auf «Mein Plan» („Beratung vorbereiten · Dossier und
+  Datenstand“, Route `advice`), **kein Menüpunkt**; Rückweg «‹ Mein Plan». Titel „Beratung
+  vorbereiten.“, Kontext „Dossier & Datenstand“, Zweckzeile „Alles für dein Beratungsgespräch.“
+- **Oben der Stand:** Karte „Dein Stand“ mit Fortschritt („n von m Angaben erfasst“),
+  Fortschrittsbalken, den offenen Angaben beim Namen und den vorhandenen Kennzahlen als Chips.
+- **1 Angaben vervollständigen:** vier Gruppen mit denselben Zeilen und **denselben Editoren** wie
+  «Angaben & Grundlagen» – vorhandene Plandaten werden übernommen – plus „Name & Notizen“
+  (Beratungsangaben) und „Immobilien & Hypotheken“.
+- **2 Dein Dossier:** Karte „Dossier ansehen / erstellen“ → Dossier-Screen (§7a/§6) mit den
+  Beratungsangaben (Name, Gesprächsdatum, Notizen).
+- **3 Daten sichern:** „Plan & Beratungsdaten speichern ↓“ (Datei), „Gespeicherte Daten
+  einlesen ↑“ (Dialog, auch im Schnellstart ohne Plan) und dezent „Datenstand in die
+  Zwischenablage kopieren“. Der Datenstand enthält **alles**: Plan (inkl. Varianten, Strategie,
+  Annahmen), Angaben, Beratungsdaten und Vergleichseinstellungen – ausdrücklich **nicht** das
+  Dossier: das Dossier ist die lesbare Druckvorlage (PDF), der Datenstand die Sicherungsdatei.
+- **Beratungsangaben** liegen getrennt vom Plan unter `retirement-v4-advice` und fliessen nie in
+  die Rechnung ein.
 
 ## 7a. Update, Speicherstände und Service Worker
 
@@ -301,12 +344,12 @@ Implementierung**:
 | Inhalt | Weg 1 | Weg 2 | Implementierung |
 | --- | --- | --- | --- |
 | Töpfe-Modell | Menü → Plan verstehen → Töpfe-Modell (= Jahresanfang des ersten Planjahres) | Jahresverlauf → Topf-Icon an Abschnitt 1 (Jahresanfang) bzw. 6 (Jahresende) → Töpfe-Modell | **derselbe Dialog** (`openPotsModal()`, `#v4Modal`, Titel «Das Töpfe-Modell») |
-| Angaben-Editor (AHV, PK, 3a, Einnahmen, Bedarf, Vermögen) | Menü → Angaben & Grundlagen → Zeile | Plan präzisieren → Zeile «…» bzw. «Angaben ergänzen» | **dieselbe Editorseite** (`openDetail(page)`) |
+| Angaben-Editor (AHV, PK, 3a, Einnahmen, Bedarf, Vermögen) | Menü → Angaben & Grundlagen → Zeile | Plan präzisieren → Zeile «…» bzw. «Angaben ergänzen»; Beratung vorbereiten → dieselbe Zeile | **dieselbe Editorseite** (`openDetail(page)`) |
 | Anlagestrategie | Plan optimieren → Hebel 1 | Töpfe-Dialog → Card «Anlagestrategie» | **dieselbe Quelle** (`profileComparison()` / `risk-profiles.js`) |
 | Anlagestrategie im Jahresverlauf | Abschnitt 5 «Deine Töpfe (Jahresende)» | Töpfe-Dialog-Card | **dieselbe Quelle** (`risk-profiles.js`) |
 | Variantenvergleich «Rente oder Kapital?» | PK-Bereich auf «Mein Plan» → Action-Card «Rente oder Kapital?» | «Meine Varianten» → dieselbe Action-Card | **derselbe Screen** (`renderCompare()`, `comparisonOf()`), gespeist aus `evaluatePlan()` |
 | Alte Planung (Schema 1, ohne Variantenplätze) | Laden in V4 | – | `V3State.restore()`/`migrations` – drei Variantenplätze, sonst Sicherung + Neustart |
-| Beratung / Anlagestrategie | Menü (Pilotbereich) → «Angaben für die Beratung» | Variantenvergleich → «Individuell besprechen» | **derselbe Dialog** (`openAdvisorModal()`) |
+| Beratung / Dossier / Datenstand | Mein Plan → «Beratung vorbereiten» → «Dossier ansehen / erstellen» | Variantenvergleich → «Individuell besprechen» → Beratungsvorbereitung | **derselbe Screen** (`renderDossier()` / `V4Dossier`) und **derselbe Datenstand** (`backupText()` / `parseBackup()`) |
 
 Der Test prüft für das Töpfe-Modell, dass der Menüzugang und das Topf-Icon an Abschnitt 1 im ersten
 Planjahr **identischen** Inhalt rendern (Jahresanfang des ersten Planjahres).

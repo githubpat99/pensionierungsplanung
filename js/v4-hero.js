@@ -9,8 +9,9 @@
  *
  * Die Komponente hängt das Bild genau einmal in `#v4Hero` ein und steuert danach nur die
  * Intensität über `data-mode`:
- *   start – Schnellstart (Empty State von «Mein Plan»): Bild klar erkennbar
- *   calm  – «Mein Plan» und alle Detailseiten: dezenter visueller Übergang
+ *   landing – Startscreen: Bild als Vollbild hinter Logo, Aussage und «Jetzt starten»
+ *   start   – Schnellstart (Empty State von «Mein Plan»): Bild klar erkennbar
+ *   calm    – «Mein Plan» und alle Detailseiten: dezenter visueller Übergang
  * Der Modus wird aus dem Inhalt abgeleitet, nicht je Screen gesetzt: kein Screen
  * implementiert den Hero selbst. */
 (function (root) {
@@ -19,9 +20,11 @@
   const hostId = 'v4Hero';
   let observer = null;
 
-  /* Der Schnellstart ist der einzige Zustand mit dem Schnellstart-Formular. */
+  /* Der Startscreen beansprucht das Bild als Vollbild, der Schnellstart ist der einzige Zustand
+     mit dem Schnellstart-Formular, alles andere ist die ruhige App-Ansicht. */
   function mode() {
     const app = document.getElementById('app');
+    if (app && app.querySelector('.v4-landing')) return 'landing';
     return app && app.querySelector('.v4-start') ? 'start' : 'calm';
   }
 
