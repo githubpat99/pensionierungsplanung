@@ -389,6 +389,10 @@ optionalem ⓘ · «Schliessen». Der Dialog passt bei 390 × 844 **ohne interne
 
 ## 10. UX-Regeln
 
+- **Keine klassische Scrollleiste:** Die V4-Oberfläche blendet sie aus und nutzt die volle
+  Fensterbreite (rechts bleibt kein 15 px breiter, je nach Screen heller oder dunkler Streifen).
+  Gescrollt wird mit Rad, Trackpad, Touch, Tastatur und Gesten; kein Screen führt eigene
+  Scroll-Container ein.
 - **Progressive disclosure:** erst die Antwort, dann die Details. Komplexe Details sind
   freiwillig und liegen mindestens einen Klick tief.
 - **Keine Feature-Navigation:** Navigationspunkte sind Aufgaben (Planen, Verstehen), keine

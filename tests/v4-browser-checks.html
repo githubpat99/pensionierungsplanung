@@ -110,6 +110,7 @@ async function landingChecks(w, h) {
   /* Der Startscreen scrollt nicht: die Seite ist gesperrt, solange er steht, und der Inhalt
      endet oberhalb der Fensterkante. */
   ok(win.getComputedStyle(d.body).overflow === 'hidden' && d.body.classList.contains('v4-landing-open'), tag + ': Seite ist während des Startscreens gesperrt (' + win.getComputedStyle(d.body).overflow + ')');
+  ok(d.documentElement.clientWidth === view.w && Math.abs(d.body.getBoundingClientRect().width - view.w) <= 1, tag + ': volle Fensterbreite ohne Scrollleisten-Streifen (' + Math.round(d.body.getBoundingClientRect().width) + ' von ' + view.w + ' px)');
   ok(d.documentElement.clientWidth === view.w, tag + ': keine Scrollleiste (' + d.documentElement.clientWidth + ' von ' + view.w + ' px)');
   const factsBox = d.querySelector('.v4-landing-facts')?.getBoundingClientRect();
   ok(!!factsBox && factsBox.bottom <= view.h + 1, tag + ': Inhalt endet im Fenster (untere Kante ' + Math.round(factsBox?.bottom ?? 0) + ' von ' + view.h + ' px)');
@@ -203,6 +204,9 @@ async function planStructure(w, h) {
     return node.className || node.tagName;
   });
   ok(JSON.stringify(order) === JSON.stringify(['title','status','tiles','lever','improve','rows']), tag + ' Zielstruktur exakt (' + order.join(' · ') + ')');
+  /* Keine klassische Scrollleiste: die Seite nutzt die volle Fensterbreite, rechts bleibt kein
+     heller Streifen (15 px Scrollleisten-Streifen) stehen. */
+  ok(d.documentElement.clientWidth === win.innerWidth && Math.abs(d.body.getBoundingClientRect().width - win.innerWidth) <= 1, tag + ' volle Fensterbreite ohne Scrollleisten-Streifen (body ' + Math.round(d.body.getBoundingClientRect().width) + ' von ' + win.innerWidth + ' px)');
   ok(app.querySelectorAll('.v4-tile').length === 4, tag + ' genau vier Kennzahlen (' + app.querySelectorAll('.v4-tile').length + ')');
   const labels = [...app.querySelectorAll('.v4-tile > span')].map(node => node.textContent.replace(/\s+/g, ' ').trim());
   const expected = ['Einkommen netto / Monat', 'Bedarf netto / Monat', 'Aus Vermögen / Monat', 'Startkapital'];

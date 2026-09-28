@@ -600,6 +600,14 @@ body{padding-bottom:18px}
 .v4-file{display:block;margin:12px 0 6px;font:600 13px system-ui,sans-serif;color:var(--v3-ink)}
 .v4-file-input{display:block;width:100%;font:13px system-ui,sans-serif;color:var(--v3-muted)}
 
+/* ---------- Keine klassische Scrollleiste (verbindlich) ----------
+   Die App ist mobile-first: Gescrollt wird mit Finger, Rad, Tastatur und Scrollgeste. Die
+   klassische Leiste am rechten Rand reserviert aber 15 px im **Layout** und bleibt als heller
+   (bzw. auf dem Startscreen dunkler) Streifen sichtbar – sie kostet Platz, ohne etwas zu
+   erklären. Deshalb ist sie ausgeblendet; das Scrollen selbst bleibt unverändert möglich. */
+html,body{scrollbar-width:none;-ms-overflow-style:none}
+html::-webkit-scrollbar,body::-webkit-scrollbar{width:0;height:0;display:none}
+
 /* ---------- Startscreen (Landing) ----------
    Das verbindliche Hintergrundbild liegt als Vollbild dahinter (Hero-Modus «landing»), der
    Inhalt steht mittig darauf: Logo, Slogan, Aussage, ein Satz, genau ein Weg in die App.
