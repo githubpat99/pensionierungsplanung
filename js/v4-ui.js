@@ -1080,7 +1080,7 @@
       : name === 'ahv' ? {...incomeValues(), ...(Estimates && Estimates.ahvOf(state).origin === 'estimated' ? {ahv:Estimates.ahv.monthly} : {})}
       : name === 'extra' ? incomeValues()
       : name === 'assumptions' ? {...State.defaults, ...(state.details.assumptions ?? {}), targetAge:state.targetAge}
-      : name === 'pension' ? {...(state.details.assumptions ?? {}), ...State.defaults, ...state.details.pension}
+      : name === 'pension' ? {...State.defaults, ...(state.details.assumptions ?? {}), ...state.details.pension}
       : {...state.values, ...state.details[name]};
     draft = Object.fromEntries(fields.map(field => [field.key, initial[field.key] ?? '']));
     const origin = name === 'ahv' && Estimates && Estimates.ahvOf(state).origin === 'estimated' ? `<p class="v4-form-hint">Aus dem Schnellstart übernommen (Annahme ${money(Estimates.ahv.monthly)} / Monat). Deine Eingabe ersetzt sie.</p>` : '';
@@ -1106,6 +1106,22 @@
           apply('time', draft); apply('tax', {canton:draft.canton});
         } else if (name === 'ahv' || name === 'extra') apply('income', {...incomeValues(), ...draft});
         else if (name === 'assumptions') apply('assumptions', {...State.defaults, ...draft, reviewed:true});
+        else if (name === 'pension') {
+          /* PK-Guthaben, Beiträge und Bezugsanteil sind **Plandaten**; **PK-Verzinsung und
+             Umwandlungssatz sind Annahmen** (`details.assumptions`), auch wenn sie in diesem
+             Editor erfasst werden – genau wie in V3. Beide Werte wurden früher unter
+             `details.pension` abgelegt, wo die Rechnung sie nie liest: die PK-Verzinsung blieb
+             ohne Wirkung auf Startkapital und PK-Rente. Sie werden deshalb hier aus den
+             Plandaten entfernt (auch ein alter Doppel-Eintrag) und als Annahme geschrieben.
+             Der Bestätigungsstand der Annahmen bleibt unverändert – wer nur PK-Daten pflegt,
+             hat die Annahmen nicht geprüft. */
+          const assumptionsConfirmed = state.confirmed?.assumptions;
+          const pensionValues = {...state.details.pension, ...draft};
+          delete pensionValues.pkInterest; delete pensionValues.uws;
+          apply('pension', pensionValues);
+          apply('assumptions', {...State.defaults, ...(state.details.assumptions ?? {}), pkInterest:draft.pkInterest, uws:draft.uws, targetAge:state.targetAge});
+          state = {...state, confirmed:{...state.confirmed, assumptions:assumptionsConfirmed}};
+        }
         else if (name === 'pension3a') { state = apply3a(state, draft); markDirty(); returnToPlan(); }
         else apply(name, {...state.details[name], ...draft});
         returnToPlan();

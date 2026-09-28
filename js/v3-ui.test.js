@@ -121,6 +121,24 @@ assert.equal(restoredLegacy.record.storageVersion,V.STORAGE_VERSION,'migrierter 
 assert.equal(new Set(V.variants(restoredLegacy.state)).size,3,'Migration füllt auf drei eindeutige Variantenplätze auf');
 assert.ok(V.variants(restoredLegacy.state).includes(Number(restoredLegacy.state.details.pension.pkShare)),'der aktuelle Plan bleibt nach der Migration in den Varianten');
 assert.deepEqual(V.restore(JSON.stringify(encoded)).migrated,false,'aktueller Stand wird nicht migriert');
+/* Generation 3 → 4: PK-Verzinsung und Umwandlungssatz wurden im V4-PK-Editor unter
+   `details.pension` abgelegt, wo die Rechnung sie nie liest. Die Migration verschiebt sie zu den
+   Annahmen (Wert bleibt erhalten) und räumt den falschen Platz. */
+const pkBase=M.apply({...s,position:'plan'},'pension',{pk:750000,pkContrib:24000,pkShare:50});
+const misplaced={...encoded,storageVersion:3,state:{...pkBase,details:{...pkBase.details,pension:{...pkBase.details.pension,pkInterest:1.5,uws:4}}}};
+const moved=V.restore(JSON.stringify(misplaced));
+assert.equal(moved.ok,true,'Stand mit falsch abgelegter PK-Verzinsung wird geladen');
+assert.equal(moved.migrated,true,'Stand der Generation 3 wird migriert');
+assert.equal(moved.record.storageVersion,V.STORAGE_VERSION,'migrierter Stand trägt die aktuelle Speicherversion');
+assert.equal(Number(moved.state.details.assumptions.pkInterest),1.5,'PK-Verzinsung wandert zu den Annahmen');
+assert.equal(Number(moved.state.details.assumptions.uws),4,'Umwandlungssatz wandert zu den Annahmen');
+assert.equal(moved.state.details.pension.pkInterest,undefined,'der falsche Platz ist geräumt (pkInterest)');
+assert.equal(moved.state.details.pension.uws,undefined,'der falsche Platz ist geräumt (uws)');
+assert.equal(Number(M.toPlan(moved.state).assumptions.rates.pkInterest),1.5,'der Rechenkern liest die migrierte PK-Verzinsung');
+/* Stände ohne den Fehler bleiben unberührt. */
+const untouchedRates=V.restore(JSON.stringify({...encoded,storageVersion:3}));
+assert.equal(Number(untouchedRates.state.details.assumptions?.pkInterest??M.defaults.pkInterest),Number(M.defaults.pkInterest),'ohne falsch abgelegte Werte ändert die Migration nichts');
+assert.equal(untouchedRates.state.details.pension.pkInterest,undefined,'PK-Daten bleiben ohne Renditefeld');
 /* Neuere Generation und unbekanntes Schema: nichts anfassen, nur melden. */
 assert.equal(V.restore(JSON.stringify({...encoded,storageVersion:V.STORAGE_VERSION+1})).reason,'newer');
 assert.equal(V.restore(JSON.stringify({...encoded,version:99})).reason,'newer');

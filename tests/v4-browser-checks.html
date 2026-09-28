@@ -484,6 +484,62 @@ async function editorChecks(w, h) {
   f.remove();
 }
 
+/* ---------- PK-Annahmen: Verzinsung und Umwandlungssatz wirken ----------
+   PK-Verzinsung und Umwandlungssatz werden im PK-Editor erfasst, sind aber **Annahmen**
+   (`details.assumptions`). Früher landeten sie unter `details.pension`, wo die Rechnung sie nie
+   liest: eine geänderte PK-Verzinsung blieb ohne Wirkung auf das Startkapital und fehlte im
+   Dossier. Geprüft wird die Wirkung auf die Kennzahl, der Speicherort und das Dossier. */
+async function pkRateChecks(w, h) {
+  const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
+  const digits = text => Number(String(text ?? '').replace(/[^\d]/g, ''));
+  let state = win.DevFixture.scenarios['vollstaendig']();
+  state = win.CheckV2State.apply(state, 'pension', {pk:750000, pkContrib:24000, pkShare:50});
+  win.DevFixture.write(state); win.V4.load();
+  await wait(600);
+  const startCapital = () => digits((/Startkapital[\s\S]{0,6}?(CHF [\d'’]+)/.exec(d.querySelector('.v4-tiles')?.textContent ?? '') ?? [])[1]);
+  const before = startCapital();
+  const action = () => (/Plan (präzisieren|optimieren)/.exec(d.getElementById('app')?.textContent ?? '') ?? [])[0] ?? '';
+  const actionBefore = action();
+  await openEditor(d, 'pension');
+  const rate = d.getElementById('pkInterest'), uws = d.getElementById('uws');
+  ok(!!rate && !!uws, tag + ' PK-Editor enthält PK-Verzinsung und Umwandlungssatz');
+  ok(Number(String(rate?.value ?? '').replace(',', '.')) === Number(win.CheckV2State.defaults.pkInterest), tag + ' der Editor zeigt den wirksamen Satz (' + rate?.value + ' %)');
+  if (rate) {
+    rate.value = '1';
+    rate.dispatchEvent(new win.Event('input', {bubbles:true}));
+    d.querySelector('.v4-form-submit')?.click();
+    await wait(700);
+  }
+  const after = startCapital();
+  ok(Number.isFinite(before) && Number.isFinite(after) && after < before, tag + ' PK-Verzinsung wirkt auf das Startkapital (4,33 % → 1 %: ' + before + ' → ' + after + ')');
+  const stored = JSON.parse(win.localStorage.getItem('retirement-v3-plan')).state.details;
+  ok(Number(stored.assumptions?.pkInterest) === 1, tag + ' PK-Verzinsung steht bei den Annahmen (' + stored.assumptions?.pkInterest + ' %)');
+  ok(stored.pension?.pkInterest === undefined && stored.pension?.uws === undefined, tag + ' PK-Daten führen keine Rendite mehr (' + Object.keys(stored.pension ?? {}).join(', ') + ')');
+  ok(actionBefore !== '' && action() === actionBefore, tag + ' der Bestätigungsstand der Annahmen bleibt unverändert (' + actionBefore + ')');
+  ok(Number(win.V4.evaluated(50)?.plan?.assumptions?.rates?.pkInterest) === 1, tag + ' der Rechenkern liest die erfasste PK-Verzinsung (' + win.V4.evaluated(50)?.plan?.assumptions?.rates?.pkInterest + ' %)');
+  /* Derselbe Weg für den Umwandlungssatz: er bestimmt die lebenslange PK-Rente. */
+  const income = () => digits((/Einkommen netto \/ Monat[\s\S]{0,6}?(CHF [\d'’]+)/.exec(d.querySelector('.v4-tiles')?.textContent ?? '') ?? [])[1]);
+  const incomeBefore = income();
+  await openEditor(d, 'pension');
+  const uwsField = d.getElementById('uws');
+  if (uwsField) {
+    uwsField.value = '4';
+    uwsField.dispatchEvent(new win.Event('input', {bubbles:true}));
+    d.querySelector('.v4-form-submit')?.click();
+    await wait(700);
+  }
+  ok(income() < incomeBefore && Number(JSON.parse(win.localStorage.getItem('retirement-v3-plan')).state.details.assumptions?.uws) === 4, tag + ' Umwandlungssatz wirkt auf die PK-Rente (' + incomeBefore + ' → ' + income() + ' CHF netto / Monat)');
+  /* Dieselbe Zahl steht im Dossier (Annahmenseite). */
+  [...d.querySelectorAll('.v4-rows .v4-row')].find(row => /Beratung vorbereiten/.test(row.textContent))?.click();
+  await wait(700);
+  d.querySelector('[data-v4-next="dossier"]')?.click();
+  await wait(900);
+  const row = [...d.querySelectorAll('.v4-dossier-row')].find(entry => /PK-Verzinsung/.test(entry.textContent));
+  ok(/^1 %$/.test(row?.querySelector('dd')?.textContent.trim() ?? ''), tag + ' Dossier nennt die erfasste PK-Verzinsung (' + (row?.textContent.replace(/\s+/g, ' ').trim() ?? 'Zeile fehlt') + ')');
+  win.DevFixture.write(win.DevFixture.scenarios['vollstaendig']());
+  f.remove();
+}
+
 /* ---------- Info-Dialoge: Betrag, Herkunft, Tabelle ---------- */
 async function infoChecks(w, h) {
   const f = await frame(w, h), d = f.contentDocument, win = f.contentWindow, tag = w + 'px';
@@ -1283,6 +1339,15 @@ async function storageVersionChecks() {
   const afterMigration = JSON.parse(first.win.localStorage.getItem('retirement-v3-plan') ?? 'null');
   ok(afterMigration?.storageVersion === version && first.win.__v4StorageMigrated === true, tag + ': Altstand wird migriert und in der neuen Hülle gespeichert (storageVersion ' + afterMigration?.storageVersion + ')');
   ok(!first.d.getElementById('v4Notice') || first.d.getElementById('v4Notice').hidden === true, tag + ': Migration läuft ohne Warnbanner');
+  /* 2b) Generation 3 mit der früher falsch abgelegten PK-Verzinsung: die Migration verschiebt den
+     erfassten Wert zu den Annahmen – dort liest ihn der Rechenkern (und das Dossier). */
+  const misplaced = JSON.parse(JSON.stringify(saved));
+  misplaced.storageVersion = 3;
+  misplaced.state.details.pension = {...misplaced.state.details.pension, pkInterest:1.5, uws:4};
+  const repaired = await fresh(JSON.stringify(misplaced));
+  const repairedStore = JSON.parse(repaired.win.localStorage.getItem('retirement-v3-plan') ?? 'null');
+  ok(Number(repairedStore?.state?.details?.assumptions?.pkInterest) === 1.5 && repairedStore?.state?.details?.pension?.pkInterest === undefined, tag + ': Generation 3 wird repariert – die PK-Verzinsung liegt bei den Annahmen (' + repairedStore?.state?.details?.assumptions?.pkInterest + ' %, PK-Daten: ' + Object.keys(repairedStore?.state?.details?.pension ?? {}).join(', ') + ')');
+  ok(Number(repaired.win.V4.evaluated(Number(repairedStore?.state?.details?.pension?.pkShare ?? 0))?.plan?.assumptions?.rates?.pkInterest) === 1.5, tag + ': der Rechenkern rechnet mit dem migrierten Satz');
   /* 3) Defekter eigener Stand: sichern, räumen, sichtbar melden – und weiter speichern können. */
   const backupPrefix = 'retirement-v3-plan.backup-';
   const beforeBackups = Object.keys(first.win.localStorage).filter(key => key.startsWith(backupPrefix)).length;
@@ -2562,6 +2627,10 @@ async function amountInputChecks(w) {
   flush();
   for (const [w, h] of [[390,844],[1000,900]]) {
     try { await editorChecks(w, h); } catch (e) { ok(false, w + ' Editor: ' + e.message); }
+  }
+  flush();
+  for (const [w, h] of [[390,844],[1000,900]]) {
+    try { await pkRateChecks(w, h); } catch (e) { ok(false, w + ' PK-Annahmen: ' + e.message); }
   }
   flush();
   for (const [w, h] of [[390,844],[1000,900]]) {

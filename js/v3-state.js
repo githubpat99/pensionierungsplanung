@@ -119,13 +119,27 @@
          angefasst** (kein Überschreiben, kein Löschen) – die App meldet es sichtbar.
        – Nicht ladbare eigene Stände werden vom UI **gesichert und geräumt** (`restore` liefert
          `reason:'invalid'`), damit ein defekter Stand die App nie blockiert. */
-  const STORAGE_VERSION = 3;
+  const STORAGE_VERSION = 4;
   /* Migrationskette: `migrations[n]` formt Generation n-1 auf Generation n um. */
   const migrations = {
     /* 1 → 2: Altbestand ohne `storageVersion`; die drei Variantenplätze werden verbindlich. */
     2: record => ({...record, state:{...record.state, v3Variants:slots(record.state ?? {})}}),
     /* 2 → 3: keine Umformung des Zustands (Generation der Varianten-/Vergleichsregeln). */
-    3: record => record
+    3: record => record,
+    /* 3 → 4: **PK-Verzinsung und Umwandlungssatz lagen am falschen Ort.** Der V4-PK-Editor hat
+       beide Werte wie Plandaten unter `details.pension` gespeichert; die Rechnung liest sie aber
+       als Annahmen unter `details.assumptions` – sie wirkten deshalb nicht auf das Startkapital
+       und die PK-Rente. Die Migration verschiebt die erfassten Werte dorthin (ihr Wert bleibt
+       erhalten, es wird nichts geschätzt) und räumt den falschen Platz. */
+    4: record => {
+      const pension = record?.state?.details?.pension;
+      const keys = ['pkInterest','uws'].filter(key => pension && pension[key] !== undefined && pension[key] !== null && pension[key] !== '');
+      if (!keys.length) return record;
+      const state = copy(record.state), moved = {};
+      keys.forEach(key => { moved[key] = pension[key]; delete state.details.pension[key]; });
+      state.details.assumptions = {...base.defaults, ...(state.details.assumptions ?? {}), ...moved};
+      return {...record, state};
+    }
   };
   function storageVersionOf(record) {
     const value = Number(record?.storageVersion);
