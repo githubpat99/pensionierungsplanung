@@ -10,6 +10,7 @@ Der Begleiter soll konkrete Fragen anhand nachvollziehbarer Quellen einordnen un
 Auslöser ist ein Testdialog, in dem die KI bei einer Frage zu Kinderleistungen lediglich an eine Ausgleichskasse verwies. Der Dialog selbst ist kein Fachbeleg; persönliche Gesprächsdaten und Screenshots werden hier nicht abgelegt.
 
 ## Pensionskassen
+- [Abraxas: Vorsorgeplan 2026 der Pensionskasse Stadt St.Gallen](pensionskassen/pksg/ABRAXAS_VORSORGEPLAN_2026.md) – eigenständige Einrichtung, nicht sgpk; Quellenkarte mit Originalplan, Rahmenreglement und Kinderleistungen. Noch nicht in der Website-Positivliste.
 - [St.Galler Pensionskasse: Reglement 2026 und Kinderleistungen](pensionskassen/sgpk/REGLEMENT_2026_KINDERLEISTUNGEN.md) – Original-PDF, Fundstellen und offene Alterskinderrentenprüfung; noch keine fachliche Freigabe.
 
 ## Aufbau beim schrittweisen Befüllen
