@@ -9,6 +9,9 @@ Der Begleiter soll konkrete Fragen anhand nachvollziehbarer Quellen einordnen un
 [Kinderleistungen im Ruhestand: AHV-Kinderrenten und Familienzulagen, CH/AR](kinderleistungen/CH-AR.md).
 Auslöser ist ein Testdialog, in dem die KI bei einer Frage zu Kinderleistungen lediglich an eine Ausgleichskasse verwies. Der Dialog selbst ist kein Fachbeleg; persönliche Gesprächsdaten und Screenshots werden hier nicht abgelegt.
 
+## Pensionskassen
+- [St.Galler Pensionskasse: Reglement 2026 und Kinderleistungen](pensionskassen/sgpk/REGLEMENT_2026_KINDERLEISTUNGEN.md) – Original-PDF, Fundstellen und offene Alterskinderrentenprüfung; noch keine fachliche Freigabe.
+
 ## Aufbau beim schrittweisen Befüllen
 Zuerst diesen Fall prüfen und anbinden; weitere Bereiche bei tatsächlichem Bedarf ergänzen:
 - AHV: Beginn, Vorbezug/Aufschub, Beitragslücken, Kinderrenten.
