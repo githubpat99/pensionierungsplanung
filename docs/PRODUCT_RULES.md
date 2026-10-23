@@ -403,3 +403,10 @@ DOM-Tests: Merken/Rückgängig, Entfernen, leere Übersicht, höchstens ein Vors
 ### KI-Status nach Verbindung (23.10.2026)
 
 Nach erfolgreichem Verbindungstest verschwinden Verbindungsblock mit Passwort, Zustimmung und Statusmeldung sowie die zusätzliche Moduszeile im Chatkopf. Ein kleines grünes Symbol im Chatkopf zeigt «KI aktiv» über Tooltip und zugängliche Beschriftung. Vor der Verbindung bleiben Zugang und Übermittlungshinweis sichtbar. Ein Gesprächsreset behält die Verbindung und das Symbol; Neuladen startet wie bisher im Demo-Modus. DOM-Verhalten und JavaScript-Syntax geprüft, keine visuelle Browserabnahme oder erneute Modellprüfung. Keine Änderung an privater Konfiguration, Wissensdateien oder V4-Planung.
+
+
+### Abraxas-Zuordnung, API 0.5-abraxas (23.10.2026)
+
+Dritter Baustein: `pensionskassen/pksg/ABRAXAS_VORSORGEPLAN_2026.md` im privaten Wissensordner. «Abraxas», «PKSG» und «PK/Pensionskasse Stadt St.Gallen» wählen diesen Plan. «sgpk» und eindeutig kantonale Bezeichnungen wählen die kantonale St.Galler Pensionskasse. «PK SG» allein bleibt mehrdeutig, ohne eine der beiden Kassen auszuwählen. Die neueste ausdrückliche Kassennennung im Nutzerdialog geht früheren Nennungen und bestätigten Angaben vor; ausdrücklich genannte Vergleiche dürfen beide Grundlagen erhalten. Inhalte aus technischen Status-/Bearbeitungsabschnitten werden nicht als Fachwissen übertragen.
+
+PHP-8.3-Tests für drei Bausteine, Zuordnungssynonyme, Mehrdeutigkeit, Vergleich und aktuelle Institution sowie bestehende Pfad-/Metadaten-/Freischaltungsregeln erfolgreich. Keine neue Live-Modellprüfung. Nur `sites/nickpatrick.it-pin.ch/ruhestand/api.php` ersetzen; private Konfiguration, API-Schlüssel und Frontend bleiben erhalten. Keine Änderung am V4-Rechenkern.
