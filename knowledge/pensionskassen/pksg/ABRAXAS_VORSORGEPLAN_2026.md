@@ -55,7 +55,7 @@ Redaktionelle Anwendungsvorgaben:
 - Sind Kapitalwahl, zeitliche Grenzen und Leistungskombination im konkreten Fall abgeklärt?
 
 ## Technischer Stand
-Im App-Repo als Wissen abgelegt. Die bisherige Website-API hat eine feste Positivliste aus CH/AR und sgpk; dieser neue PK-Stadt-Abraxas-Baustein wird dadurch noch nicht automatisch geladen. Vor der Anbindung die Kassenerkennung erweitern und mit Verwechslungstests absichern.
+Im App-Repo als Wissen abgelegt. API 0.5-abraxas enthält diesen Baustein in ihrer Positivliste und trennt PK Stadt St.Gallen/Abraxas von kantonaler sgpk. Wirksam nach Upload der neuen api.php und dieses Dokuments in die private Wissensablage. Zuordnungs- und Verwechslungstests unter PHP 8.3 erfolgreich; echte Modellantwort nach Hosting-Update noch zu prüfen.
 
 ## Prüfung
 Quellenabgleich durch Recherche, keine menschliche Fachfreigabe. Keine individuelle Leistungszusage und keine neue Rechenlogik implementiert.
