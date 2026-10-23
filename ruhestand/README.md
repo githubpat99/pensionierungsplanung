@@ -46,3 +46,8 @@ Die gelben Vorschlagskarten sind durch eine dezente Zeile unter der jeweiligen A
 DOM-Tests: Merken/Rückgängig, Entfernen, leere Übersicht, höchstens ein Vorschlag, Reset und sichere Textdarstellung; PHP-Syntax geprüft. Keine visuelle Browserabnahme oder neue Live-Modellprüfung ausgeführt.
 
 Für das Hosting-Update 0.4 `index.html` und `api.php` in `sites/nickpatrick.it-pin.ch/ruhestand/`, `app.js` und `style.css` im dortigen Ordner `assets` ersetzen. Private config.php und Wissensdateien bleiben erhalten. Der vollständige Frontend-Stand ist jetzt im App-Repository unter `ruhestand/` versioniert; session.js und conversation.js sind gegenüber 0.2 unverändert. Test: `node ruhestand/memory-ui.test.cjs` mit verfügbaren Testpaketen linkedom und php-parser (keine Browser-Abhängigkeiten der Anwendung).
+
+
+### KI-Status nach Verbindung (23.10.2026)
+
+Nach erfolgreichem Verbindungstest verschwinden Verbindungsblock mit Passwort, Zustimmung und Statusmeldung sowie die zusätzliche Moduszeile im Chatkopf. Ein kleines grünes Symbol im Chatkopf zeigt «KI aktiv» über Tooltip und zugängliche Beschriftung. Vor der Verbindung bleiben Zugang und Übermittlungshinweis sichtbar. Ein Gesprächsreset behält die Verbindung und das Symbol; Neuladen startet wie bisher im Demo-Modus. DOM-Verhalten und JavaScript-Syntax geprüft, keine visuelle Browserabnahme oder erneute Modellprüfung. Keine Änderung an privater Konfiguration, Wissensdateien oder V4-Planung.
