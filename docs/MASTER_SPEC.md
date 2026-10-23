@@ -726,3 +726,8 @@ Der bestehende V4-Ruhestands-Check, sein lokaler Plan/Datenstand, Navigation und
 Die gelben Vorschlagskarten sind durch eine dezente Zeile unter der jeweiligen Antwort ersetzt: «Für später merken?» mit einem verständlichen Anliegen und «Merken». Die Zweckbeschreibung erscheint einmal pro Gespräch. Erst der Klick übernimmt; danach «✓ Gemerkt» und «Rückgängig». Kein Ablehnen-Knopf und kein Zwang zur Übernahme. Höchstens ein Vorschlag pro Antwort, nur für ein konkretes persönliches Anliegen; allgemeine Wissensfragen sollen keine Vorschläge erzeugen. Die Übersicht heisst «Meine gemerkten Punkte», ist leer kompakt und zeigt dann keinen deaktivierten Download. Entfernen in der Übersicht synchronisiert die Zeile im Gespräch. Eingaben und Modelltext bleiben als Text gerendert. Kein Eingriff in V4-Plan, Rechenkern oder Speicherstand.
 
 DOM-Tests: Merken/Rückgängig, Entfernen, leere Übersicht, höchstens ein Vorschlag, Reset und sichere Textdarstellung; PHP-Syntax geprüft. Keine visuelle Browserabnahme oder neue Live-Modellprüfung ausgeführt.
+
+
+### KI-Status nach Verbindung (23.10.2026)
+
+Nach erfolgreichem Verbindungstest verschwinden Verbindungsblock mit Passwort, Zustimmung und Statusmeldung sowie die zusätzliche Moduszeile im Chatkopf. Ein kleines grünes Symbol im Chatkopf zeigt «KI aktiv» über Tooltip und zugängliche Beschriftung. Vor der Verbindung bleiben Zugang und Übermittlungshinweis sichtbar. Ein Gesprächsreset behält die Verbindung und das Symbol; Neuladen startet wie bisher im Demo-Modus. DOM-Verhalten und JavaScript-Syntax geprüft, keine visuelle Browserabnahme oder erneute Modellprüfung. Keine Änderung an privater Konfiguration, Wissensdateien oder V4-Planung.
