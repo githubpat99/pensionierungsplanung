@@ -26,6 +26,8 @@ Die App speichert den Plan im Browser auf diesem Gerät (`retirement-v3-plan`); 
 - `docs/USE_CASES.md`, `docs/TEST_CASES.md`: aktuelle Use Cases und Testzuordnung.
 - `docs/archive/`, `archive/`: historische Dokumente und frühere Prototypen; keine Implementierungsanforderungen.
 
+- `knowledge/`: [quellenbasierte Wissensbausteine für den Ruhestandsbegleiter](knowledge/README.md), beginnend mit [Kinderleistungen CH/AR](knowledge/kinderleistungen/CH-AR.md). Entwurfsstand; noch keine automatische Anbindung an den Chat oder Änderung der App-Berechnungen.
+
 ## Prüfungen
 
 Node-Tests liegen unter `js/*.test.js`. Browser-Tests liegen unter `tests/*.cy.js`; die Cypress-Konfiguration ist `js/cypress.config.js` und erwartet `http://localhost:8000`. Vor Änderungen die Hinweise in [AGENTS.md](AGENTS.md) und die betroffenen Kapitel von [MASTER_SPEC.md](docs/MASTER_SPEC.md) und [PRODUCT_RULES.md](docs/PRODUCT_RULES.md) lesen.
