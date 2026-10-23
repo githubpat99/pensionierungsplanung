@@ -37,3 +37,12 @@ Der authentifizierte Verbindungstest prüft vorhandene lesbare Bausteine, ohne e
 
 ## Rücknahme
 Alte api.php wiederherstellen. Private Konfiguration und Wissensdateien können erhalten bleiben. Die Wissensbasis ist versioniert im App-Repo unter knowledge; hier liegt nur die serverseitige Anbindung. Noch kein automatischer Import in die Planungs-App oder ihr Dossier.
+
+
+### Merkpunkte im Gesprächsprototyp 0.4 (23.10.2026)
+
+Die gelben Vorschlagskarten sind durch eine dezente Zeile unter der jeweiligen Antwort ersetzt: «Für später merken?» mit einem verständlichen Anliegen und «Merken». Die Zweckbeschreibung erscheint einmal pro Gespräch. Erst der Klick übernimmt; danach «✓ Gemerkt» und «Rückgängig». Kein Ablehnen-Knopf und kein Zwang zur Übernahme. Höchstens ein Vorschlag pro Antwort, nur für ein konkretes persönliches Anliegen; allgemeine Wissensfragen sollen keine Vorschläge erzeugen. Die Übersicht heisst «Meine gemerkten Punkte», ist leer kompakt und zeigt dann keinen deaktivierten Download. Entfernen in der Übersicht synchronisiert die Zeile im Gespräch. Eingaben und Modelltext bleiben als Text gerendert. Kein Eingriff in V4-Plan, Rechenkern oder Speicherstand.
+
+DOM-Tests: Merken/Rückgängig, Entfernen, leere Übersicht, höchstens ein Vorschlag, Reset und sichere Textdarstellung; PHP-Syntax geprüft. Keine visuelle Browserabnahme oder neue Live-Modellprüfung ausgeführt.
+
+Für das Hosting-Update 0.4 `index.html` und `api.php` in `sites/nickpatrick.it-pin.ch/ruhestand/`, `app.js` und `style.css` im dortigen Ordner `assets` ersetzen. Private config.php und Wissensdateien bleiben erhalten. Der vollständige Frontend-Stand ist jetzt im App-Repository unter `ruhestand/` versioniert; session.js und conversation.js sind gegenüber 0.2 unverändert. Test: `node ruhestand/memory-ui.test.cjs` mit verfügbaren Testpaketen linkedom und php-parser (keine Browser-Abhängigkeiten der Anwendung).
